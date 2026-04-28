@@ -1,0 +1,102 @@
+---
+- name: Configure BIG-IP LTM objects for RKE2 and Kubernetes HA
+  hosts: localhost
+  gather_facts: false
+  collections:
+    - f5networks.f5_modules
+
+  vars_files:
+    - vars/common.yml
+    - vars/ltm_config.yml
+
+  tasks:
+    - name: Create TCP monitors for backend services
+      f5networks.f5_modules.bigip_monitor_tcp:
+        provider: "{{ provider }}"
+        partition: "{{ partition }}"
+        name: "{{ item.value.monitor_name }}"
+        state: present
+      loop: "{{ ltm_services | dict2items }}"
+
+    - name: Create LTM pools for every cluster/service pair
+      f5networks.f5_modules.bigip_pool:
+        provider: "{{ provider }}"
+        partition: "{{ partition }}"
+        name: "pool_{{ item.0.key }}_{{ item.1.key }}"
+        lb_method: "round-robin"
+        monitors:
+          - "/{{ partition }}/{{ item.1.value.monitor_name }}"
+        state: present
+      loop: "{{ cluster_definitions | dict2items | product(ltm_services | dict2items) | list }}"
+
+    - name: Add RKE2 registration members to pool
+      f5networks.f5_modules.bigip_pool_member:
+        provider: "{{ provider }}"
+        partition: "{{ partition }}"
+        pool: "pool_{{ item.0.key }}_rke2_registration"
+        host: "{{ item.1 }}"
+        port: "{{ ltm_services.rke2_registration.member_port }}"
+        state: present
+      loop: "{{ query('subelements', cluster_definitions | dict2items, 'value.control_plane_nodes') }}"
+
+    - name: Add Kubernetes API members to pool
+      f5networks.f5_modules.bigip_pool_member:
+        provider: "{{ provider }}"
+        partition: "{{ partition }}"
+        pool: "pool_{{ item.0.key }}_k8s_api"
+        host: "{{ item.1 }}"
+        port: "{{ ltm_services.k8s_api.member_port }}"
+        state: present
+      loop: "{{ query('subelements', cluster_definitions | dict2items, 'value.control_plane_nodes') }}"
+
+    - name: Add Traefik NodePort members to ingress pool
+      f5networks.f5_modules.bigip_pool_member:
+        provider: "{{ provider }}"
+        partition: "{{ partition }}"
+        pool: "pool_{{ item.0.key }}_ingress_https"
+        host: "{{ item.1 }}"
+        port: "{{ ltm_services.ingress_https.member_port }}"
+        state: present
+      loop: "{{ query('subelements', cluster_definitions | dict2items, 'value.worker_nodes') }}"
+
+    - name: Create RKE2 registration virtual servers on 9345
+      f5networks.f5_modules.bigip_virtual_server:
+        provider: "{{ provider }}"
+        partition: "{{ partition }}"
+        name: "vs_{{ item.key }}_rke2_9345"
+        destination: "{{ item.value.virtual_addresses.rke2_registration }}"
+        port: "{{ ltm_services.rke2_registration.destination_port }}"
+        pool: "pool_{{ item.key }}_rke2_registration"
+        snat: "Automap"
+        all_profiles:
+          - tcp
+        state: present
+      loop: "{{ cluster_definitions | dict2items }}"
+
+    - name: Create Kubernetes API virtual servers on 6443
+      f5networks.f5_modules.bigip_virtual_server:
+        provider: "{{ provider }}"
+        partition: "{{ partition }}"
+        name: "vs_{{ item.key }}_k8s_api_6443"
+        destination: "{{ item.value.virtual_addresses.k8s_api }}"
+        port: "{{ ltm_services.k8s_api.destination_port }}"
+        pool: "pool_{{ item.key }}_k8s_api"
+        snat: "Automap"
+        all_profiles:
+          - tcp
+        state: present
+      loop: "{{ cluster_definitions | dict2items }}"
+
+    - name: Create ingress virtual servers on 443 forwarding to NodePort 30043
+      f5networks.f5_modules.bigip_virtual_server:
+        provider: "{{ provider }}"
+        partition: "{{ partition }}"
+        name: "vs_{{ item.key }}_ingress_443"
+        destination: "{{ item.value.virtual_addresses.ingress_https }}"
+        port: "{{ ltm_services.ingress_https.destination_port }}"
+        pool: "pool_{{ item.key }}_ingress_https"
+        snat: "Automap"
+        all_profiles:
+          - tcp
+        state: present
+      loop: "{{ cluster_definitions | dict2items }}"

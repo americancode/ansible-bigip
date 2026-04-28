@@ -1,3 +1,12 @@
+---
+# AWX UI:
+# Administration -> Credential Types -> Add
+# Paste `input_configuration` into Input Configuration.
+# Paste `injector_configuration` into Injector Configuration.
+name: "F5 BIG-IP Env"
+kind: "cloud"
+
+input_configuration:
   fields:
     - id: f5_host
       label: F5 Host
@@ -20,8 +29,7 @@
     - f5_username
     - f5_password
 
-  Use this for Injector Configuration:
-
+injector_configuration:
   env:
     F5_HOST: "{{ f5_host }}"
     F5_USERNAME: "{{ f5_username }}"

@@ -1,0 +1,68 @@
+---
+cluster_definitions:
+  a:
+    control_plane_nodes:
+      - "10.10.11.11"
+      - "10.10.11.12"
+      - "10.10.11.13"
+    worker_nodes:
+      - "10.10.21.11"
+      - "10.10.21.12"
+      - "10.10.21.13"
+    virtual_addresses:
+      rke2_registration: "10.10.11.100"
+      k8s_api: "10.10.11.101"
+      ingress_https: "10.10.11.102"
+  b:
+    control_plane_nodes:
+      - "10.10.12.11"
+      - "10.10.12.12"
+      - "10.10.12.13"
+    worker_nodes:
+      - "10.10.22.11"
+      - "10.10.22.12"
+      - "10.10.22.13"
+    virtual_addresses:
+      rke2_registration: "10.10.12.100"
+      k8s_api: "10.10.12.101"
+      ingress_https: "10.10.12.102"
+  c:
+    control_plane_nodes:
+      - "10.10.13.11"
+      - "10.10.13.12"
+      - "10.10.13.13"
+    worker_nodes:
+      - "10.10.23.11"
+      - "10.10.23.12"
+      - "10.10.23.13"
+    virtual_addresses:
+      rke2_registration: "10.10.13.100"
+      k8s_api: "10.10.13.101"
+      ingress_https: "10.10.13.102"
+  d:
+    control_plane_nodes:
+      - "10.10.14.11"
+      - "10.10.14.12"
+      - "10.10.14.13"
+    worker_nodes:
+      - "10.10.24.11"
+      - "10.10.24.12"
+      - "10.10.24.13"
+    virtual_addresses:
+      rke2_registration: "10.10.14.100"
+      k8s_api: "10.10.14.101"
+      ingress_https: "10.10.14.102"
+
+ltm_services:
+  rke2_registration:
+    monitor_name: "mon_tcp_9345"
+    destination_port: 9345
+    member_port: 9345
+  k8s_api:
+    monitor_name: "mon_tcp_6443"
+    destination_port: 6443
+    member_port: 6443
+  ingress_https:
+    monitor_name: "mon_tcp_30043"
+    destination_port: 443
+    member_port: 30043

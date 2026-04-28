@@ -1,0 +1,16 @@
+---
+enable_gtm: false
+
+gtm_mirror_pair:
+  datacenter: "dc-east"
+  wide_ip: "grafana.my.domain.com"
+  pool_name: "pool_grafana_ab"
+  members:
+    - cluster: "a"
+      gtm_server: "gtm-ltm-cluster-a"
+      gtm_server_ip: "192.0.2.10"
+      virtual_server: "vs_a_ingress_443"
+    - cluster: "b"
+      gtm_server: "gtm-ltm-cluster-b"
+      gtm_server_ip: "192.0.2.11"
+      virtual_server: "vs_b_ingress_443"

@@ -1,0 +1,13 @@
+---
+# AWX usage:
+# 1. Create a Custom Credential Type from config.yaml.
+# 2. Create a Credential from that type.
+# 3. Attach the Credential to the Job Template for ltm.yml and/or gtm.yml.
+provider:
+  server: "{{ lookup('env', 'F5_HOST') | default('bigip-mgmt.my.domain.com', true) }}"
+  user: "{{ lookup('env', 'F5_USERNAME') | default('admin', true) }}"
+  password: "{{ lookup('env', 'F5_PASSWORD') }}"
+  server_port: "{{ lookup('env', 'F5_SERVER_PORT') | default(443, true) }}"
+  validate_certs: "{{ lookup('env', 'F5_VALIDATE_CERTS') | default(false, true) }}"
+
+partition: "Common"
