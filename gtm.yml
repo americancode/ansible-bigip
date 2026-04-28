@@ -1,0 +1,76 @@
+---
+- name: Configure BIG-IP DNS/GTM objects for grafana.my.domain.com
+  hosts: localhost
+  gather_facts: false
+  collections:
+    - f5networks.f5_modules
+
+  vars_files:
+    - vars/common.yml
+    - vars/gtm_config.yml
+
+  tasks:
+    - name: Create GTM datacenter for the A/B mirror pair
+      when: enable_gtm | bool
+      f5networks.f5_modules.bigip_gtm_datacenter:
+        provider: "{{ provider }}"
+        partition: "{{ partition }}"
+        name: "{{ gtm_mirror_pair.datacenter }}"
+        state: present
+
+    - name: Register cluster LTMs as GTM servers
+      when: enable_gtm | bool
+      f5networks.f5_modules.bigip_gtm_server:
+        provider: "{{ provider }}"
+        partition: "{{ partition }}"
+        name: "{{ item.gtm_server }}"
+        datacenter: "{{ gtm_mirror_pair.datacenter }}"
+        product: "bigip"
+        server_type: "ltm"
+        devices:
+          - name: "{{ item.gtm_server }}"
+            addresses:
+              - "{{ item.gtm_server_ip }}"
+        virtual_server_discovery: "enabled"
+        link_discovery: "enabled"
+        state: present
+      loop: "{{ gtm_mirror_pair.members }}"
+
+    - name: Create GTM pool for grafana using cluster A/B ingress virtual servers
+      when: enable_gtm | bool
+      f5networks.f5_modules.bigip_gtm_pool:
+        provider: "{{ provider }}"
+        partition: "{{ partition }}"
+        name: "{{ gtm_mirror_pair.pool_name }}"
+        type: "a"
+        preferred_lb_method: "topology"
+        alternate_lb_method: "global-availability"
+        fallback_lb_method: "round-robin"
+        members:
+          - server_name: "{{ gtm_mirror_pair.members[0].gtm_server }}"
+            virtual_server: "{{ gtm_mirror_pair.members[0].virtual_server }}"
+          - server_name: "{{ gtm_mirror_pair.members[1].gtm_server }}"
+            virtual_server: "{{ gtm_mirror_pair.members[1].virtual_server }}"
+        state: present
+
+    - name: Create the Wide IP for grafana.my.domain.com
+      when: enable_gtm | bool
+      f5networks.f5_modules.bigip_gtm_wide_ip:
+        provider: "{{ provider }}"
+        partition: "{{ partition }}"
+        name: "{{ gtm_mirror_pair.wide_ip }}"
+        type: "a"
+        pool_lb_method: "topology"
+        pools:
+          - name: "{{ gtm_mirror_pair.pool_name }}"
+            partition: "{{ partition }}"
+            ratio: 1
+        state: present
+
+    - name: Explain health-check behavior for this GTM example
+      when: enable_gtm | bool
+      ansible.builtin.debug:
+        msg:
+          - "GTM pool members point at the cluster A/B ingress virtual servers."
+          - "Member health is typically inherited from the LTM virtual server state discovered from each BIG-IP."
+          - "If you need Grafana-specific HTTP host-header probing, build a dedicated application VIP or attach an application monitor to a Grafana-specific LTM object."
