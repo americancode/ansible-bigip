@@ -1,0 +1,30 @@
+  fields:
+    - id: f5_host
+      label: F5 Host
+      type: string
+    - id: f5_username
+      label: F5 Username
+      type: string
+    - id: f5_password
+      label: F5 Password
+      type: string
+      secret: true
+    - id: f5_server_port
+      label: F5 Server Port
+      type: string
+    - id: f5_validate_certs
+      label: Validate Certs
+      type: boolean
+  required:
+    - f5_host
+    - f5_username
+    - f5_password
+
+  Use this for Injector Configuration:
+
+  env:
+    F5_HOST: "{{ f5_host }}"
+    F5_USERNAME: "{{ f5_username }}"
+    F5_PASSWORD: "{{ f5_password }}"
+    F5_SERVER_PORT: "{{ f5_server_port | default('443') }}"
+    F5_VALIDATE_CERTS: "{{ f5_validate_certs | default(false) }}"
