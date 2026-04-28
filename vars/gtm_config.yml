@@ -9,8 +9,16 @@ gtm_mirror_pair:
     - cluster: "a"
       gtm_server: "gtm-ltm-cluster-a"
       gtm_server_ip: "192.0.2.10"
-      virtual_server: "vs_a_ingress_443"
+      virtual_server: "gtm_vs_a_grafana_443"
+      address: "10.10.11.102"
+      port: 443
+      monitors:
+        - "/Common/https"
     - cluster: "b"
       gtm_server: "gtm-ltm-cluster-b"
       gtm_server_ip: "192.0.2.11"
-      virtual_server: "vs_b_ingress_443"
+      virtual_server: "gtm_vs_b_grafana_443"
+      address: "10.10.12.102"
+      port: 443
+      monitors:
+        - "/Common/https"

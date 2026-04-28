@@ -31,12 +31,27 @@
           - name: "{{ item.gtm_server }}"
             addresses:
               - "{{ item.gtm_server_ip }}"
-        virtual_server_discovery: "enabled"
-        link_discovery: "enabled"
+        virtual_server_discovery: "disabled"
+        link_discovery: "disabled"
         state: present
       loop: "{{ gtm_mirror_pair.members }}"
 
-    - name: Create GTM pool for grafana using cluster A/B ingress virtual servers
+    - name: Create manual GTM virtual servers for cluster ingress VIPs
+      when: enable_gtm | bool
+      f5networks.f5_modules.bigip_gtm_virtual_server:
+        provider: "{{ provider }}"
+        partition: "{{ partition }}"
+        server_name: "{{ item.gtm_server }}"
+        name: "{{ item.virtual_server }}"
+        address: "{{ item.address }}"
+        port: "{{ item.port }}"
+        translation_address: "{{ item.translation_address | default('') }}"
+        translation_port: "{{ item.translation_port | default('') }}"
+        monitors: "{{ item.monitors | default(['/Common/https']) }}"
+        state: present
+      loop: "{{ gtm_mirror_pair.members }}"
+
+    - name: Create GTM pool for grafana using manual GTM virtual servers
       when: enable_gtm | bool
       f5networks.f5_modules.bigip_gtm_pool:
         provider: "{{ provider }}"
@@ -71,6 +86,6 @@
       when: enable_gtm | bool
       ansible.builtin.debug:
         msg:
-          - "GTM pool members point at the cluster A/B ingress virtual servers."
-          - "Member health is typically inherited from the LTM virtual server state discovered from each BIG-IP."
-          - "If you need Grafana-specific HTTP host-header probing, build a dedicated application VIP or attach an application monitor to a Grafana-specific LTM object."
+          - "GTM pool members point at manually defined GTM virtual servers, not auto-discovered LTM virtuals."
+          - "GTM health checks run directly against the configured VIP and port for each cluster member."
+          - "This avoids the /Common to /K8s LTM virtual discovery/reference problem, but still requires GTM server and datacenter objects."
