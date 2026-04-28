@@ -1,6 +1,9 @@
 ---
 cluster_definitions:
   a:
+    # `control_plane` is the default VIP for both 9345 and 6443.
+    # Set optional `rke2_registration` and/or `k8s_api` keys below if a cluster
+    # needs separate VIPs for those listeners.
     control_plane_nodes:
       - "10.10.11.11"
       - "10.10.11.12"
@@ -10,10 +13,12 @@ cluster_definitions:
       - "10.10.21.12"
       - "10.10.21.13"
     virtual_addresses:
-      rke2_registration: "10.10.11.100"
-      k8s_api: "10.10.11.101"
+      control_plane: "10.10.11.100"
       ingress_https: "10.10.11.102"
   b:
+    # `control_plane` is the default VIP for both 9345 and 6443.
+    # Set optional `rke2_registration` and/or `k8s_api` keys below if a cluster
+    # needs separate VIPs fvfor those listeners.
     control_plane_nodes:
       - "10.10.12.11"
       - "10.10.12.12"
@@ -23,10 +28,12 @@ cluster_definitions:
       - "10.10.22.12"
       - "10.10.22.13"
     virtual_addresses:
-      rke2_registration: "10.10.12.100"
-      k8s_api: "10.10.12.101"
+      control_plane: "10.10.12.100"
       ingress_https: "10.10.12.102"
   c:
+    # `control_plane` is the default VIP for both 9345 and 6443.
+    # Set optional `rke2_registration` and/or `k8s_api` keys below if a cluster
+    # needs separate VIPs for those listeners.
     control_plane_nodes:
       - "10.10.13.11"
       - "10.10.13.12"
@@ -36,10 +43,12 @@ cluster_definitions:
       - "10.10.23.12"
       - "10.10.23.13"
     virtual_addresses:
-      rke2_registration: "10.10.13.100"
-      k8s_api: "10.10.13.101"
+      control_plane: "10.10.13.100"
       ingress_https: "10.10.13.102"
   d:
+    # `control_plane` is the default VIP for both 9345 and 6443.
+    # Set optional `rke2_registration` and/or `k8s_api` keys below if a cluster
+    # needs separate VIPs for those listeners.
     control_plane_nodes:
       - "10.10.14.11"
       - "10.10.14.12"
@@ -49,8 +58,7 @@ cluster_definitions:
       - "10.10.24.12"
       - "10.10.24.13"
     virtual_addresses:
-      rke2_registration: "10.10.14.100"
-      k8s_api: "10.10.14.101"
+      control_plane: "10.10.14.100"
       ingress_https: "10.10.14.102"
 
 ltm_services:
