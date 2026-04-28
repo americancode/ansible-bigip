@@ -203,6 +203,7 @@
       validate_certs: false
 
     partition: "Common"
+    enable_gtm: false
 
     # This example assumes clusters a and b are geographic mirrors
     # and that GTM will direct clients to either ingress VIP based on
@@ -223,6 +224,7 @@
 
   tasks:
     - name: Create GTM datacenter for the A/B mirror pair
+      when: enable_gtm | bool
       bigip_gtm_datacenter:
         provider: "{{ provider }}"
         partition: "{{ partition }}"
@@ -230,6 +232,7 @@
         state: present
 
     - name: Register cluster LTMs as GTM servers
+      when: enable_gtm | bool
       bigip_gtm_server:
         provider: "{{ provider }}"
         partition: "{{ partition }}"
@@ -247,6 +250,7 @@
       loop: "{{ gtm_mirror_pair.members }}"
 
     - name: Create a GTM pool for grafana using cluster A/B ingress virtual servers
+      when: enable_gtm | bool
       bigip_gtm_pool:
         provider: "{{ provider }}"
         partition: "{{ partition }}"
@@ -263,6 +267,7 @@
         state: present
 
     - name: Create the Wide IP for grafana.my.domain.com
+      when: enable_gtm | bool
       bigip_gtm_wide_ip:
         provider: "{{ provider }}"
         partition: "{{ partition }}"
@@ -276,6 +281,7 @@
         state: present
 
     - name: Explain health-check behavior for this GTM example
+      when: enable_gtm | bool
       ansible.builtin.debug:
         msg:
           - "GTM pool members point at the cluster A/B ingress virtual servers."
