@@ -1,0 +1,267 @@
+---
+- name: Configure BIG-IP LTM objects for RKE2/Kubernetes HA
+  hosts: localhost
+  gather_facts: false
+  collections:
+    - f5networks.f5_modules
+
+  vars:
+    provider:
+      server: "bigip-mgmt.my.domain.com"
+      user: "admin"
+      password: "replace-me"
+      server_port: 443
+      validate_certs: false
+
+    partition: "Common"
+
+    # Example cluster inventory. Replace addresses to match your environment.
+    cluster_definitions:
+      a:
+        datacenter: "dc-east"
+        gtm_server: "gtm-ltm-cluster-a"
+        gtm_server_ip: "192.0.2.10"
+        nodes:
+          - "10.10.11.11"
+          - "10.10.11.12"
+          - "10.10.11.13"
+        virtual_addresses:
+          rke2_registration: "10.10.11.100"
+          k8s_api: "10.10.11.101"
+          ingress_https: "10.10.11.102"
+      b:
+        datacenter: "dc-east"
+        gtm_server: "gtm-ltm-cluster-b"
+        gtm_server_ip: "192.0.2.11"
+        nodes:
+          - "10.10.12.11"
+          - "10.10.12.12"
+          - "10.10.12.13"
+        virtual_addresses:
+          rke2_registration: "10.10.12.100"
+          k8s_api: "10.10.12.101"
+          ingress_https: "10.10.12.102"
+      c:
+        datacenter: "dc-west"
+        gtm_server: "gtm-ltm-cluster-c"
+        gtm_server_ip: "192.0.2.12"
+        nodes:
+          - "10.10.13.11"
+          - "10.10.13.12"
+          - "10.10.13.13"
+        virtual_addresses:
+          rke2_registration: "10.10.13.100"
+          k8s_api: "10.10.13.101"
+          ingress_https: "10.10.13.102"
+      d:
+        datacenter: "dc-west"
+        gtm_server: "gtm-ltm-cluster-d"
+        gtm_server_ip: "192.0.2.13"
+        nodes:
+          - "10.10.14.11"
+          - "10.10.14.12"
+          - "10.10.14.13"
+        virtual_addresses:
+          rke2_registration: "10.10.14.100"
+          k8s_api: "10.10.14.101"
+          ingress_https: "10.10.14.102"
+
+    ltm_services:
+      rke2_registration:
+        monitor_name: "mon_tcp_9543"
+        destination_port: 9543
+        member_port: 9543
+      k8s_api:
+        monitor_name: "mon_tcp_6443"
+        destination_port: 6443
+        member_port: 6443
+      ingress_https:
+        monitor_name: "mon_tcp_30043"
+        destination_port: 443
+        member_port: 30043
+
+  tasks:
+    - name: Create TCP monitors for backend services
+      bigip_monitor_tcp:
+        provider: "{{ provider }}"
+        partition: "{{ partition }}"
+        name: "{{ item.value.monitor_name }}"
+        state: present
+      loop: "{{ ltm_services | dict2items }}"
+
+    - name: Create LTM pools for every cluster/service pair
+      bigip_pool:
+        provider: "{{ provider }}"
+        partition: "{{ partition }}"
+        name: "pool_{{ item.0.key }}_{{ item.1.key }}"
+        lb_method: "round-robin"
+        monitors:
+          - "/{{ partition }}/{{ item.1.value.monitor_name }}"
+        state: present
+      loop: "{{ cluster_definitions | dict2items | product(ltm_services | dict2items) | list }}"
+
+    - name: Add RKE2 registration members to pool
+      bigip_pool_member:
+        provider: "{{ provider }}"
+        partition: "{{ partition }}"
+        pool: "pool_{{ item.0.key }}_rke2_registration"
+        host: "{{ item.1 }}"
+        port: "{{ ltm_services.rke2_registration.member_port }}"
+        state: present
+      loop: "{{ query('subelements', cluster_definitions | dict2items, 'value.nodes') }}"
+
+    - name: Add Kubernetes API members to pool
+      bigip_pool_member:
+        provider: "{{ provider }}"
+        partition: "{{ partition }}"
+        pool: "pool_{{ item.0.key }}_k8s_api"
+        host: "{{ item.1 }}"
+        port: "{{ ltm_services.k8s_api.member_port }}"
+        state: present
+      loop: "{{ query('subelements', cluster_definitions | dict2items, 'value.nodes') }}"
+
+    - name: Add Traefik NodePort members to ingress pool
+      bigip_pool_member:
+        provider: "{{ provider }}"
+        partition: "{{ partition }}"
+        pool: "pool_{{ item.0.key }}_ingress_https"
+        host: "{{ item.1 }}"
+        port: "{{ ltm_services.ingress_https.member_port }}"
+        state: present
+      loop: "{{ query('subelements', cluster_definitions | dict2items, 'value.nodes') }}"
+
+    - name: Create RKE2 registration virtual servers on 9543
+      bigip_virtual_server:
+        provider: "{{ provider }}"
+        partition: "{{ partition }}"
+        name: "vs_{{ item.key }}_rke2_9543"
+        destination: "{{ item.value.virtual_addresses.rke2_registration }}"
+        port: "{{ ltm_services.rke2_registration.destination_port }}"
+        pool: "pool_{{ item.key }}_rke2_registration"
+        snat: "Automap"
+        all_profiles:
+          - tcp
+        state: present
+      loop: "{{ cluster_definitions | dict2items }}"
+
+    - name: Create Kubernetes API virtual servers on 6443
+      bigip_virtual_server:
+        provider: "{{ provider }}"
+        partition: "{{ partition }}"
+        name: "vs_{{ item.key }}_k8s_api_6443"
+        destination: "{{ item.value.virtual_addresses.k8s_api }}"
+        port: "{{ ltm_services.k8s_api.destination_port }}"
+        pool: "pool_{{ item.key }}_k8s_api"
+        snat: "Automap"
+        all_profiles:
+          - tcp
+        state: present
+      loop: "{{ cluster_definitions | dict2items }}"
+
+    - name: Create shared ingress virtual servers on 443 forwarding to NodePort 30043
+      bigip_virtual_server:
+        provider: "{{ provider }}"
+        partition: "{{ partition }}"
+        name: "vs_{{ item.key }}_ingress_443"
+        destination: "{{ item.value.virtual_addresses.ingress_https }}"
+        port: "{{ ltm_services.ingress_https.destination_port }}"
+        pool: "pool_{{ item.key }}_ingress_https"
+        snat: "Automap"
+        all_profiles:
+          - tcp
+        state: present
+      loop: "{{ cluster_definitions | dict2items }}"
+
+- name: Example BIG-IP DNS/GTM objects for grafana.my.domain.com
+  hosts: localhost
+  gather_facts: false
+  collections:
+    - f5networks.f5_modules
+
+  vars:
+    provider:
+      server: "bigip-mgmt.my.domain.com"
+      user: "admin"
+      password: "replace-me"
+      server_port: 443
+      validate_certs: false
+
+    partition: "Common"
+
+    # This example assumes clusters a and b are geographic mirrors
+    # and that GTM will direct clients to either ingress VIP based on
+    # pool member health plus the configured LB method.
+    gtm_mirror_pair:
+      datacenter: "dc-east"
+      wide_ip: "grafana.my.domain.com"
+      pool_name: "pool_grafana_ab"
+      members:
+        - cluster: "a"
+          gtm_server: "gtm-ltm-cluster-a"
+          gtm_server_ip: "192.0.2.10"
+          virtual_server: "vs_a_ingress_443"
+        - cluster: "b"
+          gtm_server: "gtm-ltm-cluster-b"
+          gtm_server_ip: "192.0.2.11"
+          virtual_server: "vs_b_ingress_443"
+
+  tasks:
+    - name: Create GTM datacenter for the A/B mirror pair
+      bigip_gtm_datacenter:
+        provider: "{{ provider }}"
+        partition: "{{ partition }}"
+        name: "{{ gtm_mirror_pair.datacenter }}"
+        state: present
+
+    - name: Register cluster LTMs as GTM servers
+      bigip_gtm_server:
+        provider: "{{ provider }}"
+        partition: "{{ partition }}"
+        name: "{{ item.gtm_server }}"
+        datacenter: "{{ gtm_mirror_pair.datacenter }}"
+        product: "bigip"
+        server_type: "ltm"
+        devices:
+          - name: "{{ item.gtm_server }}"
+            addresses:
+              - "{{ item.gtm_server_ip }}"
+        virtual_server_discovery: "enabled"
+        link_discovery: "enabled"
+        state: present
+      loop: "{{ gtm_mirror_pair.members }}"
+
+    - name: Create a GTM pool for grafana using cluster A/B ingress virtual servers
+      bigip_gtm_pool:
+        provider: "{{ provider }}"
+        partition: "{{ partition }}"
+        name: "{{ gtm_mirror_pair.pool_name }}"
+        type: "a"
+        preferred_lb_method: "topology"
+        alternate_lb_method: "global-availability"
+        fallback_lb_method: "round-robin"
+        members:
+          - server_name: "{{ gtm_mirror_pair.members[0].gtm_server }}"
+            virtual_server: "{{ gtm_mirror_pair.members[0].virtual_server }}"
+          - server_name: "{{ gtm_mirror_pair.members[1].gtm_server }}"
+            virtual_server: "{{ gtm_mirror_pair.members[1].virtual_server }}"
+        state: present
+
+    - name: Create the Wide IP for grafana.my.domain.com
+      bigip_gtm_wide_ip:
+        provider: "{{ provider }}"
+        partition: "{{ partition }}"
+        name: "{{ gtm_mirror_pair.wide_ip }}"
+        type: "a"
+        pool_lb_method: "topology"
+        pools:
+          - name: "{{ gtm_mirror_pair.pool_name }}"
+            partition: "{{ partition }}"
+            ratio: 1
+        state: present
+
+    - name: Explain health-check behavior for this GTM example
+      ansible.builtin.debug:
+        msg:
+          - "GTM pool members point at the cluster A/B ingress virtual servers."
+          - "Member health is typically inherited from the LTM virtual server state discovered from each BIG-IP."
+          - "If you need Grafana-specific HTTP host-header probing, build a dedicated application VIP or attach an application monitor to a Grafana-specific LTM object."
