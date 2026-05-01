@@ -1,0 +1,3 @@
+---
+system_hostnames:
+  - hostname: "bigip01.my.domain.com"

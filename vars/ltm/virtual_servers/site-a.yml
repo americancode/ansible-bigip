@@ -63,13 +63,4 @@ ltm_virtual_servers:
     profiles:
       - "tcp"
     snat: "Automap"
-    pool:
-      name: "pool_a_postgres_5432"
-      lb_method: "round-robin"
-      monitors:
-        - "/Common/tcp"
-      members:
-        - host: "10.10.31.11"
-          port: 5432
-        - host: "10.10.31.12"
-          port: 5432
+    pool: "pool_a_postgres_5432"

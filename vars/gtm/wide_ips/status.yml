@@ -1,0 +1,7 @@
+---
+gtm_wide_ips:
+  - name: "status.my.domain.com"
+    record_type: "a"
+    pool_lb_method: "topology"
+    pools:
+      - name: "pool_status_primary"

@@ -89,7 +89,6 @@ This is the recommended end-state layout.
     │   ├── data_groups/
     │   └── deletions/
     ├── gtm/
-    │   ├── settings/
     │   ├── datacenters/
     │   ├── monitors/
     │   ├── servers/
@@ -429,13 +428,13 @@ Goal: make the system operable at enterprise scale over time.
 
 This is the practical next sequence for the current repo.
 
-1. Add validation tooling and CI gates
-2. Add `vars/ltm/nodes` and `vars/ltm/pools`
-3. Add `vars/gtm/datacenters` and `vars/gtm/pools`
-4. Add `system.yml` for base platform settings
-5. Add `ha.yml` for trust/sync/failover
-6. Add `tls.yml` for certs and SSL profiles
-7. Add network routes, route domains, and SNAT/NAT support
+1. [x] Add validation tooling and CI gates
+2. [x] Add `vars/ltm/nodes` and `vars/ltm/pools`
+3. [x] Add `vars/gtm/datacenters` and `vars/gtm/pools`
+4. [x] Add `system.yml` for base platform settings
+5. [ ] Add `ha.yml` for trust/sync/failover
+6. [ ] Add `tls.yml` for certs and SSL profiles
+7. [ ] Add network routes, route domains, and SNAT/NAT support
 
 ## Issue-Sized Execution Plan
 
@@ -443,31 +442,31 @@ These are the first concrete tickets I would open.
 
 ### Milestone 1: Validation
 
-- Create `tools/validate-vars`
-- Add schema checks for `network`, `ltm`, and `gtm`
-- Add reference validation across existing object trees
-- Add duplicate object detection
-- Add `make validate` or equivalent wrapper
+- [x] Create `tools/validate-vars`
+- [x] Add schema checks for `network`, `ltm`, and `gtm`
+- [x] Add reference validation across existing object trees
+- [x] Add duplicate object detection
+- [x] Add `make validate` or equivalent wrapper
 
 ### Milestone 2: LTM Shared Objects
 
-- Add `vars/ltm/nodes`
-- Add `vars/ltm/pools`
-- Refactor `ltm.yml` to support first-class pool and node objects
-- Keep backward compatibility for current virtual-server-centric fragments during transition
+- [x] Add `vars/ltm/nodes`
+- [x] Add `vars/ltm/pools`
+- [x] Refactor `ltm.yml` to support first-class pool and node objects
+- [x] Keep backward compatibility for current virtual-server-centric fragments during transition
 
 ### Milestone 3: GTM Shared Objects
 
-- Add `vars/gtm/datacenters`
-- Add `vars/gtm/pools`
-- Refactor `gtm.yml` so datacenters and pools are explicit managed trees
-- Add separate static server model
+- [x] Add `vars/gtm/datacenters`
+- [x] Add `vars/gtm/pools`
+- [x] Refactor `gtm.yml` so datacenters and pools are explicit managed trees
+- [x] Add separate static server model
 
 ### Milestone 4: Platform and HA
 
-- Add `system.yml`
+- [x] Add `system.yml`
 - Add `ha.yml`
-- Implement config save workflow
+- [x] Implement config save workflow
 - Add examples for active/standby pair bootstrap
 
 ### Milestone 5: TLS

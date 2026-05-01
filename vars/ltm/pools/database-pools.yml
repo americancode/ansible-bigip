@@ -1,0 +1,27 @@
+---
+ltm_pools:
+  - name: "pool_a_postgres_5432"
+    description: "Site A PostgreSQL pool managed as a first-class LTM object"
+    lb_method: "round-robin"
+    monitors:
+      - "/Common/tcp"
+    members:
+      - name: "node_a_postgres_1"
+        host: "10.10.31.11"
+        port: 5432
+      - name: "node_a_postgres_2"
+        host: "10.10.31.12"
+        port: 5432
+
+  - name: "pool_b_postgres_5432"
+    description: "Site B PostgreSQL pool managed as a first-class LTM object"
+    lb_method: "round-robin"
+    monitors:
+      - "/Common/tcp"
+    members:
+      - name: "node_b_postgres_1"
+        host: "10.10.32.11"
+        port: 5432
+      - name: "node_b_postgres_2"
+        host: "10.10.32.12"
+        port: 5432

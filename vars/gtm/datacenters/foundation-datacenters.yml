@@ -1,0 +1,13 @@
+---
+gtm_datacenters:
+  - name: "dc-east"
+    location: "Primary east region"
+
+  - name: "dc-west"
+    location: "Primary west region"
+
+  - name: "dc-lab-east"
+    location: "Lab east region"
+
+  - name: "dc-lab-west"
+    location: "Lab west region"

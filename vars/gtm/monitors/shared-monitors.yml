@@ -30,3 +30,11 @@ gtm_monitors:
     receive: ""
     interval: 15
     timeout: 46
+
+  - name: "mon_https_status"
+    type: "https"
+    send: "GET /health HTTP/1.1\\r\\nHost: status.my.domain.com\\r\\nConnection: close\\r\\n\\r\\n"
+    receive: "200 OK"
+    interval: 15
+    timeout: 46
+    probe_timeout: 5

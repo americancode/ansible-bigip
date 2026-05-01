@@ -1,0 +1,18 @@
+---
+gtm_pools:
+  - name: "pool_status_primary"
+    record_type: "a"
+    preferred_lb_method: "topology"
+    alternate_lb_method: "global-availability"
+    fallback_lb_method: "round-robin"
+    monitors:
+      - "/Common/mon_https_status"
+    members:
+      - server: "status-east-1"
+        virtual_server: "status-east-443"
+        address: "203.0.113.20"
+        port: 443
+      - server: "status-west-1"
+        virtual_server: "status-west-443"
+        address: "203.0.113.30"
+        port: 443

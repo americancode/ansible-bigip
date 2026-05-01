@@ -9,24 +9,65 @@
     - vars/common.yml
 
   pre_tasks:
-    - name: Load GTM settings fragments
+    - name: Discover GTM datacenter fragments
+      ansible.builtin.set_fact:
+        gtm_datacenter_files: >-
+          {{
+            lookup(
+              'ansible.builtin.pipe',
+              "find vars/gtm/datacenters -type f -name '*.yml' ! -name 'settings.yml' 2>/dev/null | sort"
+            ).splitlines() | reject('equalto', '') | list
+          }}
+        gtm_datacenter_deletion_files: >-
+          {{
+            lookup(
+              'ansible.builtin.pipe',
+              "find vars/gtm/deletions/datacenters -type f -name '*.yml' ! -name 'settings.yml' 2>/dev/null | sort"
+            ).splitlines() | reject('equalto', '') | list
+          }}
+
+    - name: Load GTM datacenter fragments
       ansible.builtin.include_vars:
         file: "{{ item }}"
-        name: gtm_settings_fragment
-      loop: "{{ query('fileglob', 'vars/gtm/settings/*.yml') | sort }}"
-      register: gtm_settings_include_results
+        name: gtm_datacenter_fragment
+      loop: "{{ gtm_datacenter_files }}"
+      register: gtm_datacenter_include_results
 
-    - name: Aggregate GTM settings
+    - name: Load GTM datacenter deletion fragments
+      ansible.builtin.include_vars:
+        file: "{{ item }}"
+        name: gtm_datacenter_deletion_fragment
+      loop: "{{ gtm_datacenter_deletion_files }}"
+      register: gtm_datacenter_deletion_include_results
+
+    - name: Aggregate GTM datacenters with directory settings
       ansible.builtin.set_fact:
-        enable_gtm: >-
+        gtm_datacenters: "{{ gtm_datacenters | default([]) + [ gtm_datacenter_directory_defaults | combine(item.1, recursive=True) ] }}"
+      loop: "{{ query('subelements', gtm_datacenter_include_results.results, 'ansible_facts.gtm_datacenter_fragment.gtm_datacenters', {'skip_missing': True}) }}"
+      vars:
+        gtm_datacenter_settings_path: "{{ item.0.item | regex_replace('/[^/]+$', '/settings.yml') }}"
+        gtm_datacenter_directory_defaults: >-
           {{
             (
-              gtm_settings_include_results.results
-              | map(attribute='ansible_facts.gtm_settings_fragment.enable_gtm')
-              | select('defined')
-              | list
-              | last
-            ) | default(false)
+              lookup('ansible.builtin.file', gtm_datacenter_settings_path, errors='ignore')
+              | default('{}', true)
+              | from_yaml
+            ).gtm_datacenter_defaults | default({})
+          }}
+
+    - name: Aggregate GTM datacenter deletions with directory settings
+      ansible.builtin.set_fact:
+        gtm_datacenter_deletions: "{{ gtm_datacenter_deletions | default([]) + [ (gtm_datacenter_deletion_directory_defaults | combine(item.1, recursive=True)) | combine({'state': 'absent'}, recursive=True) ] }}"
+      loop: "{{ query('subelements', gtm_datacenter_deletion_include_results.results, 'ansible_facts.gtm_datacenter_deletion_fragment.gtm_datacenters', {'skip_missing': True}) }}"
+      vars:
+        gtm_datacenter_deletion_settings_path: "{{ item.0.item | regex_replace('/[^/]+$', '/settings.yml') }}"
+        gtm_datacenter_deletion_directory_defaults: >-
+          {{
+            (
+              lookup('ansible.builtin.file', gtm_datacenter_deletion_settings_path, errors='ignore')
+              | default('{}', true)
+              | from_yaml
+            ).gtm_datacenter_defaults | default({})
           }}
 
     - name: Discover GTM monitor fragments
@@ -151,6 +192,67 @@
             ).gtm_server_defaults | default({})
           }}
 
+    - name: Discover GTM pool fragments
+      ansible.builtin.set_fact:
+        gtm_pool_files: >-
+          {{
+            lookup(
+              'ansible.builtin.pipe',
+              "find vars/gtm/pools -type f -name '*.yml' ! -name 'settings.yml' 2>/dev/null | sort"
+            ).splitlines() | reject('equalto', '') | list
+          }}
+        gtm_pool_deletion_files: >-
+          {{
+            lookup(
+              'ansible.builtin.pipe',
+              "find vars/gtm/deletions/pools -type f -name '*.yml' ! -name 'settings.yml' 2>/dev/null | sort"
+            ).splitlines() | reject('equalto', '') | list
+          }}
+
+    - name: Load GTM pool fragments
+      ansible.builtin.include_vars:
+        file: "{{ item }}"
+        name: gtm_pool_fragment
+      loop: "{{ gtm_pool_files }}"
+      register: gtm_pool_include_results
+
+    - name: Load GTM pool deletion fragments
+      ansible.builtin.include_vars:
+        file: "{{ item }}"
+        name: gtm_pool_deletion_fragment
+      loop: "{{ gtm_pool_deletion_files }}"
+      register: gtm_pool_deletion_include_results
+
+    - name: Aggregate GTM pools with directory settings
+      ansible.builtin.set_fact:
+        gtm_pools: "{{ gtm_pools | default([]) + [ gtm_pool_directory_defaults | combine(item.1, recursive=True) ] }}"
+      loop: "{{ query('subelements', gtm_pool_include_results.results, 'ansible_facts.gtm_pool_fragment.gtm_pools', {'skip_missing': True}) }}"
+      vars:
+        gtm_pool_settings_path: "{{ item.0.item | regex_replace('/[^/]+$', '/settings.yml') }}"
+        gtm_pool_directory_defaults: >-
+          {{
+            (
+              lookup('ansible.builtin.file', gtm_pool_settings_path, errors='ignore')
+              | default('{}', true)
+              | from_yaml
+            ).gtm_pool_defaults | default({})
+          }}
+
+    - name: Aggregate GTM pool deletions with directory settings
+      ansible.builtin.set_fact:
+        gtm_pool_deletions: "{{ gtm_pool_deletions | default([]) + [ (gtm_pool_deletion_directory_defaults | combine(item.1, recursive=True)) | combine({'state': 'absent'}, recursive=True) ] }}"
+      loop: "{{ query('subelements', gtm_pool_deletion_include_results.results, 'ansible_facts.gtm_pool_deletion_fragment.gtm_pools', {'skip_missing': True}) }}"
+      vars:
+        gtm_pool_deletion_settings_path: "{{ item.0.item | regex_replace('/[^/]+$', '/settings.yml') }}"
+        gtm_pool_deletion_directory_defaults: >-
+          {{
+            (
+              lookup('ansible.builtin.file', gtm_pool_deletion_settings_path, errors='ignore')
+              | default('{}', true)
+              | from_yaml
+            ).gtm_pool_defaults | default({})
+          }}
+
     - name: Discover GTM Wide IP fragments
       ansible.builtin.set_fact:
         gtm_wide_ip_files: >-
@@ -214,6 +316,26 @@
 
     - name: Classify GTM object operations
       ansible.builtin.set_fact:
+        gtm_datacenters_delete: >-
+          {{
+            ((gtm_datacenters | default([])) + (gtm_datacenter_deletions | default([])))
+            | selectattr('state', 'defined')
+            | selectattr('state', 'equalto', 'absent')
+            | list
+          }}
+        gtm_datacenters_present: >-
+          {{
+            (gtm_datacenters | default([]))
+            | rejectattr('state', 'defined')
+            | list
+            +
+            (
+              (gtm_datacenters | default([]))
+              | selectattr('state', 'defined')
+              | rejectattr('state', 'equalto', 'absent')
+              | list
+            )
+          }}
         gtm_monitors_delete: >-
           {{
             ((gtm_monitors | default([])) + (gtm_monitor_deletions | default([])))
@@ -254,6 +376,26 @@
               | list
             )
           }}
+        gtm_pools_delete: >-
+          {{
+            ((gtm_pools | default([])) + (gtm_pool_deletions | default([])))
+            | selectattr('state', 'defined')
+            | selectattr('state', 'equalto', 'absent')
+            | list
+          }}
+        gtm_pools_present: >-
+          {{
+            (gtm_pools | default([]))
+            | rejectattr('state', 'defined')
+            | list
+            +
+            (
+              (gtm_pools | default([]))
+              | selectattr('state', 'defined')
+              | rejectattr('state', 'equalto', 'absent')
+              | list
+            )
+          }}
         gtm_wide_ips_delete: >-
           {{
             ((gtm_wide_ips | default([])) + (gtm_wide_ip_deletions | default([])))
@@ -275,15 +417,80 @@
             )
           }}
 
-  tasks:
-    - name: Build flat GTM pool deletions
-      when: enable_gtm | bool
+    - name: Derive GTM datacenters from servers
       ansible.builtin.set_fact:
-        gtm_pools_delete_flat: "{{ gtm_pools_delete_flat | default([]) + [ item.1 | combine({'wide_ip_name': item.0.name, 'record_type': item.0.record_type | default('a'), 'partition': item.1.partition | default(item.0.partition | default('Common')), 'state': 'absent'}, recursive=True) ] }}"
-      loop: "{{ query('subelements', gtm_wide_ips_delete | default([]), 'pools', {'skip_missing': True}) }}"
+        gtm_embedded_datacenters_present: "{{ gtm_embedded_datacenters_present | default([]) + [ {'name': item.datacenter, 'partition': item.partition | default('Common')} ] }}"
+      loop: "{{ gtm_servers_present | default([]) }}"
+      when: item.datacenter is defined
 
+    - name: Derive GTM datacenter deletions from deleted servers
+      ansible.builtin.set_fact:
+        gtm_embedded_datacenters_delete: "{{ gtm_embedded_datacenters_delete | default([]) + [ {'name': item.datacenter, 'partition': item.partition | default('Common'), 'state': 'absent'} ] }}"
+      loop: "{{ gtm_servers_delete | default([]) }}"
+      when: item.datacenter is defined
+
+    - name: Combine GTM datacenter sources
+      ansible.builtin.set_fact:
+        gtm_all_datacenters_present: "{{ (gtm_datacenters_present | default([])) + (gtm_embedded_datacenters_present | default([])) }}"
+        gtm_all_datacenters_delete: "{{ (gtm_datacenters_delete | default([])) + (gtm_embedded_datacenters_delete | default([])) }}"
+
+    - name: Derive inline GTM pool deletions from Wide IP deletions
+      ansible.builtin.set_fact:
+        gtm_inline_pool_deletions: "{{ gtm_inline_pool_deletions | default([]) + [ gtm_inline_pool_delete ] }}"
+      loop: "{{ query('subelements', gtm_wide_ips_delete | default([]), 'pools', {'skip_missing': True}) }}"
+      vars:
+        gtm_inline_pool_delete: >-
+          {{
+            (
+              item.1 if item.1 is mapping else {'name': item.1}
+            ) | combine({
+              'partition': (
+                item.1.partition if (item.1 is mapping and item.1.partition is defined)
+                else item.0.partition | default('Common')
+              ),
+              'record_type': item.0.record_type | default('a'),
+              'state': 'absent'
+            }, recursive=True)
+          }}
+
+    - name: Derive inline GTM pools from active Wide IPs
+      ansible.builtin.set_fact:
+        gtm_inline_pools_present: "{{ gtm_inline_pools_present | default([]) + [ gtm_inline_pool_present ] }}"
+      loop: "{{ query('subelements', gtm_wide_ips_present | default([]), 'pools', {'skip_missing': True}) }}"
+      vars:
+        gtm_pool_is_inline: >-
+          {{
+            item.1 is mapping and (
+              item.1.members is defined or
+              item.1.default_monitors is defined or
+              item.1.monitors is defined or
+              item.1.preferred_lb_method is defined or
+              item.1.alternate_lb_method is defined or
+              item.1.fallback_lb_method is defined or
+              item.1.fallback_ip is defined or
+              item.1.ttl is defined or
+              item.1.max_answers_returned is defined or
+              item.1.availability_requirements is defined or
+              item.1.enabled is defined or
+              item.1.state is defined
+            )
+          }}
+        gtm_inline_pool_present: >-
+          {{
+            item.1 | combine({
+              'partition': item.1.partition | default(item.0.partition | default('Common')),
+              'record_type': item.0.record_type | default('a')
+            }, recursive=True)
+          }}
+      when: gtm_pool_is_inline | bool
+
+    - name: Combine GTM pool sources
+      ansible.builtin.set_fact:
+        gtm_all_pools_present: "{{ (gtm_pools_present | default([])) + (gtm_inline_pools_present | default([])) }}"
+        gtm_all_pools_delete: "{{ (gtm_pools_delete | default([])) + (gtm_inline_pool_deletions | default([])) }}"
+
+  tasks:
     - name: Delete Wide IPs
-      when: enable_gtm | bool
       f5networks.f5_modules.bigip_gtm_wide_ip:
         provider: "{{ provider }}"
         partition: "{{ item.partition | default('Common') }}"
@@ -295,31 +502,28 @@
         label: "{{ item.partition | default('Common') }}/{{ item.name }}"
 
     - name: Delete GTM pools
-      when: enable_gtm | bool
       f5networks.f5_modules.bigip_gtm_pool:
         provider: "{{ provider }}"
         partition: "{{ item.partition | default('Common') }}"
         name: "{{ item.name }}"
-        type: "{{ item.record_type }}"
+        type: "{{ item.record_type | default('a') }}"
         state: absent
-      loop: "{{ gtm_pools_delete_flat | default([]) }}"
+      loop: "{{ gtm_all_pools_delete | default([]) }}"
       loop_control:
         label: "{{ item.partition | default('Common') }}/{{ item.name }}"
 
-    - name: Delete manual GTM virtual servers for pool members
-      when: enable_gtm | bool
+    - name: Delete manual GTM virtual servers for deleted pools
       f5networks.f5_modules.bigip_gtm_virtual_server:
         provider: "{{ provider }}"
         partition: "{{ item.1.partition | default(item.0.partition | default('Common')) }}"
         server_name: "{{ item.1.server }}"
         name: "{{ item.1.virtual_server }}"
         state: absent
-      loop: "{{ query('subelements', gtm_pools_delete_flat | default([]), 'members', {'skip_missing': True}) }}"
+      loop: "{{ query('subelements', gtm_all_pools_delete | default([]), 'members', {'skip_missing': True}) }}"
       loop_control:
         label: "{{ item.1.partition | default(item.0.partition | default('Common')) }}/{{ item.1.server }}/{{ item.1.virtual_server }}"
 
     - name: Delete GTM servers
-      when: enable_gtm | bool
       f5networks.f5_modules.bigip_gtm_server:
         provider: "{{ provider }}"
         partition: "{{ item.partition | default('Common') }}"
@@ -329,18 +533,15 @@
       loop_control:
         label: "{{ item.partition | default('Common') }}/{{ item.name }}"
 
-    - name: Delete GTM datacenters referenced by deleted servers
-      when:
-        - enable_gtm | bool
-        - item.datacenter is defined
+    - name: Delete GTM datacenters
       f5networks.f5_modules.bigip_gtm_datacenter:
         provider: "{{ provider }}"
         partition: "{{ item.partition | default('Common') }}"
-        name: "{{ item.datacenter }}"
+        name: "{{ item.name }}"
         state: absent
-      loop: "{{ gtm_servers_delete | default([]) }}"
+      loop: "{{ gtm_all_datacenters_delete | default([]) }}"
       loop_control:
-        label: "{{ item.partition | default('Common') }}/{{ item.datacenter }}"
+        label: "{{ item.partition | default('Common') }}/{{ item.name }}"
 
     - name: Delete GTM BIG-IP monitors
       f5networks.f5_modules.bigip_gtm_monitor_bigip:
@@ -352,7 +553,6 @@
       loop_control:
         label: "{{ item.partition | default('Common') }}/{{ item.name }}"
       when:
-        - enable_gtm | bool
         - item.type == 'bigip'
 
     - name: Delete GTM external monitors
@@ -365,7 +565,6 @@
       loop_control:
         label: "{{ item.partition | default('Common') }}/{{ item.name }}"
       when:
-        - enable_gtm | bool
         - item.type == 'external'
 
     - name: Delete GTM FirePass monitors
@@ -378,7 +577,6 @@
       loop_control:
         label: "{{ item.partition | default('Common') }}/{{ item.name }}"
       when:
-        - enable_gtm | bool
         - item.type == 'firepass'
 
     - name: Delete GTM HTTP monitors
@@ -391,7 +589,6 @@
       loop_control:
         label: "{{ item.partition | default('Common') }}/{{ item.name }}"
       when:
-        - enable_gtm | bool
         - item.type == 'http'
 
     - name: Delete GTM HTTPS monitors
@@ -404,7 +601,6 @@
       loop_control:
         label: "{{ item.partition | default('Common') }}/{{ item.name }}"
       when:
-        - enable_gtm | bool
         - item.type == 'https'
 
     - name: Delete GTM TCP monitors
@@ -417,7 +613,6 @@
       loop_control:
         label: "{{ item.partition | default('Common') }}/{{ item.name }}"
       when:
-        - enable_gtm | bool
         - item.type == 'tcp'
 
     - name: Delete GTM TCP half-open monitors
@@ -430,7 +625,6 @@
       loop_control:
         label: "{{ item.partition | default('Common') }}/{{ item.name }}"
       when:
-        - enable_gtm | bool
         - item.type == 'tcp_half_open'
 
     - name: Create GTM BIG-IP monitors
@@ -450,7 +644,6 @@
       loop_control:
         label: "{{ item.name }}"
       when:
-        - enable_gtm | bool
         - item.type == 'bigip'
 
     - name: Create GTM external monitors
@@ -471,7 +664,6 @@
       loop_control:
         label: "{{ item.name }}"
       when:
-        - enable_gtm | bool
         - item.type == 'external'
 
     - name: Create GTM FirePass monitors
@@ -497,7 +689,6 @@
       loop_control:
         label: "{{ item.name }}"
       when:
-        - enable_gtm | bool
         - item.type == 'firepass'
 
     - name: Create GTM HTTP monitors
@@ -524,7 +715,6 @@
       loop_control:
         label: "{{ item.name }}"
       when:
-        - enable_gtm | bool
         - item.type == 'http'
 
     - name: Create GTM HTTPS monitors
@@ -555,7 +745,6 @@
       loop_control:
         label: "{{ item.name }}"
       when:
-        - enable_gtm | bool
         - item.type == 'https'
 
     - name: Create GTM TCP monitors
@@ -579,7 +768,6 @@
       loop_control:
         label: "{{ item.name }}"
       when:
-        - enable_gtm | bool
         - item.type == 'tcp'
 
     - name: Create GTM TCP half-open monitors
@@ -602,62 +790,44 @@
       loop_control:
         label: "{{ item.name }}"
       when:
-        - enable_gtm | bool
         - item.type == 'tcp_half_open'
 
-    - name: Create GTM datacenters referenced by servers
-      when: enable_gtm | bool
+    - name: Create GTM datacenters
       f5networks.f5_modules.bigip_gtm_datacenter:
         provider: "{{ provider }}"
         partition: "{{ item.partition | default('Common') }}"
-        name: "{{ item.datacenter }}"
-        state: present
-      loop: "{{ gtm_servers_present | default([]) }}"
+        name: "{{ item.name }}"
+        contact: "{{ item.contact | default(omit) }}"
+        description: "{{ item.description | default(omit) }}"
+        location: "{{ item.location | default(omit) }}"
+        state: "{{ item.state | default((item.enabled | default(true)) | ternary('enabled', 'disabled')) }}"
+      loop: "{{ gtm_all_datacenters_present | default([]) }}"
       loop_control:
-        label: "{{ item.partition | default('Common') }}/{{ item.datacenter }}"
+        label: "{{ item.partition | default('Common') }}/{{ item.name }}"
 
     - name: Register GTM servers
-      when: enable_gtm | bool
       f5networks.f5_modules.bigip_gtm_server:
         provider: "{{ provider }}"
         partition: "{{ item.partition | default('Common') }}"
         name: "{{ item.name }}"
         datacenter: "{{ item.datacenter }}"
-        server_type: bigip
-        devices:
-          - name: "{{ item.name }}"
-            address: "{{ item.address | trim }}"
-        virtual_server_discovery: disabled
-        link_discovery: disabled
-        state: "{{ item.state | default('present') }}"
+        server_type: "{{ item.server_type | default('bigip') }}"
+        devices: "{{ item.devices | default([{'name': item.name, 'address': item.address | trim}]) }}"
+        monitors: "{{ item.monitors | default(omit) }}"
+        availability_requirements: "{{ item.availability_requirements | default(omit) }}"
+        iquery_options: "{{ item.iquery_options | default(omit) }}"
+        limits: "{{ item.limits | default(omit) }}"
+        prober_fallback: "{{ item.prober_fallback | default(omit) }}"
+        prober_pool: "{{ item.prober_pool | default(omit) }}"
+        prober_preference: "{{ item.prober_preference | default(omit) }}"
+        virtual_server_discovery: "{{ item.virtual_server_discovery | default('disabled') }}"
+        link_discovery: "{{ item.link_discovery | default('disabled') }}"
+        state: "{{ item.state | default((item.enabled | default(true)) | ternary('enabled', 'disabled')) }}"
       loop: "{{ gtm_servers_present | default([]) }}"
       loop_control:
         label: "{{ item.partition | default('Common') }}/{{ item.name }}"
 
-    - name: Build flat GTM pool definitions
-      when: enable_gtm | bool
-      ansible.builtin.set_fact:
-        gtm_pools_flat: "{{ gtm_pools_flat | default([]) + [ item.1 | combine({'wide_ip_name': item.0.name, 'record_type': item.0.record_type | default('a'), 'partition': item.1.partition | default(item.0.partition | default('Common'))}, recursive=True) ] }}"
-      loop: "{{ query('subelements', gtm_wide_ips_present | default([]), 'pools', {'skip_missing': True}) }}"
-
-    - name: Build Wide IP pool references
-      when: enable_gtm | bool
-      ansible.builtin.set_fact:
-        gtm_wide_ip_pool_refs: >-
-          {{
-            gtm_wide_ip_pool_refs | default({}) | combine({
-              item.0.name: (gtm_wide_ip_pool_refs | default({})).get(item.0.name, []) + [
-                {
-                  'name': item.1.name,
-                  'ratio': item.1.ratio | default(1)
-                }
-              ]
-            })
-          }}
-      loop: "{{ query('subelements', gtm_wide_ips_present | default([]), 'pools', {'skip_missing': True}) }}"
-
     - name: Create manual GTM virtual servers for pool members
-      when: enable_gtm | bool
       f5networks.f5_modules.bigip_gtm_virtual_server:
         provider: "{{ provider }}"
         partition: "{{ item.1.partition | default(item.0.partition | default('Common')) }}"
@@ -667,62 +837,102 @@
         port: "{{ item.1.port }}"
         translation_address: "{{ item.1.translation_address | default('') }}"
         translation_port: "{{ item.1.translation_port | default('') }}"
-        monitors: "{{ item.1.monitors | default(item.0.default_monitors | default(omit)) }}"
+        monitors: "{{ item.1.monitors | default(item.0.monitors | default(item.0.default_monitors | default(omit))) }}"
         state: "{{ item.1.state | default((item.1.enabled | default(true)) | ternary('enabled', 'disabled')) }}"
-      loop: "{{ query('subelements', gtm_pools_flat | default([]), 'members', {'skip_missing': True}) }}"
+      loop: "{{ query('subelements', gtm_all_pools_present | default([]), 'members', {'skip_missing': True}) }}"
       loop_control:
         label: "{{ item.1.partition | default(item.0.partition | default('Common')) }}/{{ item.1.server }}/{{ item.1.virtual_server }}"
 
-    - name: Build GTM pool members by pool
-      when: enable_gtm | bool
+    - name: Build GTM pool member map
       ansible.builtin.set_fact:
         gtm_pool_members_by_pool: >-
           {{
             gtm_pool_members_by_pool | default({}) | combine({
-              item.0.name: (gtm_pool_members_by_pool | default({})).get(item.0.name, []) + [
-                {
-                  'server': item.1.server,
-                  'virtual_server': item.1.virtual_server
-                }
-              ]
+              (
+                (item.0.partition | default('Common')) ~ '|' ~
+                (item.0.record_type | default('a')) ~ '|' ~
+                item.0.name
+              ): (
+                (gtm_pool_members_by_pool | default({})).get(
+                  (item.0.partition | default('Common')) ~ '|' ~ (item.0.record_type | default('a')) ~ '|' ~ item.0.name,
+                  []
+                ) + [
+                  {
+                    'server': item.1.server,
+                    'virtual_server': item.1.virtual_server
+                  }
+                ]
+              )
             })
           }}
-      loop: "{{ query('subelements', gtm_pools_flat | default([]), 'members', {'skip_missing': True}) }}"
+      loop: "{{ query('subelements', gtm_all_pools_present | default([]), 'members', {'skip_missing': True}) }}"
 
     - name: Create GTM pools
-      when: enable_gtm | bool
       f5networks.f5_modules.bigip_gtm_pool:
         provider: "{{ provider }}"
         partition: "{{ item.partition | default('Common') }}"
         name: "{{ item.name }}"
-        type: "{{ item.record_type }}"
+        type: "{{ item.record_type | default('a') }}"
         preferred_lb_method: "{{ item.preferred_lb_method | default('topology') }}"
         alternate_lb_method: "{{ item.alternate_lb_method | default('global-availability') }}"
         fallback_lb_method: "{{ item.fallback_lb_method | default('round-robin') }}"
-        members: "{{ gtm_pool_members_by_pool[item.name] | default([]) }}"
+        fallback_ip: "{{ item.fallback_ip | default(omit) }}"
+        ttl: "{{ item.ttl | default(omit) }}"
+        max_answers_returned: "{{ item.max_answers_returned | default(omit) }}"
+        availability_requirements: "{{ item.availability_requirements | default(omit) }}"
+        monitors: "{{ item.monitors | default(item.default_monitors | default(omit)) }}"
+        members: "{{ gtm_pool_members_by_pool[((item.partition | default('Common')) ~ '|' ~ (item.record_type | default('a')) ~ '|' ~ item.name)] | default([]) }}"
         state: "{{ item.state | default((item.enabled | default(true)) | ternary('enabled', 'disabled')) }}"
-      loop: "{{ gtm_pools_flat | default([]) }}"
+      loop: "{{ gtm_all_pools_present | default([]) }}"
       loop_control:
         label: "{{ item.partition | default('Common') }}/{{ item.name }}"
 
+    - name: Build Wide IP pool references
+      ansible.builtin.set_fact:
+        gtm_wide_ip_pool_refs: >-
+          {{
+            gtm_wide_ip_pool_refs | default({}) | combine({
+              item.0.partition | default('Common') ~ '|' ~ item.0.record_type | default('a') ~ '|' ~ item.0.name:
+              (
+                (gtm_wide_ip_pool_refs | default({})).get(
+                  item.0.partition | default('Common') ~ '|' ~ item.0.record_type | default('a') ~ '|' ~ item.0.name,
+                  []
+                ) + [
+                  {
+                    'name': (
+                      item.1.name if item.1 is mapping else item.1
+                    ),
+                    'partition': (
+                      item.1.partition if (item.1 is mapping and item.1.partition is defined)
+                      else item.0.partition | default('Common')
+                    ),
+                    'ratio': (
+                      item.1.ratio if (item.1 is mapping and item.1.ratio is defined)
+                      else 1
+                    )
+                  }
+                ]
+              )
+            })
+          }}
+      loop: "{{ query('subelements', gtm_wide_ips_present | default([]), 'pools', {'skip_missing': True}) }}"
+
     - name: Create Wide IPs
-      when: enable_gtm | bool
       f5networks.f5_modules.bigip_gtm_wide_ip:
         provider: "{{ provider }}"
         partition: "{{ item.partition | default('Common') }}"
         name: "{{ item.name }}"
         type: "{{ item.record_type | default('a') }}"
         pool_lb_method: "{{ item.pool_lb_method | default('topology') }}"
-        pools: "{{ gtm_wide_ip_pool_refs[item.name] | default([]) }}"
+        pools: "{{ gtm_wide_ip_pool_refs[(item.partition | default('Common')) ~ '|' ~ (item.record_type | default('a')) ~ '|' ~ item.name] | default([]) }}"
         state: "{{ item.state | default((item.enabled | default(true)) | ternary('enabled', 'disabled')) }}"
       loop: "{{ gtm_wide_ips_present | default([]) }}"
       loop_control:
         label: "{{ item.partition | default('Common') }}/{{ item.name }}"
 
     - name: Explain health-check behavior for GTM Wide IPs
-      when: enable_gtm | bool
       ansible.builtin.debug:
         msg:
           - "Custom GTM monitors are declared in `gtm_monitors` and created before pools and Wide IPs."
-          - "Each Wide IP can reference one or more pools, and each pool defines its own members and default health monitors."
-          - "Assign monitors with fully qualified names, either in `default_monitors` on the pool or `monitors` on individual members."
+          - "GTM datacenters and pools can now be declared as first-class objects, or kept inline during transition."
+          - "Assign pool monitors with fully qualified names in `monitors` or `default_monitors`, and reference explicit pools from Wide IPs by name."

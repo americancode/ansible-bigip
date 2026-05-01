@@ -1,0 +1,9 @@
+---
+system_users:
+  - name: "automation-admin"
+    full_name: "Automation Admin"
+    partition_access:
+      - "all:admin"
+    shell: "tmsh"
+    update_password: "on_create"
+    password_credential: "ChangeMe-Immediately-123!"

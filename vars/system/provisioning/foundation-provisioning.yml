@@ -1,0 +1,10 @@
+---
+system_provisioning:
+  - module: "ltm"
+    level: "nominal"
+
+  - module: "gtm"
+    level: "minimum"
+
+  - module: "mgmt"
+    memory: "medium"

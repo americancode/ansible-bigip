@@ -70,6 +70,128 @@
             ).ltm_monitor_defaults | default({})
           }}
 
+    - name: Discover LTM node fragments
+      ansible.builtin.set_fact:
+        ltm_node_files: >-
+          {{
+            lookup(
+              'ansible.builtin.pipe',
+              "find vars/ltm/nodes -type f -name '*.yml' ! -name 'settings.yml' 2>/dev/null | sort"
+            ).splitlines() | reject('equalto', '') | list
+          }}
+        ltm_node_deletion_files: >-
+          {{
+            lookup(
+              'ansible.builtin.pipe',
+              "find vars/ltm/deletions/nodes -type f -name '*.yml' ! -name 'settings.yml' 2>/dev/null | sort"
+            ).splitlines() | reject('equalto', '') | list
+          }}
+
+    - name: Load LTM node fragments
+      ansible.builtin.include_vars:
+        file: "{{ item }}"
+        name: ltm_node_fragment
+      loop: "{{ ltm_node_files }}"
+      register: ltm_node_include_results
+
+    - name: Load LTM node deletion fragments
+      ansible.builtin.include_vars:
+        file: "{{ item }}"
+        name: ltm_node_deletion_fragment
+      loop: "{{ ltm_node_deletion_files }}"
+      register: ltm_node_deletion_include_results
+
+    - name: Aggregate LTM nodes with directory settings
+      ansible.builtin.set_fact:
+        ltm_nodes: "{{ ltm_nodes | default([]) + [ ltm_node_directory_defaults | combine(item.1, recursive=True) ] }}"
+      loop: "{{ query('subelements', ltm_node_include_results.results, 'ansible_facts.ltm_node_fragment.ltm_nodes', {'skip_missing': True}) }}"
+      vars:
+        ltm_node_settings_path: "{{ item.0.item | regex_replace('/[^/]+$', '/settings.yml') }}"
+        ltm_node_directory_defaults: >-
+          {{
+            (
+              lookup('ansible.builtin.file', ltm_node_settings_path, errors='ignore')
+              | default('{}', true)
+              | from_yaml
+            ).ltm_node_defaults | default({})
+          }}
+
+    - name: Aggregate LTM node deletions with directory settings
+      ansible.builtin.set_fact:
+        ltm_node_deletions: "{{ ltm_node_deletions | default([]) + [ (ltm_node_deletion_directory_defaults | combine(item.1, recursive=True)) | combine({'state': 'absent'}, recursive=True) ] }}"
+      loop: "{{ query('subelements', ltm_node_deletion_include_results.results, 'ansible_facts.ltm_node_deletion_fragment.ltm_nodes', {'skip_missing': True}) }}"
+      vars:
+        ltm_node_deletion_settings_path: "{{ item.0.item | regex_replace('/[^/]+$', '/settings.yml') }}"
+        ltm_node_deletion_directory_defaults: >-
+          {{
+            (
+              lookup('ansible.builtin.file', ltm_node_deletion_settings_path, errors='ignore')
+              | default('{}', true)
+              | from_yaml
+            ).ltm_node_defaults | default({})
+          }}
+
+    - name: Discover LTM pool fragments
+      ansible.builtin.set_fact:
+        ltm_pool_files: >-
+          {{
+            lookup(
+              'ansible.builtin.pipe',
+              "find vars/ltm/pools -type f -name '*.yml' ! -name 'settings.yml' 2>/dev/null | sort"
+            ).splitlines() | reject('equalto', '') | list
+          }}
+        ltm_pool_deletion_files: >-
+          {{
+            lookup(
+              'ansible.builtin.pipe',
+              "find vars/ltm/deletions/pools -type f -name '*.yml' ! -name 'settings.yml' 2>/dev/null | sort"
+            ).splitlines() | reject('equalto', '') | list
+          }}
+
+    - name: Load LTM pool fragments
+      ansible.builtin.include_vars:
+        file: "{{ item }}"
+        name: ltm_pool_fragment
+      loop: "{{ ltm_pool_files }}"
+      register: ltm_pool_include_results
+
+    - name: Load LTM pool deletion fragments
+      ansible.builtin.include_vars:
+        file: "{{ item }}"
+        name: ltm_pool_deletion_fragment
+      loop: "{{ ltm_pool_deletion_files }}"
+      register: ltm_pool_deletion_include_results
+
+    - name: Aggregate LTM pools with directory settings
+      ansible.builtin.set_fact:
+        ltm_pools: "{{ ltm_pools | default([]) + [ ltm_pool_directory_defaults | combine(item.1, recursive=True) ] }}"
+      loop: "{{ query('subelements', ltm_pool_include_results.results, 'ansible_facts.ltm_pool_fragment.ltm_pools', {'skip_missing': True}) }}"
+      vars:
+        ltm_pool_settings_path: "{{ item.0.item | regex_replace('/[^/]+$', '/settings.yml') }}"
+        ltm_pool_directory_defaults: >-
+          {{
+            (
+              lookup('ansible.builtin.file', ltm_pool_settings_path, errors='ignore')
+              | default('{}', true)
+              | from_yaml
+            ).ltm_pool_defaults | default({})
+          }}
+
+    - name: Aggregate LTM pool deletions with directory settings
+      ansible.builtin.set_fact:
+        ltm_pool_deletions: "{{ ltm_pool_deletions | default([]) + [ (ltm_pool_deletion_directory_defaults | combine(item.1, recursive=True)) | combine({'state': 'absent'}, recursive=True) ] }}"
+      loop: "{{ query('subelements', ltm_pool_deletion_include_results.results, 'ansible_facts.ltm_pool_deletion_fragment.ltm_pools', {'skip_missing': True}) }}"
+      vars:
+        ltm_pool_deletion_settings_path: "{{ item.0.item | regex_replace('/[^/]+$', '/settings.yml') }}"
+        ltm_pool_deletion_directory_defaults: >-
+          {{
+            (
+              lookup('ansible.builtin.file', ltm_pool_deletion_settings_path, errors='ignore')
+              | default('{}', true)
+              | from_yaml
+            ).ltm_pool_defaults | default({})
+          }}
+
     - name: Discover LTM virtual server fragments
       ansible.builtin.set_fact:
         ltm_virtual_server_files: >-
@@ -154,6 +276,52 @@
             )
           }}
 
+    - name: Classify LTM node operations
+      ansible.builtin.set_fact:
+        ltm_nodes_delete: >-
+          {{
+            ((ltm_nodes | default([])) + (ltm_node_deletions | default([])))
+            | selectattr('state', 'defined')
+            | selectattr('state', 'equalto', 'absent')
+            | list
+          }}
+        ltm_nodes_present: >-
+          {{
+            (ltm_nodes | default([]))
+            | rejectattr('state', 'defined')
+            | list
+            +
+            (
+              (ltm_nodes | default([]))
+              | selectattr('state', 'defined')
+              | rejectattr('state', 'equalto', 'absent')
+              | list
+            )
+          }}
+
+    - name: Classify explicit LTM pool operations
+      ansible.builtin.set_fact:
+        ltm_pools_delete: >-
+          {{
+            ((ltm_pools | default([])) + (ltm_pool_deletions | default([])))
+            | selectattr('state', 'defined')
+            | selectattr('state', 'equalto', 'absent')
+            | list
+          }}
+        ltm_pools_present: >-
+          {{
+            (ltm_pools | default([]))
+            | rejectattr('state', 'defined')
+            | list
+            +
+            (
+              (ltm_pools | default([]))
+              | selectattr('state', 'defined')
+              | rejectattr('state', 'equalto', 'absent')
+              | list
+            )
+          }}
+
     - name: Classify LTM virtual server operations
       ansible.builtin.set_fact:
         ltm_virtual_servers_delete: >-
@@ -177,6 +345,27 @@
             )
           }}
 
+    - name: Derive embedded LTM pool deletions from virtual servers
+      ansible.builtin.set_fact:
+        ltm_embedded_pool_deletions: "{{ ltm_embedded_pool_deletions | default([]) + [ item.pool | combine({'partition': item.pool.partition | default(item.partition | default('Common')), 'state': 'absent'}, recursive=True) ] }}"
+      loop: "{{ ltm_virtual_servers_delete | default([]) }}"
+      when:
+        - item.pool is defined
+        - item.pool is mapping
+
+    - name: Derive embedded LTM pools from virtual servers
+      ansible.builtin.set_fact:
+        ltm_embedded_pools_present: "{{ ltm_embedded_pools_present | default([]) + [ item.pool | combine({'partition': item.pool.partition | default(item.partition | default('Common'))}, recursive=True) ] }}"
+      loop: "{{ ltm_virtual_servers_present | default([]) }}"
+      when:
+        - item.pool is defined
+        - item.pool is mapping
+
+    - name: Combine explicit and embedded LTM pools
+      ansible.builtin.set_fact:
+        ltm_all_pools_delete: "{{ (ltm_pools_delete | default([])) + (ltm_embedded_pool_deletions | default([])) }}"
+        ltm_all_pools_present: "{{ (ltm_pools_present | default([])) + (ltm_embedded_pools_present | default([])) }}"
+
   tasks:
     - name: Delete virtual servers
       f5networks.f5_modules.bigip_virtual_server:
@@ -188,16 +377,25 @@
       loop_control:
         label: "{{ item.partition | default('Common') }}/{{ item.name }}"
 
-    - name: Delete pools referenced by deleted virtual servers
+    - name: Delete pools
       f5networks.f5_modules.bigip_pool:
         provider: "{{ provider }}"
-        partition: "{{ item.pool.partition | default(item.partition | default('Common')) }}"
-        name: "{{ item.pool.name }}"
+        partition: "{{ item.partition | default('Common') }}"
+        name: "{{ item.name }}"
         state: absent
-      loop: "{{ ltm_virtual_servers_delete | default([]) }}"
+      loop: "{{ ltm_all_pools_delete | default([]) }}"
       loop_control:
-        label: "{{ item.pool.partition | default(item.partition | default('Common')) }}/{{ item.pool.name }}"
-      when: item.pool is defined
+        label: "{{ item.partition | default('Common') }}/{{ item.name }}"
+
+    - name: Delete nodes
+      f5networks.f5_modules.bigip_node:
+        provider: "{{ provider }}"
+        partition: "{{ item.partition | default('Common') }}"
+        name: "{{ item.name }}"
+        state: absent
+      loop: "{{ ltm_nodes_delete | default([]) }}"
+      loop_control:
+        label: "{{ item.partition | default('Common') }}/{{ item.name }}"
 
     - name: Delete LTM TCP monitors
       f5networks.f5_modules.bigip_monitor_tcp:
@@ -321,29 +519,76 @@
         label: "{{ item.name }}"
       when: item.type == 'gateway_icmp'
 
-    - name: Create pools for virtual servers
+    - name: Create LTM nodes
+      f5networks.f5_modules.bigip_node:
+        provider: "{{ provider }}"
+        partition: "{{ item.partition | default('Common') }}"
+        name: "{{ item.name }}"
+        address: "{{ item.address | default(omit) }}"
+        fqdn: "{{ item.fqdn | default(omit) }}"
+        fqdn_address_type: "{{ item.fqdn_address_type | default(omit) }}"
+        fqdn_auto_populate: "{{ item.fqdn_auto_populate | default(omit) }}"
+        fqdn_down_interval: "{{ item.fqdn_down_interval | default(omit) }}"
+        fqdn_up_interval: "{{ item.fqdn_up_interval | default(omit) }}"
+        monitors: "{{ item.monitors | default(omit) }}"
+        availability_requirements: "{{ item.availability_requirements | default(omit) }}"
+        connection_limit: "{{ item.connection_limit | default(omit) }}"
+        description: "{{ item.description | default(omit) }}"
+        dynamic_ratio: "{{ item.dynamic_ratio | default(omit) }}"
+        rate_limit: "{{ item.rate_limit | default(omit) }}"
+        ratio: "{{ item.ratio | default(omit) }}"
+        state: "{{ item.state | default((item.enabled | default(true)) | ternary('enabled', 'disabled')) }}"
+      loop: "{{ ltm_nodes_present | default([]) }}"
+      loop_control:
+        label: "{{ item.partition | default('Common') }}/{{ item.name }}"
+
+    - name: Create LTM pools
       f5networks.f5_modules.bigip_pool:
         provider: "{{ provider }}"
-        partition: "{{ item.pool.partition | default(item.partition | default('Common')) }}"
-        name: "{{ item.pool.name }}"
-        lb_method: "{{ item.pool.lb_method | default('round-robin') }}"
-        monitors: "{{ item.pool.monitors | default(omit) }}"
-        state: "{{ item.pool.state | default('present') }}"
-      loop: "{{ ltm_virtual_servers_present | default([]) }}"
+        partition: "{{ item.partition | default('Common') }}"
+        name: "{{ item.name }}"
+        description: "{{ item.description | default(omit) }}"
+        lb_method: "{{ item.lb_method | default('round-robin') }}"
+        monitors: "{{ item.monitors | default(omit) }}"
+        monitor_type: "{{ item.monitor_type | default(omit) }}"
+        quorum: "{{ item.quorum | default(omit) }}"
+        metadata: "{{ item.metadata | default(omit) }}"
+        min_up_members: "{{ item.min_up_members | default(omit) }}"
+        min_up_members_action: "{{ item.min_up_members_action | default(omit) }}"
+        min_up_members_checking: "{{ item.min_up_members_checking | default(omit) }}"
+        priority_group_activation: "{{ item.priority_group_activation | default(omit) }}"
+        reselect_tries: "{{ item.reselect_tries | default(omit) }}"
+        service_down_action: "{{ item.service_down_action | default(omit) }}"
+        slow_ramp_time: "{{ item.slow_ramp_time | default(omit) }}"
+        state: "{{ item.state | default('present') }}"
+      loop: "{{ ltm_all_pools_present | default([]) }}"
       loop_control:
-        label: "{{ item.pool.partition | default(item.partition | default('Common')) }}/{{ item.pool.name }}"
+        label: "{{ item.partition | default('Common') }}/{{ item.name }}"
 
     - name: Add members to pools
       f5networks.f5_modules.bigip_pool_member:
         provider: "{{ provider }}"
-        partition: "{{ item.0.pool.partition | default(item.0.partition | default('Common')) }}"
-        pool: "{{ item.0.pool.name }}"
-        host: "{{ item.1.host }}"
+        partition: "{{ item.0.partition | default('Common') }}"
+        pool: "{{ item.0.name }}"
+        name: "{{ item.1.name | default(omit) }}"
+        host: "{{ item.1.host | default(item.1.address | default(omit)) }}"
+        fqdn: "{{ item.1.fqdn | default(omit) }}"
+        fqdn_auto_populate: "{{ item.1.fqdn_auto_populate | default(omit) }}"
         port: "{{ item.1.port }}"
+        monitors: "{{ item.1.monitors | default(omit) }}"
+        availability_requirements: "{{ item.1.availability_requirements | default(omit) }}"
+        connection_limit: "{{ item.1.connection_limit | default(omit) }}"
+        description: "{{ item.1.description | default(omit) }}"
+        ip_encapsulation: "{{ item.1.ip_encapsulation | default(omit) }}"
+        preserve_node: "{{ item.1.preserve_node | default(omit) }}"
+        priority_group: "{{ item.1.priority_group | default(omit) }}"
+        rate_limit: "{{ item.1.rate_limit | default(omit) }}"
+        ratio: "{{ item.1.ratio | default(omit) }}"
+        reuse_nodes: "{{ item.1.reuse_nodes | default(omit) }}"
         state: "{{ item.1.state | default((item.1.enabled | default(true)) | ternary('enabled', 'disabled')) }}"
-      loop: "{{ query('subelements', ltm_virtual_servers_present | default([]), 'pool.members', {'skip_missing': True}) }}"
+      loop: "{{ query('subelements', ltm_all_pools_present | default([]), 'members', {'skip_missing': True}) }}"
       loop_control:
-        label: "{{ item.0.pool.name }}:{{ item.1.host }}:{{ item.1.port }}"
+        label: "{{ item.0.partition | default('Common') }}/{{ item.0.name }}:{{ item.1.name | default(item.1.host | default(item.1.address | default(item.1.fqdn | default('member')))) }}:{{ item.1.port }}"
 
     - name: Create virtual servers
       f5networks.f5_modules.bigip_virtual_server:
@@ -352,7 +597,7 @@
         name: "{{ item.name }}"
         destination: "{{ item.destination }}"
         port: "{{ item.destination_port }}"
-        pool: "{{ item.pool.name }}"
+        pool: "{{ item.pool.name if item.pool is mapping else item.pool }}"
         snat: "{{ item.snat | default('Automap') }}"
         all_profiles: "{{ item.profiles | default(['tcp']) }}"
         description: "{{ item.description | default(omit) }}"
