@@ -1,0 +1,11 @@
+---
+gtm_servers:
+  - name: "gtm-ltm-site-a"
+    address: "192.0.2.10"
+    datacenter: "dc-east"
+  - name: "gtm-ltm-site-b"
+    address: "192.0.2.11"
+    datacenter: "dc-east"
+  - name: "gtm-ltm-site-c"
+    address: "192.0.2.12"
+    datacenter: "dc-west"

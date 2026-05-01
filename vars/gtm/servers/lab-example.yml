@@ -1,0 +1,16 @@
+---
+# Example alternative GTM server fragment.
+# Use one file per region, environment, or administrative boundary.
+
+gtm_servers:
+  - name: "gtm-ltm-lab-a"
+    address: "198.51.100.10"
+    datacenter: "dc-lab-east"
+
+  - name: "gtm-ltm-lab-b"
+    address: "198.51.100.11"
+    datacenter: "dc-lab-east"
+
+  - name: "gtm-ltm-lab-c"
+    address: "198.51.100.20"
+    datacenter: "dc-lab-west"

@@ -1,0 +1,34 @@
+---
+gtm_wide_ips:
+  - name: "api.my.domain.com"
+    record_type: "a"
+    pool_lb_method: "round-robin"
+    pools:
+      - name: "pool_api_east"
+        ratio: 2
+        preferred_lb_method: "global-availability"
+        alternate_lb_method: "round-robin"
+        fallback_lb_method: "none"
+        default_monitors:
+          - "/Common/mon_https_api"
+        members:
+          - server: "gtm-ltm-site-a"
+            virtual_server: "gtm_vs_a_api_443"
+            address: "10.10.11.100"
+            port: 443
+          - server: "gtm-ltm-site-b"
+            virtual_server: "gtm_vs_b_api_443"
+            address: "10.10.12.100"
+            port: 443
+      - name: "pool_api_west"
+        ratio: 1
+        preferred_lb_method: "global-availability"
+        alternate_lb_method: "round-robin"
+        fallback_lb_method: "none"
+        default_monitors:
+          - "/Common/mon_https_api"
+        members:
+          - server: "gtm-ltm-site-c"
+            virtual_server: "gtm_vs_c_api_443"
+            address: "10.10.13.100"
+            port: 443
