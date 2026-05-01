@@ -1,7 +1,8 @@
 ---
-- name: Configure BIG-IP DNS/GTM objects for grafana.my.domain.com
+- name: Configure BIG-IP DNS/GTM objects for app
   hosts: localhost
   gather_facts: false
+
   collections:
     - f5networks.f5_modules
 
@@ -25,14 +26,12 @@
         partition: "{{ partition }}"
         name: "{{ item.gtm_server }}"
         datacenter: "{{ gtm_mirror_pair.datacenter }}"
-        product: "bigip"
-        server_type: "ltm"
+        server_type: bigip
         devices:
           - name: "{{ item.gtm_server }}"
-            addresses:
-              - "{{ item.gtm_server_ip }}"
-        virtual_server_discovery: "disabled"
-        link_discovery: "disabled"
+            address: "{{ item.gtm_server_ip | trim }}"
+        virtual_server_discovery: disabled
+        link_discovery: disabled
         state: present
       loop: "{{ gtm_mirror_pair.members }}"
 
@@ -51,34 +50,40 @@
         state: present
       loop: "{{ gtm_mirror_pair.members }}"
 
-    - name: Create GTM pool for grafana using manual GTM virtual servers
+    - name: Build GTM pool members
+      when: enable_gtm | bool
+      ansible.builtin.set_fact:
+        gtm_pool_members: "{{ gtm_pool_members | default([]) + [
+          {
+            'server': item.gtm_server,
+            'virtual_server': item.virtual_server
+          }
+        ] }}"
+      loop: "{{ gtm_mirror_pair.members }}"
+
+    - name: Create GTM pool for app using manual GTM virtual servers
       when: enable_gtm | bool
       f5networks.f5_modules.bigip_gtm_pool:
         provider: "{{ provider }}"
         partition: "{{ partition }}"
         name: "{{ gtm_mirror_pair.pool_name }}"
-        type: "a"
-        preferred_lb_method: "topology"
-        alternate_lb_method: "global-availability"
-        fallback_lb_method: "round-robin"
-        members:
-          - server_name: "{{ gtm_mirror_pair.members[0].gtm_server }}"
-            virtual_server: "{{ gtm_mirror_pair.members[0].virtual_server }}"
-          - server_name: "{{ gtm_mirror_pair.members[1].gtm_server }}"
-            virtual_server: "{{ gtm_mirror_pair.members[1].virtual_server }}"
+        type: a
+        preferred_lb_method: topology
+        alternate_lb_method: global-availability
+        fallback_lb_method: round-robin
+        members: "{{ gtm_pool_members }}"
         state: present
 
-    - name: Create the Wide IP for grafana.my.domain.com
+    - name: Create the Wide IP for app
       when: enable_gtm | bool
       f5networks.f5_modules.bigip_gtm_wide_ip:
         provider: "{{ provider }}"
         partition: "{{ partition }}"
         name: "{{ gtm_mirror_pair.wide_ip }}"
-        type: "a"
-        pool_lb_method: "topology"
+        type: a
+        pool_lb_method: topology
         pools:
           - name: "{{ gtm_mirror_pair.pool_name }}"
-            partition: "{{ partition }}"
             ratio: 1
         state: present
 
