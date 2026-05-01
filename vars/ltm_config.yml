@@ -1,76 +1,138 @@
 ---
-cluster_definitions:
-  a:
-    # `control_plane` is the default VIP for both 9345 and 6443.
-    # Set optional `rke2_registration` and/or `k8s_api` keys below if a cluster
-    # needs separate VIPs for those listeners.
-    control_plane_nodes:
-      - "10.10.11.11"
-      - "10.10.11.12"
-      - "10.10.11.13"
-    worker_nodes:
-      - "10.10.21.11"
-      - "10.10.21.12"
-      - "10.10.21.13"
-    virtual_addresses:
-      control_plane: "10.10.11.100"
-      ingress_https: "10.10.11.102"
-  b:
-    # `control_plane` is the default VIP for both 9345 and 6443.
-    # Set optional `rke2_registration` and/or `k8s_api` keys below if a cluster
-    # needs separate VIPs fvfor those listeners.
-    control_plane_nodes:
-      - "10.10.12.11"
-      - "10.10.12.12"
-      - "10.10.12.13"
-    worker_nodes:
-      - "10.10.22.11"
-      - "10.10.22.12"
-      - "10.10.22.13"
-    virtual_addresses:
-      control_plane: "10.10.12.100"
-      ingress_https: "10.10.12.102"
-  c:
-    # `control_plane` is the default VIP for both 9345 and 6443.
-    # Set optional `rke2_registration` and/or `k8s_api` keys below if a cluster
-    # needs separate VIPs for those listeners.
-    control_plane_nodes:
-      - "10.10.13.11"
-      - "10.10.13.12"
-      - "10.10.13.13"
-    worker_nodes:
-      - "10.10.23.11"
-      - "10.10.23.12"
-      - "10.10.23.13"
-    virtual_addresses:
-      control_plane: "10.10.13.100"
-      ingress_https: "10.10.13.102"
-  d:
-    # `control_plane` is the default VIP for both 9345 and 6443.
-    # Set optional `rke2_registration` and/or `k8s_api` keys below if a cluster
-    # needs separate VIPs for those listeners.
-    control_plane_nodes:
-      - "10.10.14.11"
-      - "10.10.14.12"
-      - "10.10.14.13"
-    worker_nodes:
-      - "10.10.24.11"
-      - "10.10.24.12"
-      - "10.10.24.13"
-    virtual_addresses:
-      control_plane: "10.10.14.100"
-      ingress_https: "10.10.14.102"
+# Virtual-server-centric LTM model.
+# Define reusable LTM monitors once in `ltm_monitors`, then map them to pools
+# with fully-qualified monitor names in `pool.monitors`.
 
-ltm_services:
-  rke2_registration:
-    monitor_name: "mon_tcp_9345"
+ltm_monitors:
+  - name: "mon_tcp_9345"
+    type: "tcp"
+    interval: 30
+    timeout: 91
+
+  - name: "mon_tcp_6443"
+    type: "tcp"
+    interval: 30
+    timeout: 91
+
+  - name: "mon_https_ingress"
+    type: "https"
+    send: "GET / HTTP/1.1\\r\\nHost: ingress.example.com\\r\\nConnection: close\\r\\n\\r\\n"
+    receive: "200 OK"
+    interval: 30
+    timeout: 91
+    compatibility: true
+
+ltm_virtual_servers:
+  - name: "vs_a_api_9345"
+    destination: "10.10.11.100"
     destination_port: 9345
-    member_port: 9345
-  k8s_api:
-    monitor_name: "mon_tcp_6443"
+    profiles:
+      - "tcp"
+    snat: "Automap"
+    pool:
+      name: "pool_a_api_9345"
+      lb_method: "round-robin"
+      monitors:
+        - "/Common/mon_tcp_9345"
+      members:
+        - host: "10.10.11.11"
+          port: 9345
+        - host: "10.10.11.12"
+          port: 9345
+        - host: "10.10.11.13"
+          port: 9345
+
+  - name: "vs_a_control_6443"
+    destination: "10.10.11.100"
     destination_port: 6443
-    member_port: 6443
-  ingress_https:
-    monitor_name: "mon_tcp_30043"
+    profiles:
+      - "tcp"
+    snat: "Automap"
+    pool:
+      name: "pool_a_control_6443"
+      lb_method: "round-robin"
+      monitors:
+        - "/Common/mon_tcp_6443"
+      members:
+        - host: "10.10.11.11"
+          port: 6443
+        - host: "10.10.11.12"
+          port: 6443
+        - host: "10.10.11.13"
+          port: 6443
+
+  - name: "vs_a_ingress_443"
+    destination: "10.10.11.102"
     destination_port: 443
-    member_port: 30043
+    profiles:
+      - "tcp"
+    snat: "Automap"
+    pool:
+      name: "pool_a_ingress_30043"
+      lb_method: "round-robin"
+      monitors:
+        - "/Common/mon_https_ingress"
+      members:
+        - host: "10.10.21.11"
+          port: 30043
+        - host: "10.10.21.12"
+          port: 30043
+        - host: "10.10.21.13"
+          port: 30043
+
+  - name: "vs_b_api_9345"
+    destination: "10.10.12.100"
+    destination_port: 9345
+    profiles:
+      - "tcp"
+    snat: "Automap"
+    pool:
+      name: "pool_b_api_9345"
+      lb_method: "round-robin"
+      monitors:
+        - "/Common/mon_tcp_9345"
+      members:
+        - host: "10.10.12.11"
+          port: 9345
+        - host: "10.10.12.12"
+          port: 9345
+        - host: "10.10.12.13"
+          port: 9345
+
+  - name: "vs_b_control_6443"
+    destination: "10.10.12.100"
+    destination_port: 6443
+    profiles:
+      - "tcp"
+    snat: "Automap"
+    pool:
+      name: "pool_b_control_6443"
+      lb_method: "round-robin"
+      monitors:
+        - "/Common/mon_tcp_6443"
+      members:
+        - host: "10.10.12.11"
+          port: 6443
+        - host: "10.10.12.12"
+          port: 6443
+        - host: "10.10.12.13"
+          port: 6443
+
+  - name: "vs_b_ingress_443"
+    destination: "10.10.12.102"
+    destination_port: 443
+    profiles:
+      - "tcp"
+    snat: "Automap"
+    pool:
+      name: "pool_b_ingress_30043"
+      lb_method: "round-robin"
+      monitors:
+        - "/Common/mon_https_ingress"
+      members:
+        - host: "10.10.22.11"
+          port: 30043
+        - host: "10.10.22.12"
+          port: 30043
+        - host: "10.10.22.13"
+          port: 30043
