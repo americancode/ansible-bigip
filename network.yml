@@ -15,7 +15,7 @@
           {{
             lookup(
               'ansible.builtin.pipe',
-              "find vars/system/vlans -type f -name '*.yml' ! -name 'settings.yml' | sort"
+              "find vars/networking/vlans -type f -name '*.yml' ! -name 'settings.yml' | sort"
             ).splitlines() | reject('equalto', '') | list
           }}
 
@@ -38,7 +38,7 @@
               lookup('ansible.builtin.file', vlan_settings_path, errors='ignore')
               | default('{}', true)
               | from_yaml
-            ).system_vlan_defaults | default({})
+            ).networking_vlan_defaults | default({})
           }}
 
     - name: Discover self IP fragments
@@ -47,7 +47,7 @@
           {{
             lookup(
               'ansible.builtin.pipe',
-              "find vars/system/self_ips -type f -name '*.yml' ! -name 'settings.yml' | sort"
+              "find vars/networking/self_ips -type f -name '*.yml' ! -name 'settings.yml' | sort"
             ).splitlines() | reject('equalto', '') | list
           }}
 
@@ -70,7 +70,7 @@
               lookup('ansible.builtin.file', self_ip_settings_path, errors='ignore')
               | default('{}', true)
               | from_yaml
-            ).system_self_ip_defaults | default({})
+            ).networking_self_ip_defaults | default({})
           }}
 
   tasks:
