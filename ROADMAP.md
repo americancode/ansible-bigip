@@ -33,7 +33,7 @@ The repository already supports:
 
 The main remaining gaps are:
 
-- HA lifecycle
+- deeper HA lifecycle beyond trust, groups, traffic groups, and config sync
 - deeper LTM object coverage beyond pools/nodes/virtuals/monitors
 - deeper GTM object coverage beyond datacenters/servers/pools/Wide IPs/monitors
 - TLS/certificate management
@@ -58,6 +58,18 @@ Implemented today:
   - provisioning
   - users
   - config save
+- `ha.yml`
+  - device trust
+  - device groups
+  - device group members
+  - traffic groups
+  - config sync actions
+- `tls.yml`
+  - SSL keys
+  - certificates
+  - CA bundles
+  - client SSL profiles
+  - server SSL profiles
 - `ltm.yml`
   - custom LTM monitors
   - first-class nodes
@@ -83,8 +95,6 @@ Implemented today:
 
 Not implemented yet:
 
-- `ha.yml`
-- `tls.yml`
 - routes, route domains, SNATs, NATs, trunks
 - LTM profiles, persistence, policies, iRules, data groups
 - GTM topology and regions
@@ -508,8 +518,8 @@ This is the practical next sequence for the current repo.
 2. [x] Add `vars/ltm/nodes` and `vars/ltm/pools`
 3. [x] Add `vars/gtm/datacenters` and `vars/gtm/pools`
 4. [x] Add `system.yml` for base platform settings
-5. [ ] Add `ha.yml` for trust/sync/failover
-6. [ ] Add `tls.yml` for certs and SSL profiles
+5. [x] Add `ha.yml` for trust/sync/failover
+6. [x] Add `tls.yml` for certs and SSL profiles
 7. [ ] Add network routes, route domains, and SNAT/NAT support
 8. [ ] Add hybrid readability shortcuts:
    - [x] `pool_defaults`
@@ -552,15 +562,15 @@ These are the first concrete tickets I would open.
 ### Milestone 4: Platform and HA
 
 - [x] Add `system.yml`
-- Add `ha.yml`
+- [x] Add `ha.yml`
 - [x] Implement config save workflow
-- Add examples for active/standby pair bootstrap
+- [x] Add examples for active/standby pair bootstrap
 
 ### Milestone 5: TLS
 
-- Add `tls.yml`
-- Add certificate, key, and SSL profile trees
-- Define secret handling approach
+- [x] Add `tls.yml`
+- [x] Add certificate, key, and SSL profile trees
+- [ ] Define secret handling approach
 
 ## Decisions To Make Early
 

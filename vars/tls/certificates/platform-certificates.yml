@@ -1,0 +1,15 @@
+---
+tls_certificates:
+  - name: "wildcard_platform_example_com"
+    content: |
+      -----BEGIN CERTIFICATE-----
+      REPLACE_WITH_REAL_PLATFORM_CERTIFICATE_CONTENT
+      -----END CERTIFICATE-----
+    true_names: true
+
+  - name: "upstream_mtls_client"
+    content: |
+      -----BEGIN CERTIFICATE-----
+      REPLACE_WITH_REAL_UPSTREAM_CLIENT_CERTIFICATE_CONTENT
+      -----END CERTIFICATE-----
+    true_names: true

@@ -92,6 +92,41 @@ class Validator:
                 settings_key="ha_configsync_action_defaults",
             ),
             TreeSpec(
+                name="tls_keys",
+                active_dir=VARS_DIR / "tls" / "keys",
+                deletion_dir=VARS_DIR / "tls" / "deletions" / "keys",
+                top_key="tls_keys",
+                settings_key="tls_key_defaults",
+            ),
+            TreeSpec(
+                name="tls_certificates",
+                active_dir=VARS_DIR / "tls" / "certificates",
+                deletion_dir=VARS_DIR / "tls" / "deletions" / "certificates",
+                top_key="tls_certificates",
+                settings_key="tls_certificate_defaults",
+            ),
+            TreeSpec(
+                name="tls_ca_bundles",
+                active_dir=VARS_DIR / "tls" / "ca_bundles",
+                deletion_dir=VARS_DIR / "tls" / "deletions" / "ca_bundles",
+                top_key="tls_ca_bundles",
+                settings_key="tls_ca_bundle_defaults",
+            ),
+            TreeSpec(
+                name="tls_client_ssl_profiles",
+                active_dir=VARS_DIR / "tls" / "client_ssl_profiles",
+                deletion_dir=VARS_DIR / "tls" / "deletions" / "client_ssl_profiles",
+                top_key="tls_client_ssl_profiles",
+                settings_key="tls_client_ssl_profile_defaults",
+            ),
+            TreeSpec(
+                name="tls_server_ssl_profiles",
+                active_dir=VARS_DIR / "tls" / "server_ssl_profiles",
+                deletion_dir=VARS_DIR / "tls" / "deletions" / "server_ssl_profiles",
+                top_key="tls_server_ssl_profiles",
+                settings_key="tls_server_ssl_profile_defaults",
+            ),
+            TreeSpec(
                 name="network_vlans",
                 active_dir=VARS_DIR / "network" / "vlans",
                 deletion_dir=VARS_DIR / "network" / "deletions" / "vlans",
@@ -226,6 +261,7 @@ class Validator:
         self.validate_network()
         self.validate_system()
         self.validate_ha()
+        self.validate_tls()
         self.validate_ltm()
         self.validate_gtm()
 
@@ -462,6 +498,90 @@ class Validator:
                 self.error(obj.relpath, "HA config sync action must set exactly one of `sync_device_to_group` or `sync_group_to_device`")
             if str(obj.data.get("device_group")) not in active_group_names:
                 self.error(obj.relpath, f"HA config sync action references undefined device group `{obj.data.get('device_group')}`")
+
+    def validate_tls(self) -> None:
+        keys = self.objects.get("tls_keys", [])
+        certificates = self.objects.get("tls_certificates", [])
+        ca_bundles = self.objects.get("tls_ca_bundles", [])
+        client_ssl_profiles = self.objects.get("tls_client_ssl_profiles", [])
+        server_ssl_profiles = self.objects.get("tls_server_ssl_profiles", [])
+
+        active_key_names = set()
+        active_certificate_names = set()
+        active_ca_bundle_names = set()
+
+        for obj in keys:
+            self.require_fields(obj, ["name"])
+            if obj.effective_state != "absent":
+                self.require_fields(obj, ["content"])
+                active_key_names.add(self.fq_name(obj.partition, str(obj.data["name"])))
+
+        self.check_duplicates(keys, lambda obj: ("tls_key", obj.partition, obj.data.get("name")), "TLS key")
+
+        for obj in certificates:
+            self.require_fields(obj, ["name"])
+            if obj.effective_state != "absent":
+                self.require_fields(obj, ["content"])
+                active_certificate_names.add(self.fq_name(obj.partition, str(obj.data["name"])))
+
+        self.check_duplicates(certificates, lambda obj: ("tls_certificate", obj.partition, obj.data.get("name")), "TLS certificate")
+
+        for obj in ca_bundles:
+            self.require_fields(obj, ["name"])
+            if obj.effective_state != "absent":
+                self.require_fields(obj, ["content"])
+                active_ca_bundle_names.add(self.fq_name(obj.partition, str(obj.data["name"])))
+
+        self.check_duplicates(ca_bundles, lambda obj: ("tls_ca_bundle", obj.partition, obj.data.get("name")), "TLS CA bundle")
+
+        known_cert_like_names = active_certificate_names | active_ca_bundle_names
+
+        for obj in client_ssl_profiles:
+            self.require_fields(obj, ["name"])
+            if obj.effective_state == "absent":
+                continue
+            if obj.data.get("cert_key_chain") is not None and not isinstance(obj.data.get("cert_key_chain"), list):
+                self.error(obj.relpath, f"TLS client SSL profile `{obj.data.get('name')}` `cert_key_chain` must be a list")
+            for index, chain in enumerate(obj.data.get("cert_key_chain", []) or []):
+                if not isinstance(chain, dict):
+                    self.error(obj.relpath, f"TLS client SSL profile `{obj.data.get('name')}` cert_key_chain entry {index} must be a mapping")
+                    continue
+                self.require_fields(chain, ["cert", "key"], obj.relpath, f"TLS client SSL profile `{obj.data.get('name')}` cert_key_chain entry {index}")
+                self.validate_named_or_fq_reference(obj.relpath, chain.get("cert"), obj.partition, active_certificate_names, "TLS client SSL certificate")
+                self.validate_named_or_fq_reference(obj.relpath, chain.get("key"), obj.partition, active_key_names, "TLS client SSL key")
+                if chain.get("chain") is not None:
+                    self.validate_named_or_fq_reference(obj.relpath, chain.get("chain"), obj.partition, known_cert_like_names, "TLS client SSL chain")
+            if obj.data.get("trusted_cert_authority") is not None:
+                self.validate_fq_or_common_reference(obj.relpath, obj.data.get("trusted_cert_authority"), known_cert_like_names, "TLS trusted cert authority")
+            if obj.data.get("advertised_cert_authority") is not None:
+                self.validate_fq_or_common_reference(obj.relpath, obj.data.get("advertised_cert_authority"), known_cert_like_names, "TLS advertised cert authority")
+            if obj.data.get("client_auth_crl") is not None and not isinstance(obj.data.get("client_auth_crl"), str):
+                self.error(obj.relpath, f"TLS client SSL profile `{obj.data.get('name')}` `client_auth_crl` must be a string")
+
+        self.check_duplicates(
+            client_ssl_profiles,
+            lambda obj: ("tls_client_ssl_profile", obj.partition, obj.data.get("name")),
+            "TLS client SSL profile",
+        )
+
+        for obj in server_ssl_profiles:
+            self.require_fields(obj, ["name"])
+            if obj.effective_state == "absent":
+                continue
+            if obj.data.get("certificate") is not None:
+                self.validate_named_or_fq_reference(obj.relpath, obj.data.get("certificate"), obj.partition, active_certificate_names, "TLS server SSL certificate")
+            if obj.data.get("key") is not None:
+                self.validate_named_or_fq_reference(obj.relpath, obj.data.get("key"), obj.partition, active_key_names, "TLS server SSL key")
+            if obj.data.get("chain") is not None:
+                self.validate_named_or_fq_reference(obj.relpath, obj.data.get("chain"), obj.partition, known_cert_like_names, "TLS server SSL chain")
+            if obj.data.get("ca_file") is not None:
+                self.validate_fq_or_common_reference(obj.relpath, obj.data.get("ca_file"), known_cert_like_names, "TLS server SSL CA file")
+
+        self.check_duplicates(
+            server_ssl_profiles,
+            lambda obj: ("tls_server_ssl_profile", obj.partition, obj.data.get("name")),
+            "TLS server SSL profile",
+        )
 
     def validate_ltm(self) -> None:
         nodes = self.objects.get("ltm_nodes", [])
@@ -815,6 +935,39 @@ class Validator:
             self.error(source, f"{kind} reference `{reference}` does not match a declared custom monitor")
         if partition == "Common" and reference in known_monitors:
             return
+
+    def validate_named_or_fq_reference(
+        self,
+        source: str,
+        reference: Any,
+        default_partition: str,
+        known_objects: set[str],
+        kind: str,
+    ) -> None:
+        if not isinstance(reference, str):
+            self.error(source, f"{kind} reference must be a string")
+            return
+        fq_reference = reference if reference.startswith("/") else self.fq_name(default_partition, reference)
+        if fq_reference not in known_objects:
+            self.error(source, f"{kind} reference `{reference}` does not match a declared object")
+
+    def validate_fq_or_common_reference(
+        self,
+        source: str,
+        reference: Any,
+        known_objects: set[str],
+        kind: str,
+    ) -> None:
+        if not isinstance(reference, str):
+            self.error(source, f"{kind} reference must be a string")
+            return
+        if not reference.startswith("/"):
+            self.error(source, f"{kind} reference `{reference}` must be fully qualified, for example `/Common/name`")
+            return
+        if reference.startswith("/Common/") and reference not in known_objects:
+            return
+        if reference not in known_objects:
+            self.error(source, f"{kind} reference `{reference}` does not match a declared object")
 
     def check_duplicates(
         self,

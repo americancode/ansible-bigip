@@ -17,6 +17,7 @@ validate-ansible:
 	ANSIBLE_LOCAL_TEMP=$(ANSIBLE_LOCAL_TEMP) ANSIBLE_REMOTE_TEMP=$(ANSIBLE_REMOTE_TEMP) ansible-playbook --syntax-check ha.yml
 	ANSIBLE_LOCAL_TEMP=$(ANSIBLE_LOCAL_TEMP) ANSIBLE_REMOTE_TEMP=$(ANSIBLE_REMOTE_TEMP) ansible-playbook --syntax-check network.yml
 	ANSIBLE_LOCAL_TEMP=$(ANSIBLE_LOCAL_TEMP) ANSIBLE_REMOTE_TEMP=$(ANSIBLE_REMOTE_TEMP) ansible-playbook --syntax-check system.yml
+	ANSIBLE_LOCAL_TEMP=$(ANSIBLE_LOCAL_TEMP) ANSIBLE_REMOTE_TEMP=$(ANSIBLE_REMOTE_TEMP) ansible-playbook --syntax-check tls.yml
 
 validate-image-build:
 	docker build -f Dockerfile.validation -t $(VALIDATION_IMAGE) .

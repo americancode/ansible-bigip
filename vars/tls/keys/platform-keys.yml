@@ -1,0 +1,15 @@
+---
+tls_keys:
+  - name: "wildcard_platform_example_com"
+    content: |
+      -----BEGIN PRIVATE KEY-----
+      REPLACE_WITH_REAL_PRIVATE_KEY_CONTENT
+      -----END PRIVATE KEY-----
+    true_names: true
+
+  - name: "upstream_mtls_client"
+    content: |
+      -----BEGIN PRIVATE KEY-----
+      REPLACE_WITH_REAL_UPSTREAM_CLIENT_KEY_CONTENT
+      -----END PRIVATE KEY-----
+    true_names: true
