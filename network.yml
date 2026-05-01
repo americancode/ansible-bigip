@@ -9,65 +9,75 @@
     - vars/common.yml
 
   pre_tasks:
-    - name: Load system settings fragments
-      ansible.builtin.include_vars:
-        file: "{{ item }}"
-        name: system_settings_fragment
-      loop: "{{ query('fileglob', 'vars/system/settings/*.yml') | sort }}"
-      register: system_settings_include_results
-
-    - name: Aggregate system settings
+    - name: Discover VLAN fragments
       ansible.builtin.set_fact:
-        partition: >-
+        vlan_files: >-
           {{
-            (
-              system_settings_include_results.results
-              | map(attribute='ansible_facts.system_settings_fragment.partition')
-              | select('defined')
-              | list
-              | last
-            ) | default(partition)
+            lookup(
+              'ansible.builtin.pipe',
+              "find vars/system/vlans -type f -name '*.yml' ! -name 'settings.yml' | sort"
+            ).splitlines() | reject('equalto', '') | list
           }}
 
     - name: Load VLAN fragments
       ansible.builtin.include_vars:
         file: "{{ item }}"
         name: vlan_fragment
-      loop: "{{ query('fileglob', 'vars/system/vlans/*.yml') | sort }}"
+      loop: "{{ vlan_files }}"
       register: vlan_include_results
 
-    - name: Aggregate VLANs
+    - name: Aggregate VLANs with directory settings
       ansible.builtin.set_fact:
-        bigip_vlans: >-
+        bigip_vlans: "{{ bigip_vlans | default([]) + [ vlan_directory_defaults | combine(item.1, recursive=True) ] }}"
+      loop: "{{ query('subelements', vlan_include_results.results, 'ansible_facts.vlan_fragment.bigip_vlans', {'skip_missing': True}) }}"
+      vars:
+        vlan_settings_path: "{{ item.0.item | regex_replace('/[^/]+$', '/settings.yml') }}"
+        vlan_directory_defaults: >-
           {{
-            vlan_include_results.results
-            | map(attribute='ansible_facts.vlan_fragment.bigip_vlans')
-            | select('defined')
-            | flatten
+            (
+              lookup('ansible.builtin.file', vlan_settings_path, errors='ignore')
+              | default('{}', true)
+              | from_yaml
+            ).system_vlan_defaults | default({})
+          }}
+
+    - name: Discover self IP fragments
+      ansible.builtin.set_fact:
+        self_ip_files: >-
+          {{
+            lookup(
+              'ansible.builtin.pipe',
+              "find vars/system/self_ips -type f -name '*.yml' ! -name 'settings.yml' | sort"
+            ).splitlines() | reject('equalto', '') | list
           }}
 
     - name: Load self IP fragments
       ansible.builtin.include_vars:
         file: "{{ item }}"
         name: self_ip_fragment
-      loop: "{{ query('fileglob', 'vars/system/self_ips/*.yml') | sort }}"
+      loop: "{{ self_ip_files }}"
       register: self_ip_include_results
 
-    - name: Aggregate self IPs
+    - name: Aggregate self IPs with directory settings
       ansible.builtin.set_fact:
-        bigip_self_ips: >-
+        bigip_self_ips: "{{ bigip_self_ips | default([]) + [ self_ip_directory_defaults | combine(item.1, recursive=True) ] }}"
+      loop: "{{ query('subelements', self_ip_include_results.results, 'ansible_facts.self_ip_fragment.bigip_self_ips', {'skip_missing': True}) }}"
+      vars:
+        self_ip_settings_path: "{{ item.0.item | regex_replace('/[^/]+$', '/settings.yml') }}"
+        self_ip_directory_defaults: >-
           {{
-            self_ip_include_results.results
-            | map(attribute='ansible_facts.self_ip_fragment.bigip_self_ips')
-            | select('defined')
-            | flatten
+            (
+              lookup('ansible.builtin.file', self_ip_settings_path, errors='ignore')
+              | default('{}', true)
+              | from_yaml
+            ).system_self_ip_defaults | default({})
           }}
 
   tasks:
     - name: Create VLANs
       f5networks.f5_modules.bigip_vlan:
         provider: "{{ provider }}"
-        partition: "{{ item.partition | default(partition) }}"
+        partition: "{{ item.partition | default('Common') }}"
         name: "{{ item.name }}"
         tag: "{{ item.tag | default(omit) }}"
         mtu: "{{ item.mtu | default(omit) }}"
@@ -79,7 +89,7 @@
     - name: Create self IPs
       f5networks.f5_modules.bigip_selfip:
         provider: "{{ provider }}"
-        partition: "{{ item.partition | default(partition) }}"
+        partition: "{{ item.partition | default('Common') }}"
         name: "{{ item.name }}"
         address: "{{ item.address }}"
         netmask: "{{ item.netmask }}"

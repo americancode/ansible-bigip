@@ -1,5 +1,0 @@
----
-# Optional system-level overrides for the network playbook.
-# Common BIG-IP connection settings still come from vars/common.yml.
-
-partition: "Common"
