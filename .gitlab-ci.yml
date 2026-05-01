@@ -1,0 +1,33 @@
+image: $VALIDATION_IMAGE
+
+stages:
+  - validate
+
+variables:
+  VALIDATION_IMAGE: "python:3.12"
+  PIP_CACHE_DIR: "$CI_PROJECT_DIR/.cache/pip"
+  ANSIBLE_LOCAL_TEMP: "$CI_PROJECT_DIR/.ansible/localtmp"
+  ANSIBLE_REMOTE_TEMP: "$CI_PROJECT_DIR/.ansible/tmp"
+  ANSIBLE_COLLECTIONS_PATH: "/opt/ansible/collections"
+
+cache:
+  paths:
+    - .cache/pip
+
+validate:
+  stage: validate
+  rules:
+    - if: '$CI_COMMIT_BRANCH == "main"'
+  before_script:
+    - mkdir -p "$ANSIBLE_LOCAL_TEMP" "$ANSIBLE_REMOTE_TEMP"
+    - |
+      if ! command -v ansible-playbook >/dev/null 2>&1; then
+        python -m pip install --upgrade pip
+        python -m pip install ansible-core PyYAML
+      fi
+    - |
+      if ! ansible-doc -l 2>/dev/null | grep -q 'f5networks.f5_modules.bigip_virtual_server'; then
+        ansible-galaxy collection install f5networks.f5_modules -p /opt/ansible/collections
+      fi
+  script:
+    - make validate

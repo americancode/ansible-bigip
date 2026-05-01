@@ -1,8 +1,9 @@
 PYTHON ?= python3
 ANSIBLE_LOCAL_TEMP ?= .ansible/localtmp
 ANSIBLE_REMOTE_TEMP ?= .ansible/tmp
+VALIDATION_IMAGE ?= ansible-bigip-validation:latest
 
-.PHONY: validate validate-vars validate-ansible
+.PHONY: validate validate-vars validate-ansible validate-image-build validate-image-run
 
 validate: validate-vars validate-ansible
 
@@ -13,5 +14,12 @@ validate-ansible:
 	mkdir -p $(ANSIBLE_LOCAL_TEMP) $(ANSIBLE_REMOTE_TEMP)
 	ANSIBLE_LOCAL_TEMP=$(ANSIBLE_LOCAL_TEMP) ANSIBLE_REMOTE_TEMP=$(ANSIBLE_REMOTE_TEMP) ansible-playbook --syntax-check ltm.yml
 	ANSIBLE_LOCAL_TEMP=$(ANSIBLE_LOCAL_TEMP) ANSIBLE_REMOTE_TEMP=$(ANSIBLE_REMOTE_TEMP) ansible-playbook --syntax-check gtm.yml
+	ANSIBLE_LOCAL_TEMP=$(ANSIBLE_LOCAL_TEMP) ANSIBLE_REMOTE_TEMP=$(ANSIBLE_REMOTE_TEMP) ansible-playbook --syntax-check ha.yml
 	ANSIBLE_LOCAL_TEMP=$(ANSIBLE_LOCAL_TEMP) ANSIBLE_REMOTE_TEMP=$(ANSIBLE_REMOTE_TEMP) ansible-playbook --syntax-check network.yml
 	ANSIBLE_LOCAL_TEMP=$(ANSIBLE_LOCAL_TEMP) ANSIBLE_REMOTE_TEMP=$(ANSIBLE_REMOTE_TEMP) ansible-playbook --syntax-check system.yml
+
+validate-image-build:
+	docker build -f Dockerfile.validation -t $(VALIDATION_IMAGE) .
+
+validate-image-run:
+	docker run --rm -v "$$(pwd):/workspace" -w /workspace $(VALIDATION_IMAGE) make validate
