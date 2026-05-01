@@ -2,3 +2,23 @@
 gtm_wide_ip_defaults:
   partition: "Common"
   enabled: true
+
+gtm_pool_defaults:
+  enabled: true
+  alternate_lb_method: "round-robin"
+  fallback_lb_method: "none"
+
+gtm_member_defaults:
+  enabled: true
+
+gtm_monitor_sets:
+  platform_https:
+    - "/Common/mon_gtm_platform_https"
+  kubeapi_tcp:
+    - "/Common/mon_gtm_rke2_kubeapi_tcp"
+  registration_tcp:
+    - "/Common/mon_gtm_rke2_registration_tcp"
+  argocd_https:
+    - "/Common/mon_gtm_argocd_https"
+  grafana_https:
+    - "/Common/mon_gtm_grafana_https"

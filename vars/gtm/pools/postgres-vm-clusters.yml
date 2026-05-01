@@ -3,10 +3,8 @@ gtm_pools:
   - name: "pool_pg_vm_global"
     record_type: "a"
     preferred_lb_method: "global-availability"
-    alternate_lb_method: "round-robin"
-    fallback_lb_method: "none"
     monitors:
-      - "/Common/mon_gtm_postgres_tcp"
+      - "postgres_tcp"
     members:
       - server: "bigip-east"
         virtual_server: "vs_pg_vm_east_5432"

@@ -225,33 +225,74 @@
 
     - name: Aggregate GTM pools with directory settings
       ansible.builtin.set_fact:
-        gtm_pools: "{{ gtm_pools | default([]) + [ gtm_pool_directory_defaults | combine(item.1, recursive=True) ] }}"
+        gtm_pools: >-
+          {{
+            gtm_pools | default([]) + [
+              (
+                gtm_pool_directory_defaults
+                | combine(item.1, recursive=True)
+                | normalize_gtm_pool(
+                    gtm_pool_directory_defaults,
+                    gtm_pool_member_defaults,
+                    gtm_pool_monitor_sets
+                  )
+              )
+            ]
+          }}
       loop: "{{ query('subelements', gtm_pool_include_results.results, 'ansible_facts.gtm_pool_fragment.gtm_pools', {'skip_missing': True}) }}"
       vars:
         gtm_pool_settings_path: "{{ item.0.item | regex_replace('/[^/]+$', '/settings.yml') }}"
-        gtm_pool_directory_defaults: >-
+        gtm_pool_settings_payload: >-
           {{
             (
               lookup('ansible.builtin.file', gtm_pool_settings_path, errors='ignore')
               | default('{}', true)
               | from_yaml
-            ).gtm_pool_defaults | default({})
+            )
           }}
+        gtm_pool_directory_defaults: >-
+          {{
+            gtm_pool_settings_payload.gtm_pool_defaults | default({})
+          }}
+        gtm_pool_member_defaults: "{{ gtm_pool_settings_payload.gtm_member_defaults | default({}) }}"
+        gtm_pool_monitor_sets: "{{ gtm_pool_settings_payload.gtm_monitor_sets | default({}) }}"
 
     - name: Aggregate GTM pool deletions with directory settings
       ansible.builtin.set_fact:
-        gtm_pool_deletions: "{{ gtm_pool_deletions | default([]) + [ (gtm_pool_deletion_directory_defaults | combine(item.1, recursive=True)) | combine({'state': 'absent'}, recursive=True) ] }}"
+        gtm_pool_deletions: >-
+          {{
+            gtm_pool_deletions | default([]) + [
+              (
+                (
+                  gtm_pool_deletion_directory_defaults
+                  | combine(item.1, recursive=True)
+                  | normalize_gtm_pool(
+                      gtm_pool_deletion_directory_defaults,
+                      gtm_pool_deletion_member_defaults,
+                      gtm_pool_deletion_monitor_sets
+                    )
+                )
+                | combine({'state': 'absent'}, recursive=True)
+              )
+            ]
+          }}
       loop: "{{ query('subelements', gtm_pool_deletion_include_results.results, 'ansible_facts.gtm_pool_deletion_fragment.gtm_pools', {'skip_missing': True}) }}"
       vars:
         gtm_pool_deletion_settings_path: "{{ item.0.item | regex_replace('/[^/]+$', '/settings.yml') }}"
-        gtm_pool_deletion_directory_defaults: >-
+        gtm_pool_deletion_settings_payload: >-
           {{
             (
               lookup('ansible.builtin.file', gtm_pool_deletion_settings_path, errors='ignore')
               | default('{}', true)
               | from_yaml
-            ).gtm_pool_defaults | default({})
+            )
           }}
+        gtm_pool_deletion_directory_defaults: >-
+          {{
+            gtm_pool_deletion_settings_payload.gtm_pool_defaults | default({})
+          }}
+        gtm_pool_deletion_member_defaults: "{{ gtm_pool_deletion_settings_payload.gtm_member_defaults | default({}) }}"
+        gtm_pool_deletion_monitor_sets: "{{ gtm_pool_deletion_settings_payload.gtm_monitor_sets | default({}) }}"
 
     - name: Discover GTM Wide IP fragments
       ansible.builtin.set_fact:
@@ -286,7 +327,7 @@
 
     - name: Aggregate GTM Wide IPs with directory settings
       ansible.builtin.set_fact:
-        gtm_wide_ips: "{{ gtm_wide_ips | default([]) + [ gtm_wide_ip_directory_defaults | combine(item.1, recursive=True) ] }}"
+        gtm_wide_ips: "{{ gtm_wide_ips | default([]) + [ (gtm_wide_ip_directory_defaults | combine(item.1, recursive=True)) | combine({'__source_file': item.0.item}, recursive=True) ] }}"
       loop: "{{ query('subelements', gtm_wide_ip_include_results.results, 'ansible_facts.gtm_wide_ip_fragment.gtm_wide_ips', {'skip_missing': True}) }}"
       vars:
         gtm_wide_ip_settings_path: "{{ item.0.item | regex_replace('/[^/]+$', '/settings.yml') }}"
@@ -301,7 +342,7 @@
 
     - name: Aggregate GTM Wide IP deletions with directory settings
       ansible.builtin.set_fact:
-        gtm_wide_ip_deletions: "{{ gtm_wide_ip_deletions | default([]) + [ (gtm_wide_ip_deletion_directory_defaults | combine(item.1, recursive=True)) | combine({'state': 'absent'}, recursive=True) ] }}"
+        gtm_wide_ip_deletions: "{{ gtm_wide_ip_deletions | default([]) + [ ((gtm_wide_ip_deletion_directory_defaults | combine(item.1, recursive=True)) | combine({'state': 'absent'}, recursive=True)) | combine({'__source_file': item.0.item}, recursive=True) ] }}"
       loop: "{{ query('subelements', gtm_wide_ip_deletion_include_results.results, 'ansible_facts.gtm_wide_ip_deletion_fragment.gtm_wide_ips', {'skip_missing': True}) }}"
       vars:
         gtm_wide_ip_deletion_settings_path: "{{ item.0.item | regex_replace('/[^/]+$', '/settings.yml') }}"
@@ -470,21 +511,83 @@
 
     - name: Collect embedded GTM pool deletions from deleted Wide IPs
       ansible.builtin.set_fact:
-        gtm_inline_pool_deletions: "{{ (gtm_inline_pool_deletions | default([])) + [ {'partition': item.0.partition | default('Common'), 'record_type': item.0.record_type | default('a')} | combine(item.1, recursive=True) ] }}"
+        gtm_inline_pool_deletions: >-
+          {{
+            (gtm_inline_pool_deletions | default([])) + [
+              (
+                {'partition': item.0.partition | default('Common'), 'record_type': item.0.record_type | default('a')}
+                | combine(
+                    (
+                      item.1
+                      | normalize_gtm_pool(
+                          gtm_wide_ip_pool_defaults,
+                          gtm_wide_ip_member_defaults,
+                          gtm_wide_ip_monitor_sets
+                        )
+                    ),
+                    recursive=True
+                  )
+              )
+            ]
+          }}
       loop: "{{ query('subelements', gtm_wide_ips_delete | default([]), 'pools', {'skip_missing': True}) }}"
       when:
         - item.1 is mapping
         - item.1.name is defined
         - item.1.members is defined
+      vars:
+        gtm_wide_ip_settings_path: "{{ item.0.__source_file | regex_replace('/[^/]+$', '/settings.yml') if item.0.__source_file is defined else '' }}"
+        gtm_wide_ip_settings_payload: >-
+          {{
+            (
+              lookup('ansible.builtin.file', gtm_wide_ip_settings_path, errors='ignore')
+              | default('{}', true)
+              | from_yaml
+            ) if gtm_wide_ip_settings_path else {}
+          }}
+        gtm_wide_ip_pool_defaults: "{{ gtm_wide_ip_settings_payload.gtm_pool_defaults | default({}) }}"
+        gtm_wide_ip_member_defaults: "{{ gtm_wide_ip_settings_payload.gtm_member_defaults | default({}) }}"
+        gtm_wide_ip_monitor_sets: "{{ gtm_wide_ip_settings_payload.gtm_monitor_sets | default({}) }}"
 
     - name: Collect embedded GTM pools from active Wide IPs
       ansible.builtin.set_fact:
-        gtm_inline_pools_present: "{{ (gtm_inline_pools_present | default([])) + [ {'partition': item.0.partition | default('Common'), 'record_type': item.0.record_type | default('a')} | combine(item.1, recursive=True) ] }}"
+        gtm_inline_pools_present: >-
+          {{
+            (gtm_inline_pools_present | default([])) + [
+              (
+                {'partition': item.0.partition | default('Common'), 'record_type': item.0.record_type | default('a')}
+                | combine(
+                    (
+                      item.1
+                      | normalize_gtm_pool(
+                          gtm_wide_ip_pool_defaults,
+                          gtm_wide_ip_member_defaults,
+                          gtm_wide_ip_monitor_sets
+                        )
+                    ),
+                    recursive=True
+                  )
+              )
+            ]
+          }}
       loop: "{{ query('subelements', gtm_wide_ips_present | default([]), 'pools', {'skip_missing': True}) }}"
       when:
         - item.1 is mapping
         - item.1.name is defined
         - item.1.members is defined
+      vars:
+        gtm_wide_ip_settings_path: "{{ item.0.__source_file | regex_replace('/[^/]+$', '/settings.yml') if item.0.__source_file is defined else '' }}"
+        gtm_wide_ip_settings_payload: >-
+          {{
+            (
+              lookup('ansible.builtin.file', gtm_wide_ip_settings_path, errors='ignore')
+              | default('{}', true)
+              | from_yaml
+            ) if gtm_wide_ip_settings_path else {}
+          }}
+        gtm_wide_ip_pool_defaults: "{{ gtm_wide_ip_settings_payload.gtm_pool_defaults | default({}) }}"
+        gtm_wide_ip_member_defaults: "{{ gtm_wide_ip_settings_payload.gtm_member_defaults | default({}) }}"
+        gtm_wide_ip_monitor_sets: "{{ gtm_wide_ip_settings_payload.gtm_monitor_sets | default({}) }}"
 
     - name: Combine first-class and embedded GTM pool operations
       ansible.builtin.set_fact:

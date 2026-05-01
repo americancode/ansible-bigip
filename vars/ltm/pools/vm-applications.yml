@@ -4,7 +4,7 @@ ltm_pools:
     description: "East region inventory application pool"
     lb_method: "least-connections-member"
     monitors:
-      - "/Common/https"
+      - "standard_https"
     members:
       - name: "inventory-east-1"
         host: "10.201.40.11"
@@ -17,7 +17,7 @@ ltm_pools:
     description: "West region inventory application pool"
     lb_method: "least-connections-member"
     monitors:
-      - "/Common/https"
+      - "standard_https"
     members:
       - name: "inventory-west-1"
         host: "10.202.40.11"
@@ -30,7 +30,7 @@ ltm_pools:
     description: "East region reporting application pool"
     lb_method: "least-connections-member"
     monitors:
-      - "/Common/https"
+      - "standard_https"
     members:
       - name: "reporting-east-1"
         host: "10.201.41.11"
@@ -43,7 +43,7 @@ ltm_pools:
     description: "West region reporting application pool"
     lb_method: "least-connections-member"
     monitors:
-      - "/Common/https"
+      - "standard_https"
     members:
       - name: "reporting-west-1"
         host: "10.202.41.11"

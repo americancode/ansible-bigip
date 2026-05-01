@@ -11,7 +11,10 @@ import yaml
 
 
 ROOT = Path(__file__).resolve().parents[1]
+sys.path.insert(0, str(ROOT))
 VARS_DIR = ROOT / "vars"
+
+from filter_plugins.bigip_var_filters import normalize_gtm_pool, normalize_ltm_pool
 
 
 @dataclass(frozen=True)
@@ -21,6 +24,7 @@ class TreeSpec:
     deletion_dir: Path
     top_key: str
     settings_key: str
+    extra_settings_keys: tuple[str, ...] = ()
 
 
 @dataclass
@@ -50,6 +54,7 @@ class Validator:
     def __init__(self) -> None:
         self.errors: list[str] = []
         self.objects: dict[str, list[LoadedObject]] = {}
+        self.settings_cache: dict[Path, dict[str, Any]] = {}
         self.tree_specs = [
             TreeSpec(
                 name="network_vlans",
@@ -120,6 +125,7 @@ class Validator:
                 deletion_dir=VARS_DIR / "ltm" / "deletions" / "pools",
                 top_key="ltm_pools",
                 settings_key="ltm_pool_defaults",
+                extra_settings_keys=("ltm_member_defaults", "ltm_monitor_sets"),
             ),
             TreeSpec(
                 name="ltm_monitors",
@@ -134,6 +140,7 @@ class Validator:
                 deletion_dir=VARS_DIR / "ltm" / "deletions" / "virtual_servers",
                 top_key="ltm_virtual_servers",
                 settings_key="ltm_virtual_server_defaults",
+                extra_settings_keys=("ltm_pool_defaults", "ltm_member_defaults", "ltm_monitor_sets"),
             ),
             TreeSpec(
                 name="gtm_monitors",
@@ -162,6 +169,7 @@ class Validator:
                 deletion_dir=VARS_DIR / "gtm" / "deletions" / "pools",
                 top_key="gtm_pools",
                 settings_key="gtm_pool_defaults",
+                extra_settings_keys=("gtm_member_defaults", "gtm_monitor_sets"),
             ),
             TreeSpec(
                 name="gtm_wide_ips",
@@ -169,6 +177,7 @@ class Validator:
                 deletion_dir=VARS_DIR / "gtm" / "deletions" / "wide_ips",
                 top_key="gtm_wide_ips",
                 settings_key="gtm_wide_ip_defaults",
+                extra_settings_keys=("gtm_pool_defaults", "gtm_member_defaults", "gtm_monitor_sets"),
             ),
         ]
 
@@ -254,7 +263,8 @@ class Validator:
             self.error(path, "must contain a mapping")
             return
 
-        unknown = sorted(set(payload) - {spec.settings_key})
+        allowed_keys = {spec.settings_key, *spec.extra_settings_keys}
+        unknown = sorted(set(payload) - allowed_keys)
         if unknown:
             self.error(path, f"contains unsupported keys: {', '.join(unknown)}")
 
@@ -270,6 +280,19 @@ class Validator:
             return {}
         defaults = payload.get(spec.settings_key, {})
         return defaults if isinstance(defaults, dict) else {}
+
+    def load_settings_payload(self, path: Path) -> dict[str, Any]:
+        if path in self.settings_cache:
+            return self.settings_cache[path]
+        if not path.exists():
+            self.settings_cache[path] = {}
+            return {}
+        payload = self.load_yaml(path)
+        if not isinstance(payload, dict):
+            self.settings_cache[path] = {}
+            return {}
+        self.settings_cache[path] = payload
+        return payload
 
     def validate_network(self) -> None:
         vlans = self.objects.get("network_vlans", [])
@@ -369,11 +392,19 @@ class Validator:
             if obj.effective_state == "absent":
                 continue
 
-            active_pool_names.add(self.fq_name(obj.partition, str(obj.data["name"])))
+            settings_payload = self.load_settings_payload(obj.source_file.parent / "settings.yml")
+            normalized_pool = normalize_ltm_pool(
+                obj.data,
+                settings_payload.get("ltm_pool_defaults", {}),
+                settings_payload.get("ltm_member_defaults", {}),
+                settings_payload.get("ltm_monitor_sets", {}),
+            )
 
-            monitors_list = obj.data.get("monitors", [])
+            active_pool_names.add(self.fq_name(obj.partition, str(normalized_pool["name"])))
+
+            monitors_list = normalized_pool.get("monitors", [])
             if monitors_list is not None and not isinstance(monitors_list, list):
-                self.error(obj.relpath, f"LTM pool `{obj.data.get('name')}` `monitors` must be a list")
+                self.error(obj.relpath, f"LTM pool `{normalized_pool.get('name')}` `monitors` must be a list")
             else:
                 for monitor in monitors_list or []:
                     self.validate_monitor_reference(
@@ -383,7 +414,7 @@ class Validator:
                         kind="LTM pool monitor",
                     )
 
-            self.validate_ltm_pool_members(obj.relpath, obj.data.get("name"), obj.partition, obj.data.get("members"), active_node_names)
+            self.validate_ltm_pool_members(obj.relpath, normalized_pool.get("name"), obj.partition, normalized_pool.get("members"), active_node_names)
 
         self.check_duplicates(pools, lambda obj: ("ltm_pool", obj.partition, obj.data.get("name")), "LTM pool")
 
@@ -407,12 +438,20 @@ class Validator:
                 self.error(obj.relpath, f"virtual server `{obj.data.get('name')}` embedded pool must define `name`")
                 continue
 
-            pool_partition = str(pool.get("partition", obj.partition))
-            active_pool_names.add(self.fq_name(pool_partition, str(pool["name"])))
+            settings_payload = self.load_settings_payload(obj.source_file.parent / "settings.yml")
+            normalized_pool = normalize_ltm_pool(
+                pool,
+                settings_payload.get("ltm_pool_defaults", {}),
+                settings_payload.get("ltm_member_defaults", {}),
+                settings_payload.get("ltm_monitor_sets", {}),
+            )
 
-            monitors_list = pool.get("monitors", [])
+            pool_partition = str(normalized_pool.get("partition", obj.partition))
+            active_pool_names.add(self.fq_name(pool_partition, str(normalized_pool["name"])))
+
+            monitors_list = normalized_pool.get("monitors", [])
             if monitors_list is not None and not isinstance(monitors_list, list):
-                self.error(obj.relpath, f"LTM pool `{pool.get('name')}` `monitors` must be a list")
+                self.error(obj.relpath, f"LTM pool `{normalized_pool.get('name')}` `monitors` must be a list")
             else:
                 for monitor in monitors_list or []:
                     self.validate_monitor_reference(
@@ -424,9 +463,9 @@ class Validator:
 
             self.validate_ltm_pool_members(
                 obj.relpath,
-                pool.get("name"),
+                normalized_pool.get("name"),
                 pool_partition,
-                pool.get("members"),
+                normalized_pool.get("members"),
                 active_node_names,
             )
 
@@ -511,10 +550,18 @@ class Validator:
             if obj.effective_state == "absent":
                 continue
 
-            record_type = str(obj.data.get("record_type", "a"))
-            active_pool_names.add(self.fq_gtm_pool_name(obj.partition, record_type, str(obj.data["name"])))
+            settings_payload = self.load_settings_payload(obj.source_file.parent / "settings.yml")
+            normalized_pool = normalize_gtm_pool(
+                obj.data,
+                settings_payload.get("gtm_pool_defaults", {}),
+                settings_payload.get("gtm_member_defaults", {}),
+                settings_payload.get("gtm_monitor_sets", {}),
+            )
 
-            for monitor in obj.data.get("monitors", obj.data.get("default_monitors", [])) or []:
+            record_type = str(normalized_pool.get("record_type", "a"))
+            active_pool_names.add(self.fq_gtm_pool_name(obj.partition, record_type, str(normalized_pool["name"])))
+
+            for monitor in normalized_pool.get("monitors", normalized_pool.get("default_monitors", [])) or []:
                 self.validate_monitor_reference(
                     source=obj.relpath,
                     reference=monitor,
@@ -524,9 +571,9 @@ class Validator:
 
             self.validate_gtm_pool_members(
                 source=obj.relpath,
-                pool_name=obj.data.get("name"),
+                pool_name=normalized_pool.get("name"),
                 pool_partition=obj.partition,
-                members=obj.data.get("members"),
+                members=normalized_pool.get("members"),
                 active_server_names=active_server_names,
                 active_monitor_names=active_monitor_names,
             )
@@ -564,8 +611,16 @@ class Validator:
 
                 pool_partition = str(pool.get("partition", obj.partition))
                 if self.is_inline_gtm_pool(pool):
-                    active_pool_names.add(self.fq_gtm_pool_name(pool_partition, record_type, str(pool["name"])))
-                    for monitor in pool.get("monitors", pool.get("default_monitors", [])) or []:
+                    settings_payload = self.load_settings_payload(obj.source_file.parent / "settings.yml")
+                    normalized_pool = normalize_gtm_pool(
+                        pool,
+                        settings_payload.get("gtm_pool_defaults", {}),
+                        settings_payload.get("gtm_member_defaults", {}),
+                        settings_payload.get("gtm_monitor_sets", {}),
+                    )
+                    pool_partition = str(normalized_pool.get("partition", obj.partition))
+                    active_pool_names.add(self.fq_gtm_pool_name(pool_partition, record_type, str(normalized_pool["name"])))
+                    for monitor in normalized_pool.get("monitors", normalized_pool.get("default_monitors", [])) or []:
                         self.validate_monitor_reference(
                             source=obj.relpath,
                             reference=monitor,
@@ -574,9 +629,9 @@ class Validator:
                         )
                     self.validate_gtm_pool_members(
                         source=obj.relpath,
-                        pool_name=pool.get("name"),
+                        pool_name=normalized_pool.get("name"),
                         pool_partition=pool_partition,
-                        members=pool.get("members"),
+                        members=normalized_pool.get("members"),
                         active_server_names=active_server_names,
                         active_monitor_names=active_monitor_names,
                     )

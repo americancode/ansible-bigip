@@ -4,7 +4,7 @@ ltm_pools:
     description: "Shared east PostgreSQL VM pool"
     lb_method: "least-connections-member"
     monitors:
-      - "/Common/tcp"
+      - "standard_tcp"
     members:
       - name: "pg-vm-east-1"
         host: "10.201.30.11"
@@ -17,7 +17,7 @@ ltm_pools:
     description: "Shared west PostgreSQL VM pool"
     lb_method: "least-connections-member"
     monitors:
-      - "/Common/tcp"
+      - "standard_tcp"
     members:
       - name: "pg-vm-west-1"
         host: "10.202.30.11"

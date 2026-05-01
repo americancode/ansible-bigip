@@ -7,7 +7,7 @@ ltm_virtual_servers:
     pool:
       name: "pool_rke2_west_kubeapi_6443"
       monitors:
-        - "/Common/mon_rke2_kubeapi_tcp"
+        - "kubeapi_tcp"
       members:
         - host: "10.202.10.11"
           port: 6443
@@ -23,7 +23,7 @@ ltm_virtual_servers:
     pool:
       name: "pool_rke2_west_registration_9345"
       monitors:
-        - "/Common/mon_rke2_registration_tcp"
+        - "registration_tcp"
       members:
         - host: "10.202.10.11"
           port: 9345
@@ -39,7 +39,7 @@ ltm_virtual_servers:
     pool:
       name: "pool_rke2_west_traefik_443"
       monitors:
-        - "/Common/mon_traefik_https"
+        - "traefik_https"
       members:
         - host: "10.202.20.21"
           port: 443

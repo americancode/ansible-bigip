@@ -5,3 +5,18 @@ ltm_virtual_server_defaults:
   snat: "Automap"
   profiles:
     - "tcp"
+
+ltm_pool_defaults:
+  lb_method: "round-robin"
+  enabled: true
+
+ltm_member_defaults:
+  reuse_nodes: true
+
+ltm_monitor_sets:
+  kubeapi_tcp:
+    - "/Common/mon_rke2_kubeapi_tcp"
+  registration_tcp:
+    - "/Common/mon_rke2_registration_tcp"
+  traefik_https:
+    - "/Common/mon_traefik_https"

@@ -1,0 +1,16 @@
+---
+gtm_pool_defaults:
+  enabled: true
+  alternate_lb_method: "round-robin"
+  fallback_lb_method: "none"
+
+gtm_member_defaults:
+  enabled: true
+
+gtm_monitor_sets:
+  postgres_tcp:
+    - "/Common/mon_gtm_postgres_tcp"
+  inventory_https:
+    - "/Common/mon_gtm_inventory_https"
+  reporting_https:
+    - "/Common/mon_gtm_reporting_https"

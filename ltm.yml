@@ -164,33 +164,74 @@
 
     - name: Aggregate LTM pools with directory settings
       ansible.builtin.set_fact:
-        ltm_pools: "{{ ltm_pools | default([]) + [ ltm_pool_directory_defaults | combine(item.1, recursive=True) ] }}"
+        ltm_pools: >-
+          {{
+            ltm_pools | default([]) + [
+              (
+                ltm_pool_directory_defaults
+                | combine(item.1, recursive=True)
+                | normalize_ltm_pool(
+                    ltm_pool_directory_defaults,
+                    ltm_pool_member_defaults,
+                    ltm_pool_monitor_sets
+                  )
+              )
+            ]
+          }}
       loop: "{{ query('subelements', ltm_pool_include_results.results, 'ansible_facts.ltm_pool_fragment.ltm_pools', {'skip_missing': True}) }}"
       vars:
         ltm_pool_settings_path: "{{ item.0.item | regex_replace('/[^/]+$', '/settings.yml') }}"
-        ltm_pool_directory_defaults: >-
+        ltm_pool_settings_payload: >-
           {{
             (
               lookup('ansible.builtin.file', ltm_pool_settings_path, errors='ignore')
               | default('{}', true)
               | from_yaml
-            ).ltm_pool_defaults | default({})
+            )
           }}
+        ltm_pool_directory_defaults: >-
+          {{
+            ltm_pool_settings_payload.ltm_pool_defaults | default({})
+          }}
+        ltm_pool_member_defaults: "{{ ltm_pool_settings_payload.ltm_member_defaults | default({}) }}"
+        ltm_pool_monitor_sets: "{{ ltm_pool_settings_payload.ltm_monitor_sets | default({}) }}"
 
     - name: Aggregate LTM pool deletions with directory settings
       ansible.builtin.set_fact:
-        ltm_pool_deletions: "{{ ltm_pool_deletions | default([]) + [ (ltm_pool_deletion_directory_defaults | combine(item.1, recursive=True)) | combine({'state': 'absent'}, recursive=True) ] }}"
+        ltm_pool_deletions: >-
+          {{
+            ltm_pool_deletions | default([]) + [
+              (
+                (
+                  ltm_pool_deletion_directory_defaults
+                  | combine(item.1, recursive=True)
+                  | normalize_ltm_pool(
+                      ltm_pool_deletion_directory_defaults,
+                      ltm_pool_deletion_member_defaults,
+                      ltm_pool_deletion_monitor_sets
+                    )
+                )
+                | combine({'state': 'absent'}, recursive=True)
+              )
+            ]
+          }}
       loop: "{{ query('subelements', ltm_pool_deletion_include_results.results, 'ansible_facts.ltm_pool_deletion_fragment.ltm_pools', {'skip_missing': True}) }}"
       vars:
         ltm_pool_deletion_settings_path: "{{ item.0.item | regex_replace('/[^/]+$', '/settings.yml') }}"
-        ltm_pool_deletion_directory_defaults: >-
+        ltm_pool_deletion_settings_payload: >-
           {{
             (
               lookup('ansible.builtin.file', ltm_pool_deletion_settings_path, errors='ignore')
               | default('{}', true)
               | from_yaml
-            ).ltm_pool_defaults | default({})
+            )
           }}
+        ltm_pool_deletion_directory_defaults: >-
+          {{
+            ltm_pool_deletion_settings_payload.ltm_pool_defaults | default({})
+          }}
+        ltm_pool_deletion_member_defaults: "{{ ltm_pool_deletion_settings_payload.ltm_member_defaults | default({}) }}"
+        ltm_pool_deletion_monitor_sets: "{{ ltm_pool_deletion_settings_payload.ltm_monitor_sets | default({}) }}"
 
     - name: Discover LTM virtual server fragments
       ansible.builtin.set_fact:
@@ -225,7 +266,7 @@
 
     - name: Aggregate LTM virtual servers with directory settings
       ansible.builtin.set_fact:
-        ltm_virtual_servers: "{{ ltm_virtual_servers | default([]) + [ ltm_virtual_server_directory_defaults | combine(item.1, recursive=True) ] }}"
+        ltm_virtual_servers: "{{ ltm_virtual_servers | default([]) + [ (ltm_virtual_server_directory_defaults | combine(item.1, recursive=True)) | combine({'__source_file': item.0.item}, recursive=True) ] }}"
       loop: "{{ query('subelements', ltm_virtual_server_include_results.results, 'ansible_facts.ltm_virtual_server_fragment.ltm_virtual_servers', {'skip_missing': True}) }}"
       vars:
         ltm_virtual_server_settings_path: "{{ item.0.item | regex_replace('/[^/]+$', '/settings.yml') }}"
@@ -240,7 +281,7 @@
 
     - name: Aggregate LTM virtual server deletions with directory settings
       ansible.builtin.set_fact:
-        ltm_virtual_server_deletions: "{{ ltm_virtual_server_deletions | default([]) + [ (ltm_virtual_server_deletion_directory_defaults | combine(item.1, recursive=True)) | combine({'state': 'absent'}, recursive=True) ] }}"
+        ltm_virtual_server_deletions: "{{ ltm_virtual_server_deletions | default([]) + [ ((ltm_virtual_server_deletion_directory_defaults | combine(item.1, recursive=True)) | combine({'state': 'absent'}, recursive=True)) | combine({'__source_file': item.0.item}, recursive=True) ] }}"
       loop: "{{ query('subelements', ltm_virtual_server_deletion_include_results.results, 'ansible_facts.ltm_virtual_server_deletion_fragment.ltm_virtual_servers', {'skip_missing': True}) }}"
       vars:
         ltm_virtual_server_deletion_settings_path: "{{ item.0.item | regex_replace('/[^/]+$', '/settings.yml') }}"
@@ -355,19 +396,81 @@
 
     - name: Collect embedded LTM pool deletions
       ansible.builtin.set_fact:
-        ltm_embedded_pool_deletions: "{{ (ltm_embedded_pool_deletions | default([])) + [ {'partition': item.partition | default('Common')} | combine(item.pool, recursive=True) ] }}"
+        ltm_embedded_pool_deletions: >-
+          {{
+            (ltm_embedded_pool_deletions | default([])) + [
+              (
+                {'partition': item.partition | default('Common')}
+                | combine(
+                    (
+                      item.pool
+                      | normalize_ltm_pool(
+                          ltm_virtual_server_pool_defaults,
+                          ltm_virtual_server_member_defaults,
+                          ltm_virtual_server_monitor_sets
+                        )
+                    ),
+                    recursive=True
+                  )
+              )
+            ]
+          }}
       loop: "{{ ltm_virtual_servers_delete | default([]) }}"
       when:
         - item.pool is defined
         - item.pool is mapping
+      vars:
+        ltm_virtual_server_settings_path: "{{ item.__source_file | regex_replace('/[^/]+$', '/settings.yml') if item.__source_file is defined else '' }}"
+        ltm_virtual_server_settings_payload: >-
+          {{
+            (
+              lookup('ansible.builtin.file', ltm_virtual_server_settings_path, errors='ignore')
+              | default('{}', true)
+              | from_yaml
+            ) if ltm_virtual_server_settings_path else {}
+          }}
+        ltm_virtual_server_pool_defaults: "{{ ltm_virtual_server_settings_payload.ltm_pool_defaults | default({}) }}"
+        ltm_virtual_server_member_defaults: "{{ ltm_virtual_server_settings_payload.ltm_member_defaults | default({}) }}"
+        ltm_virtual_server_monitor_sets: "{{ ltm_virtual_server_settings_payload.ltm_monitor_sets | default({}) }}"
 
     - name: Collect embedded LTM pools
       ansible.builtin.set_fact:
-        ltm_embedded_pools_present: "{{ (ltm_embedded_pools_present | default([])) + [ {'partition': item.partition | default('Common')} | combine(item.pool, recursive=True) ] }}"
+        ltm_embedded_pools_present: >-
+          {{
+            (ltm_embedded_pools_present | default([])) + [
+              (
+                {'partition': item.partition | default('Common')}
+                | combine(
+                    (
+                      item.pool
+                      | normalize_ltm_pool(
+                          ltm_virtual_server_pool_defaults,
+                          ltm_virtual_server_member_defaults,
+                          ltm_virtual_server_monitor_sets
+                        )
+                    ),
+                    recursive=True
+                  )
+              )
+            ]
+          }}
       loop: "{{ ltm_virtual_servers_present | default([]) }}"
       when:
         - item.pool is defined
         - item.pool is mapping
+      vars:
+        ltm_virtual_server_settings_path: "{{ item.__source_file | regex_replace('/[^/]+$', '/settings.yml') if item.__source_file is defined else '' }}"
+        ltm_virtual_server_settings_payload: >-
+          {{
+            (
+              lookup('ansible.builtin.file', ltm_virtual_server_settings_path, errors='ignore')
+              | default('{}', true)
+              | from_yaml
+            ) if ltm_virtual_server_settings_path else {}
+          }}
+        ltm_virtual_server_pool_defaults: "{{ ltm_virtual_server_settings_payload.ltm_pool_defaults | default({}) }}"
+        ltm_virtual_server_member_defaults: "{{ ltm_virtual_server_settings_payload.ltm_member_defaults | default({}) }}"
+        ltm_virtual_server_monitor_sets: "{{ ltm_virtual_server_settings_payload.ltm_monitor_sets | default({}) }}"
 
     - name: Combine first-class and embedded LTM pool operations
       ansible.builtin.set_fact:

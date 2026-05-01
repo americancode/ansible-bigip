@@ -512,10 +512,10 @@ This is the practical next sequence for the current repo.
 6. [ ] Add `tls.yml` for certs and SSL profiles
 7. [ ] Add network routes, route domains, and SNAT/NAT support
 8. [ ] Add hybrid readability shortcuts:
-   - `pool_defaults`
-   - `member_defaults`
-   - `monitor_sets`
-   - subdirectory maintenance defaults
+   - [x] `pool_defaults`
+   - [x] `member_defaults`
+   - [x] `monitor_sets`
+   - [x] subdirectory maintenance defaults via `settings.yml` object defaults
 
 ## Issue-Sized Execution Plan
 
@@ -535,7 +535,8 @@ These are the first concrete tickets I would open.
 - [x] Add `vars/ltm/pools`
 - [x] Refactor `ltm.yml` to support first-class pool and node objects
 - [x] Keep hybrid support for virtual-server-centric embedded pools
-- [ ] Add `pool_defaults`, `member_defaults`, and `monitor_sets`
+- [x] Add `pool_defaults`, `member_defaults`, and `monitor_sets`
+- [x] Add subdirectory maintenance defaults
 
 ### Milestone 3: GTM Shared Objects
 
@@ -544,7 +545,9 @@ These are the first concrete tickets I would open.
 - [x] Refactor `gtm.yml` so datacenters and pools are explicit managed trees
 - [x] Add separate static server model
 - [x] Restore hybrid Wide IP embedded-pool support
-- [ ] Add GTM hybrid shortcuts and optional LTM virtual resolution
+- [x] Add GTM `pool_defaults`, `member_defaults`, and `monitor_sets`
+- [x] Add subdirectory maintenance defaults
+- [ ] Add optional LTM virtual resolution
 
 ### Milestone 4: Platform and HA
 

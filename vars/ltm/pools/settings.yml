@@ -1,0 +1,12 @@
+---
+ltm_pool_defaults:
+  enabled: true
+
+ltm_member_defaults:
+  reuse_nodes: true
+
+ltm_monitor_sets:
+  standard_tcp:
+    - "/Common/tcp"
+  standard_https:
+    - "/Common/https"
