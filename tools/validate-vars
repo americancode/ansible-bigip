@@ -1,0 +1,484 @@
+#!/usr/bin/env python3
+
+from __future__ import annotations
+
+import sys
+from dataclasses import dataclass
+from pathlib import Path
+from typing import Any
+
+import yaml
+
+
+ROOT = Path(__file__).resolve().parents[1]
+VARS_DIR = ROOT / "vars"
+
+
+@dataclass(frozen=True)
+class TreeSpec:
+    name: str
+    active_dir: Path
+    deletion_dir: Path
+    top_key: str
+    settings_key: str
+
+
+@dataclass
+class LoadedObject:
+    tree: TreeSpec
+    source_file: Path
+    defaults: dict[str, Any]
+    data: dict[str, Any]
+    from_deletions: bool
+
+    @property
+    def relpath(self) -> str:
+        return str(self.source_file.relative_to(ROOT))
+
+    @property
+    def effective_state(self) -> str:
+        if self.from_deletions:
+            return "absent"
+        return str(self.data.get("state", "present"))
+
+    @property
+    def partition(self) -> str:
+        return str(self.data.get("partition", self.defaults.get("partition", "Common")))
+
+
+class Validator:
+    def __init__(self) -> None:
+        self.errors: list[str] = []
+        self.objects: dict[str, list[LoadedObject]] = {}
+        self.tree_specs = [
+            TreeSpec(
+                name="network_vlans",
+                active_dir=VARS_DIR / "network" / "vlans",
+                deletion_dir=VARS_DIR / "network" / "deletions" / "vlans",
+                top_key="bigip_vlans",
+                settings_key="network_vlan_defaults",
+            ),
+            TreeSpec(
+                name="network_self_ips",
+                active_dir=VARS_DIR / "network" / "self_ips",
+                deletion_dir=VARS_DIR / "network" / "deletions" / "self_ips",
+                top_key="bigip_self_ips",
+                settings_key="network_self_ip_defaults",
+            ),
+            TreeSpec(
+                name="ltm_monitors",
+                active_dir=VARS_DIR / "ltm" / "monitors",
+                deletion_dir=VARS_DIR / "ltm" / "deletions" / "monitors",
+                top_key="ltm_monitors",
+                settings_key="ltm_monitor_defaults",
+            ),
+            TreeSpec(
+                name="ltm_virtual_servers",
+                active_dir=VARS_DIR / "ltm" / "virtual_servers",
+                deletion_dir=VARS_DIR / "ltm" / "deletions" / "virtual_servers",
+                top_key="ltm_virtual_servers",
+                settings_key="ltm_virtual_server_defaults",
+            ),
+            TreeSpec(
+                name="gtm_monitors",
+                active_dir=VARS_DIR / "gtm" / "monitors",
+                deletion_dir=VARS_DIR / "gtm" / "deletions" / "monitors",
+                top_key="gtm_monitors",
+                settings_key="gtm_monitor_defaults",
+            ),
+            TreeSpec(
+                name="gtm_servers",
+                active_dir=VARS_DIR / "gtm" / "servers",
+                deletion_dir=VARS_DIR / "gtm" / "deletions" / "servers",
+                top_key="gtm_servers",
+                settings_key="gtm_server_defaults",
+            ),
+            TreeSpec(
+                name="gtm_wide_ips",
+                active_dir=VARS_DIR / "gtm" / "wide_ips",
+                deletion_dir=VARS_DIR / "gtm" / "deletions" / "wide_ips",
+                top_key="gtm_wide_ips",
+                settings_key="gtm_wide_ip_defaults",
+            ),
+        ]
+
+    def run(self) -> int:
+        self.validate_common()
+        self.validate_gtm_settings()
+
+        for spec in self.tree_specs:
+            self.load_tree(spec, from_deletions=False)
+            self.load_tree(spec, from_deletions=True)
+
+        self.validate_network()
+        self.validate_ltm()
+        self.validate_gtm()
+
+        if self.errors:
+            for error in self.errors:
+                print(f"ERROR: {error}", file=sys.stderr)
+            print(f"Validation failed with {len(self.errors)} error(s).", file=sys.stderr)
+            return 1
+
+        print("Validation passed.")
+        return 0
+
+    def validate_common(self) -> None:
+        path = VARS_DIR / "common.yml"
+        payload = self.load_yaml(path)
+        if not isinstance(payload, dict):
+            self.error(path, "must contain a mapping")
+            return
+        if "provider" not in payload:
+            self.error(path, "must define `provider`")
+        elif not isinstance(payload["provider"], dict):
+            self.error(path, "`provider` must be a mapping")
+
+    def validate_gtm_settings(self) -> None:
+        settings_dir = VARS_DIR / "gtm" / "settings"
+        if not settings_dir.exists():
+            return
+
+        for path in sorted(settings_dir.rglob("*.yml")):
+            payload = self.load_yaml(path)
+            if not isinstance(payload, dict):
+                self.error(path, "must contain a mapping")
+                continue
+            allowed = {"enable_gtm"}
+            unknown = sorted(set(payload) - allowed)
+            if unknown:
+                self.error(path, f"contains unsupported keys: {', '.join(unknown)}")
+            value = payload.get("enable_gtm")
+            if value is not None and not isinstance(value, bool):
+                self.error(path, "`enable_gtm` must be a boolean")
+
+    def load_tree(self, spec: TreeSpec, *, from_deletions: bool) -> None:
+        base_dir = spec.deletion_dir if from_deletions else spec.active_dir
+        if not base_dir.exists():
+            return
+
+        for path in sorted(base_dir.rglob("*.yml")):
+            if path.name == "settings.yml":
+                self.validate_settings_file(path, spec)
+                continue
+
+            payload = self.load_yaml(path)
+            if not isinstance(payload, dict):
+                self.error(path, "must contain a mapping")
+                continue
+
+            unknown = sorted(set(payload) - {spec.top_key})
+            if unknown:
+                self.error(path, f"contains unsupported keys: {', '.join(unknown)}")
+
+            entries = payload.get(spec.top_key)
+            if entries is None:
+                self.error(path, f"must define `{spec.top_key}`")
+                continue
+            if not isinstance(entries, list):
+                self.error(path, f"`{spec.top_key}` must be a list")
+                continue
+
+            defaults = self.load_directory_defaults(path.parent / "settings.yml", spec)
+            for index, entry in enumerate(entries):
+                if not isinstance(entry, dict):
+                    self.error(path, f"`{spec.top_key}[{index}]` must be a mapping")
+                    continue
+                if from_deletions and "state" in entry and entry["state"] != "absent":
+                    self.error(path, f"`{spec.top_key}[{index}]` in deletions may only use `state: absent`")
+                self.objects.setdefault(spec.name, []).append(
+                    LoadedObject(
+                        tree=spec,
+                        source_file=path,
+                        defaults=defaults,
+                        data=entry,
+                        from_deletions=from_deletions,
+                    )
+                )
+
+    def validate_settings_file(self, path: Path, spec: TreeSpec) -> None:
+        payload = self.load_yaml(path)
+        if not isinstance(payload, dict):
+            self.error(path, "must contain a mapping")
+            return
+
+        unknown = sorted(set(payload) - {spec.settings_key})
+        if unknown:
+            self.error(path, f"contains unsupported keys: {', '.join(unknown)}")
+
+        defaults = payload.get(spec.settings_key)
+        if defaults is not None and not isinstance(defaults, dict):
+            self.error(path, f"`{spec.settings_key}` must be a mapping")
+
+    def load_directory_defaults(self, path: Path, spec: TreeSpec) -> dict[str, Any]:
+        if not path.exists():
+            return {}
+        payload = self.load_yaml(path)
+        if not isinstance(payload, dict):
+            return {}
+        defaults = payload.get(spec.settings_key, {})
+        return defaults if isinstance(defaults, dict) else {}
+
+    def validate_network(self) -> None:
+        vlans = self.objects.get("network_vlans", [])
+        self_ips = self.objects.get("network_self_ips", [])
+
+        for obj in vlans:
+            self.require_fields(obj, ["name"])
+            if obj.effective_state != "absent":
+                interfaces = obj.data.get("interfaces")
+                if interfaces is not None and not isinstance(interfaces, list):
+                    self.error(obj.relpath, "`interfaces` must be a list")
+
+        for obj in self_ips:
+            self.require_fields(obj, ["name"])
+            if obj.effective_state != "absent":
+                self.require_fields(obj, ["address", "netmask", "vlan"])
+
+        self.check_duplicates(vlans, lambda obj: ("vlan", obj.partition, obj.data.get("name")), "VLAN")
+        self.check_duplicates(self_ips, lambda obj: ("self_ip", obj.partition, obj.data.get("name")), "self IP")
+
+    def validate_ltm(self) -> None:
+        monitors = self.objects.get("ltm_monitors", [])
+        virtual_servers = self.objects.get("ltm_virtual_servers", [])
+
+        active_monitor_names = set()
+        for obj in monitors:
+            self.require_fields(obj, ["name", "type"])
+            active = obj.effective_state != "absent"
+            if active:
+                active_monitor_names.add(self.fq_name(obj.partition, str(obj.data["name"])))
+
+        self.check_duplicates(monitors, lambda obj: ("ltm_monitor", obj.partition, obj.data.get("name")), "LTM monitor")
+
+        pool_identities: dict[tuple[str, str], LoadedObject] = {}
+
+        for obj in virtual_servers:
+            self.require_fields(obj, ["name"])
+            if obj.effective_state == "absent":
+                continue
+
+            self.require_fields(obj, ["destination", "destination_port", "pool"])
+            pool = obj.data.get("pool")
+            if not isinstance(pool, dict):
+                self.error(obj.relpath, f"virtual server `{obj.data.get('name')}` must define `pool` as a mapping")
+                continue
+            if "name" not in pool:
+                self.error(obj.relpath, f"virtual server `{obj.data.get('name')}` pool must define `name`")
+                continue
+
+            pool_partition = str(pool.get("partition", obj.partition))
+            pool_key = (pool_partition, str(pool["name"]))
+            if pool_key in pool_identities:
+                self.error(
+                    obj.relpath,
+                    f"LTM pool `{pool_partition}/{pool['name']}` duplicates {pool_identities[pool_key].relpath}",
+                )
+            else:
+                pool_identities[pool_key] = obj
+
+            monitors_list = pool.get("monitors", [])
+            if monitors_list is not None and not isinstance(monitors_list, list):
+                self.error(obj.relpath, f"virtual server `{obj.data.get('name')}` pool `monitors` must be a list")
+            else:
+                for monitor in monitors_list or []:
+                    self.validate_monitor_reference(
+                        source=obj.relpath,
+                        reference=monitor,
+                        known_monitors=active_monitor_names,
+                        kind="LTM pool monitor",
+                    )
+
+            members = pool.get("members")
+            if members is None or not isinstance(members, list) or not members:
+                self.error(obj.relpath, f"virtual server `{obj.data.get('name')}` pool must define a non-empty `members` list")
+            else:
+                for idx, member in enumerate(members):
+                    if not isinstance(member, dict):
+                        self.error(obj.relpath, f"virtual server `{obj.data.get('name')}` pool member {idx} must be a mapping")
+                        continue
+                    if member.get("state") == "absent":
+                        self.require_fields(member, ["host", "port"], obj.relpath, f"pool member {idx}")
+                    else:
+                        self.require_fields(member, ["host", "port"], obj.relpath, f"pool member {idx}")
+
+        self.check_duplicates(
+            virtual_servers,
+            lambda obj: ("ltm_virtual_server", obj.partition, obj.data.get("name")),
+            "LTM virtual server",
+        )
+
+    def validate_gtm(self) -> None:
+        monitors = self.objects.get("gtm_monitors", [])
+        servers = self.objects.get("gtm_servers", [])
+        wide_ips = self.objects.get("gtm_wide_ips", [])
+
+        active_monitor_names = set()
+        for obj in monitors:
+            self.require_fields(obj, ["name", "type"])
+            if obj.effective_state != "absent":
+                active_monitor_names.add(self.fq_name(obj.partition, str(obj.data["name"])))
+
+        self.check_duplicates(monitors, lambda obj: ("gtm_monitor", obj.partition, obj.data.get("name")), "GTM monitor")
+
+        active_server_names = set()
+        for obj in servers:
+            self.require_fields(obj, ["name"])
+            if obj.effective_state != "absent":
+                self.require_fields(obj, ["address", "datacenter"])
+                active_server_names.add(self.fq_name(obj.partition, str(obj.data["name"])))
+
+        self.check_duplicates(servers, lambda obj: ("gtm_server", obj.partition, obj.data.get("name")), "GTM server")
+
+        pool_identities: dict[tuple[str, str, str], LoadedObject] = {}
+
+        for obj in wide_ips:
+            self.require_fields(obj, ["name"])
+            record_type = str(obj.data.get("record_type", "a"))
+            if obj.effective_state == "absent":
+                continue
+
+            pools = obj.data.get("pools")
+            if pools is None or not isinstance(pools, list) or not pools:
+                self.error(obj.relpath, f"GTM Wide IP `{obj.data.get('name')}` must define a non-empty `pools` list")
+                continue
+
+            for pool_index, pool in enumerate(pools):
+                if not isinstance(pool, dict):
+                    self.error(obj.relpath, f"GTM Wide IP `{obj.data.get('name')}` pool {pool_index} must be a mapping")
+                    continue
+                if "name" not in pool:
+                    self.error(obj.relpath, f"GTM Wide IP `{obj.data.get('name')}` pool {pool_index} must define `name`")
+                    continue
+
+                pool_partition = str(pool.get("partition", obj.partition))
+                pool_key = (pool_partition, str(pool["name"]), record_type)
+                if pool_key in pool_identities:
+                    self.error(
+                        obj.relpath,
+                        f"GTM pool `{pool_partition}/{pool['name']}` type `{record_type}` duplicates {pool_identities[pool_key].relpath}",
+                    )
+                else:
+                    pool_identities[pool_key] = obj
+
+                for monitor in pool.get("default_monitors", []) or []:
+                    self.validate_monitor_reference(
+                        source=obj.relpath,
+                        reference=monitor,
+                        known_monitors=active_monitor_names,
+                        kind="GTM pool monitor",
+                    )
+
+                members = pool.get("members")
+                if members is None or not isinstance(members, list) or not members:
+                    self.error(obj.relpath, f"GTM pool `{pool.get('name')}` must define a non-empty `members` list")
+                    continue
+
+                for member_index, member in enumerate(members):
+                    if not isinstance(member, dict):
+                        self.error(obj.relpath, f"GTM pool `{pool.get('name')}` member {member_index} must be a mapping")
+                        continue
+                    self.require_fields(member, ["server", "virtual_server"], obj.relpath, f"GTM member {member_index}")
+                    if member.get("state") != "absent":
+                        self.require_fields(member, ["address", "port"], obj.relpath, f"GTM member {member_index}")
+                    server_partition = str(member.get("partition", pool_partition))
+                    server_name = member.get("server")
+                    if server_name is not None:
+                        fq_server = self.fq_name(server_partition, str(server_name))
+                        if fq_server not in active_server_names:
+                            self.error(
+                                obj.relpath,
+                                f"GTM member `{server_name}` references undefined server `{fq_server}`",
+                            )
+                    for monitor in member.get("monitors", []) or []:
+                        self.validate_monitor_reference(
+                            source=obj.relpath,
+                            reference=monitor,
+                            known_monitors=active_monitor_names,
+                            kind="GTM member monitor",
+                        )
+
+        self.check_duplicates(
+            wide_ips,
+            lambda obj: ("gtm_wide_ip", obj.partition, obj.data.get("name"), obj.data.get("record_type", "a")),
+            "GTM Wide IP",
+        )
+
+    def validate_monitor_reference(
+        self,
+        *,
+        source: str,
+        reference: Any,
+        known_monitors: set[str],
+        kind: str,
+    ) -> None:
+        if not isinstance(reference, str):
+            self.error(source, f"{kind} reference must be a string")
+            return
+        if not reference.startswith("/"):
+            self.error(source, f"{kind} reference `{reference}` must be fully qualified, for example `/Common/name`")
+            return
+        partition, _, name = reference.strip("/").partition("/")
+        if not partition or not name:
+            self.error(source, f"{kind} reference `{reference}` is not a valid fully-qualified object name")
+            return
+        if partition != "Common" and reference not in known_monitors:
+            self.error(source, f"{kind} reference `{reference}` does not match a declared custom monitor")
+        if partition == "Common" and reference in known_monitors:
+            return
+
+    def check_duplicates(
+        self,
+        objects: list[LoadedObject],
+        key_func,
+        label: str,
+    ) -> None:
+        seen: dict[tuple[Any, ...], LoadedObject] = {}
+        for obj in objects:
+            key = key_func(obj)
+            if any(part is None for part in key):
+                continue
+            if key in seen:
+                self.error(obj.relpath, f"{label} `{key[1:]}` duplicates {seen[key].relpath}")
+            else:
+                seen[key] = obj
+
+    def require_fields(
+        self,
+        obj: LoadedObject | dict[str, Any],
+        fields: list[str],
+        source: str | None = None,
+        label: str | None = None,
+    ) -> None:
+        data = obj.data if isinstance(obj, LoadedObject) else obj
+        source_ref = obj.relpath if isinstance(obj, LoadedObject) else (source or "<unknown>")
+        prefix = label or "object"
+        for field in fields:
+            if data.get(field) in (None, ""):
+                self.error(source_ref, f"{prefix} must define `{field}`")
+
+    def fq_name(self, partition: str, name: str) -> str:
+        return f"/{partition}/{name}"
+
+    def load_yaml(self, path: Path) -> Any:
+        try:
+            with path.open("r", encoding="utf-8") as handle:
+                return yaml.safe_load(handle) or {}
+        except yaml.YAMLError as exc:
+            self.error(path, f"failed to parse YAML: {exc}")
+            return {}
+        except OSError as exc:
+            self.error(path, f"failed to read file: {exc}")
+            return {}
+
+    def error(self, source: Path | str, message: str) -> None:
+        rel = str(source.relative_to(ROOT)) if isinstance(source, Path) else source
+        self.errors.append(f"{rel}: {message}")
+
+
+def main() -> int:
+    return Validator().run()
+
+
+if __name__ == "__main__":
+    raise SystemExit(main())
