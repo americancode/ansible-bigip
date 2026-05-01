@@ -9,45 +9,75 @@
     - vars/common.yml
 
   pre_tasks:
+    - name: Discover LTM monitor fragments
+      ansible.builtin.set_fact:
+        ltm_monitor_files: >-
+          {{
+            lookup(
+              'ansible.builtin.pipe',
+              "find vars/ltm/monitors -type f -name '*.yml' ! -name 'settings.yml' | sort"
+            ).splitlines() | reject('equalto', '') | list
+          }}
+
     - name: Load LTM monitor fragments
       ansible.builtin.include_vars:
         file: "{{ item }}"
         name: ltm_monitor_fragment
-      loop: "{{ query('fileglob', 'vars/ltm/monitors/*.yml') | sort }}"
+      loop: "{{ ltm_monitor_files }}"
       register: ltm_monitor_include_results
 
-    - name: Aggregate LTM monitors
+    - name: Aggregate LTM monitors with directory settings
       ansible.builtin.set_fact:
-        ltm_monitors: >-
+        ltm_monitors: "{{ ltm_monitors | default([]) + [ ltm_monitor_directory_defaults | combine(item.1, recursive=True) ] }}"
+      loop: "{{ query('subelements', ltm_monitor_include_results.results, 'ansible_facts.ltm_monitor_fragment.ltm_monitors', {'skip_missing': True}) }}"
+      vars:
+        ltm_monitor_settings_path: "{{ item.0.item | regex_replace('/[^/]+$', '/settings.yml') }}"
+        ltm_monitor_directory_defaults: >-
           {{
-            ltm_monitor_include_results.results
-            | map(attribute='ansible_facts.ltm_monitor_fragment.ltm_monitors')
-            | select('defined')
-            | flatten
+            (
+              lookup('ansible.builtin.file', ltm_monitor_settings_path, errors='ignore')
+              | default('{}', true)
+              | from_yaml
+            ).ltm_monitor_defaults | default({})
+          }}
+
+    - name: Discover LTM virtual server fragments
+      ansible.builtin.set_fact:
+        ltm_virtual_server_files: >-
+          {{
+            lookup(
+              'ansible.builtin.pipe',
+              "find vars/ltm/virtual_servers -type f -name '*.yml' ! -name 'settings.yml' | sort"
+            ).splitlines() | reject('equalto', '') | list
           }}
 
     - name: Load LTM virtual server fragments
       ansible.builtin.include_vars:
         file: "{{ item }}"
         name: ltm_virtual_server_fragment
-      loop: "{{ query('fileglob', 'vars/ltm/virtual_servers/*.yml') | sort }}"
+      loop: "{{ ltm_virtual_server_files }}"
       register: ltm_virtual_server_include_results
 
-    - name: Aggregate LTM virtual servers
+    - name: Aggregate LTM virtual servers with directory settings
       ansible.builtin.set_fact:
-        ltm_virtual_servers: >-
+        ltm_virtual_servers: "{{ ltm_virtual_servers | default([]) + [ ltm_virtual_server_directory_defaults | combine(item.1, recursive=True) ] }}"
+      loop: "{{ query('subelements', ltm_virtual_server_include_results.results, 'ansible_facts.ltm_virtual_server_fragment.ltm_virtual_servers', {'skip_missing': True}) }}"
+      vars:
+        ltm_virtual_server_settings_path: "{{ item.0.item | regex_replace('/[^/]+$', '/settings.yml') }}"
+        ltm_virtual_server_directory_defaults: >-
           {{
-            ltm_virtual_server_include_results.results
-            | map(attribute='ansible_facts.ltm_virtual_server_fragment.ltm_virtual_servers')
-            | select('defined')
-            | flatten
+            (
+              lookup('ansible.builtin.file', ltm_virtual_server_settings_path, errors='ignore')
+              | default('{}', true)
+              | from_yaml
+            ).ltm_virtual_server_defaults | default({})
           }}
 
   tasks:
     - name: Create LTM TCP monitors
       f5networks.f5_modules.bigip_monitor_tcp:
         provider: "{{ provider }}"
-        partition: "{{ item.partition | default(partition) }}"
+        partition: "{{ item.partition | default('Common') }}"
         name: "{{ item.name }}"
         parent: "{{ item.parent | default(omit) }}"
         send: "{{ item.send | default(omit) }}"
@@ -65,7 +95,7 @@
     - name: Create LTM HTTP monitors
       f5networks.f5_modules.bigip_monitor_http:
         provider: "{{ provider }}"
-        partition: "{{ item.partition | default(partition) }}"
+        partition: "{{ item.partition | default('Common') }}"
         name: "{{ item.name }}"
         parent: "{{ item.parent | default(omit) }}"
         send: "{{ item.send | default(omit) }}"
@@ -85,7 +115,7 @@
     - name: Create LTM HTTPS monitors
       f5networks.f5_modules.bigip_monitor_https:
         provider: "{{ provider }}"
-        partition: "{{ item.partition | default(partition) }}"
+        partition: "{{ item.partition | default('Common') }}"
         name: "{{ item.name }}"
         parent: "{{ item.parent | default(omit) }}"
         send: "{{ item.send | default(omit) }}"
@@ -109,7 +139,7 @@
     - name: Create LTM gateway ICMP monitors
       f5networks.f5_modules.bigip_monitor_gateway_icmp:
         provider: "{{ provider }}"
-        partition: "{{ item.partition | default(partition) }}"
+        partition: "{{ item.partition | default('Common') }}"
         name: "{{ item.name }}"
         parent: "{{ item.parent | default(omit) }}"
         interval: "{{ item.interval | default(omit) }}"
@@ -125,7 +155,7 @@
     - name: Create pools for virtual servers
       f5networks.f5_modules.bigip_pool:
         provider: "{{ provider }}"
-        partition: "{{ item.pool.partition | default(item.partition | default(partition)) }}"
+        partition: "{{ item.pool.partition | default(item.partition | default('Common')) }}"
         name: "{{ item.pool.name }}"
         lb_method: "{{ item.pool.lb_method | default('round-robin') }}"
         monitors: "{{ item.pool.monitors | default(omit) }}"
@@ -135,17 +165,17 @@
     - name: Add members to pools
       f5networks.f5_modules.bigip_pool_member:
         provider: "{{ provider }}"
-        partition: "{{ item.0.pool.partition | default(item.0.partition | default(partition)) }}"
+        partition: "{{ item.0.pool.partition | default(item.0.partition | default('Common')) }}"
         pool: "{{ item.0.pool.name }}"
         host: "{{ item.1.host }}"
         port: "{{ item.1.port }}"
-        state: "{{ item.1.state | default('present') }}"
+        state: "{{ item.1.state | default((item.1.enabled | default(true)) | ternary('enabled', 'disabled')) }}"
       loop: "{{ query('subelements', ltm_virtual_servers, 'pool.members') }}"
 
     - name: Create virtual servers
       f5networks.f5_modules.bigip_virtual_server:
         provider: "{{ provider }}"
-        partition: "{{ item.partition | default(partition) }}"
+        partition: "{{ item.partition | default('Common') }}"
         name: "{{ item.name }}"
         destination: "{{ item.destination }}"
         port: "{{ item.destination_port }}"
@@ -153,5 +183,5 @@
         snat: "{{ item.snat | default('Automap') }}"
         all_profiles: "{{ item.profiles | default(['tcp']) }}"
         description: "{{ item.description | default(omit) }}"
-        state: "{{ item.state | default('present') }}"
+        state: "{{ item.state | default((item.enabled | default(true)) | ternary('enabled', 'disabled')) }}"
       loop: "{{ ltm_virtual_servers }}"

@@ -9,5 +9,3 @@ provider:
   password: "{{ lookup('env', 'F5_PASSWORD') }}"
   server_port: "{{ lookup('env', 'F5_SERVER_PORT') | default(443, true) }}"
   validate_certs: "{{ lookup('env', 'F5_VALIDATE_CERTS') | default(false, true) }}"
-
-partition: "Common"

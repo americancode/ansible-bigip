@@ -30,62 +30,107 @@
             ) | default(false)
           }}
 
+    - name: Discover GTM monitor fragments
+      ansible.builtin.set_fact:
+        gtm_monitor_files: >-
+          {{
+            lookup(
+              'ansible.builtin.pipe',
+              "find vars/gtm/monitors -type f -name '*.yml' ! -name 'settings.yml' | sort"
+            ).splitlines() | reject('equalto', '') | list
+          }}
+
     - name: Load GTM monitor fragments
       ansible.builtin.include_vars:
         file: "{{ item }}"
         name: gtm_monitor_fragment
-      loop: "{{ query('fileglob', 'vars/gtm/monitors/*.yml') | sort }}"
+      loop: "{{ gtm_monitor_files }}"
       register: gtm_monitor_include_results
 
-    - name: Aggregate GTM monitors
+    - name: Aggregate GTM monitors with directory settings
       ansible.builtin.set_fact:
-        gtm_monitors: >-
+        gtm_monitors: "{{ gtm_monitors | default([]) + [ gtm_monitor_directory_defaults | combine(item.1, recursive=True) ] }}"
+      loop: "{{ query('subelements', gtm_monitor_include_results.results, 'ansible_facts.gtm_monitor_fragment.gtm_monitors', {'skip_missing': True}) }}"
+      vars:
+        gtm_monitor_settings_path: "{{ item.0.item | regex_replace('/[^/]+$', '/settings.yml') }}"
+        gtm_monitor_directory_defaults: >-
           {{
-            gtm_monitor_include_results.results
-            | map(attribute='ansible_facts.gtm_monitor_fragment.gtm_monitors')
-            | select('defined')
-            | flatten
+            (
+              lookup('ansible.builtin.file', gtm_monitor_settings_path, errors='ignore')
+              | default('{}', true)
+              | from_yaml
+            ).gtm_monitor_defaults | default({})
+          }}
+
+    - name: Discover GTM server fragments
+      ansible.builtin.set_fact:
+        gtm_server_files: >-
+          {{
+            lookup(
+              'ansible.builtin.pipe',
+              "find vars/gtm/servers -type f -name '*.yml' ! -name 'settings.yml' | sort"
+            ).splitlines() | reject('equalto', '') | list
           }}
 
     - name: Load GTM server fragments
       ansible.builtin.include_vars:
         file: "{{ item }}"
         name: gtm_server_fragment
-      loop: "{{ query('fileglob', 'vars/gtm/servers/*.yml') | sort }}"
+      loop: "{{ gtm_server_files }}"
       register: gtm_server_include_results
 
-    - name: Aggregate GTM servers
+    - name: Aggregate GTM servers with directory settings
       ansible.builtin.set_fact:
-        gtm_servers: >-
+        gtm_servers: "{{ gtm_servers | default([]) + [ gtm_server_directory_defaults | combine(item.1, recursive=True) ] }}"
+      loop: "{{ query('subelements', gtm_server_include_results.results, 'ansible_facts.gtm_server_fragment.gtm_servers', {'skip_missing': True}) }}"
+      vars:
+        gtm_server_settings_path: "{{ item.0.item | regex_replace('/[^/]+$', '/settings.yml') }}"
+        gtm_server_directory_defaults: >-
           {{
-            gtm_server_include_results.results
-            | map(attribute='ansible_facts.gtm_server_fragment.gtm_servers')
-            | select('defined')
-            | flatten
+            (
+              lookup('ansible.builtin.file', gtm_server_settings_path, errors='ignore')
+              | default('{}', true)
+              | from_yaml
+            ).gtm_server_defaults | default({})
+          }}
+
+    - name: Discover GTM Wide IP fragments
+      ansible.builtin.set_fact:
+        gtm_wide_ip_files: >-
+          {{
+            lookup(
+              'ansible.builtin.pipe',
+              "find vars/gtm/wide_ips -type f -name '*.yml' ! -name 'settings.yml' | sort"
+            ).splitlines() | reject('equalto', '') | list
           }}
 
     - name: Load GTM Wide IP fragments
       ansible.builtin.include_vars:
         file: "{{ item }}"
         name: gtm_wide_ip_fragment
-      loop: "{{ query('fileglob', 'vars/gtm/wide_ips/*.yml') | sort }}"
+      loop: "{{ gtm_wide_ip_files }}"
       register: gtm_wide_ip_include_results
 
-    - name: Aggregate GTM Wide IPs
+    - name: Aggregate GTM Wide IPs with directory settings
       ansible.builtin.set_fact:
-        gtm_wide_ips: >-
+        gtm_wide_ips: "{{ gtm_wide_ips | default([]) + [ gtm_wide_ip_directory_defaults | combine(item.1, recursive=True) ] }}"
+      loop: "{{ query('subelements', gtm_wide_ip_include_results.results, 'ansible_facts.gtm_wide_ip_fragment.gtm_wide_ips', {'skip_missing': True}) }}"
+      vars:
+        gtm_wide_ip_settings_path: "{{ item.0.item | regex_replace('/[^/]+$', '/settings.yml') }}"
+        gtm_wide_ip_directory_defaults: >-
           {{
-            gtm_wide_ip_include_results.results
-            | map(attribute='ansible_facts.gtm_wide_ip_fragment.gtm_wide_ips')
-            | select('defined')
-            | flatten
+            (
+              lookup('ansible.builtin.file', gtm_wide_ip_settings_path, errors='ignore')
+              | default('{}', true)
+              | from_yaml
+            ).gtm_wide_ip_defaults | default({})
           }}
 
   tasks:
     - name: Create GTM BIG-IP monitors
       f5networks.f5_modules.bigip_gtm_monitor_bigip:
         provider: "{{ provider }}"
-        partition: "{{ item.partition | default(partition) }}"
+        partition: "{{ item.partition | default('Common') }}"
         name: "{{ item.name }}"
         parent: "{{ item.parent | default(omit) }}"
         ip: "{{ item.ip | default(omit) }}"
@@ -105,7 +150,7 @@
     - name: Create GTM external monitors
       f5networks.f5_modules.bigip_gtm_monitor_external:
         provider: "{{ provider }}"
-        partition: "{{ item.partition | default(partition) }}"
+        partition: "{{ item.partition | default('Common') }}"
         name: "{{ item.name }}"
         parent: "{{ item.parent | default(omit) }}"
         ip: "{{ item.ip | default(omit) }}"
@@ -126,7 +171,7 @@
     - name: Create GTM FirePass monitors
       f5networks.f5_modules.bigip_gtm_monitor_firepass:
         provider: "{{ provider }}"
-        partition: "{{ item.partition | default(partition) }}"
+        partition: "{{ item.partition | default('Common') }}"
         name: "{{ item.name }}"
         parent: "{{ item.parent | default(omit) }}"
         ip: "{{ item.ip | default(omit) }}"
@@ -152,7 +197,7 @@
     - name: Create GTM HTTP monitors
       f5networks.f5_modules.bigip_gtm_monitor_http:
         provider: "{{ provider }}"
-        partition: "{{ item.partition | default(partition) }}"
+        partition: "{{ item.partition | default('Common') }}"
         name: "{{ item.name }}"
         parent: "{{ item.parent | default(omit) }}"
         send: "{{ item.send | default(omit) }}"
@@ -179,7 +224,7 @@
     - name: Create GTM HTTPS monitors
       f5networks.f5_modules.bigip_gtm_monitor_https:
         provider: "{{ provider }}"
-        partition: "{{ item.partition | default(partition) }}"
+        partition: "{{ item.partition | default('Common') }}"
         name: "{{ item.name }}"
         parent: "{{ item.parent | default(omit) }}"
         send: "{{ item.send | default(omit) }}"
@@ -210,7 +255,7 @@
     - name: Create GTM TCP monitors
       f5networks.f5_modules.bigip_gtm_monitor_tcp:
         provider: "{{ provider }}"
-        partition: "{{ item.partition | default(partition) }}"
+        partition: "{{ item.partition | default('Common') }}"
         name: "{{ item.name }}"
         parent: "{{ item.parent | default(omit) }}"
         send: "{{ item.send | default(omit) }}"
@@ -234,7 +279,7 @@
     - name: Create GTM TCP half-open monitors
       f5networks.f5_modules.bigip_gtm_monitor_tcp_half_open:
         provider: "{{ provider }}"
-        partition: "{{ item.partition | default(partition) }}"
+        partition: "{{ item.partition | default('Common') }}"
         name: "{{ item.name }}"
         parent: "{{ item.parent | default(omit) }}"
         ip: "{{ item.ip | default(omit) }}"
@@ -258,27 +303,18 @@
       when: enable_gtm | bool
       f5networks.f5_modules.bigip_gtm_datacenter:
         provider: "{{ provider }}"
-        partition: "{{ item.partition | default(partition) }}"
-        name: "{{ item.name }}"
+        partition: "{{ item.partition | default('Common') }}"
+        name: "{{ item.datacenter }}"
         state: present
-      loop: >-
-        {{
-          gtm_servers
-          | map(attribute='datacenter')
-          | select('defined')
-          | unique
-          | map('regex_replace', '^(.*)$', '{"name":"\\1"}')
-          | map('from_yaml')
-          | list
-        }}
+      loop: "{{ gtm_servers }}"
       loop_control:
-        label: "{{ item.name }}"
+        label: "{{ item.partition | default('Common') }}/{{ item.datacenter }}"
 
     - name: Register GTM servers
       when: enable_gtm | bool
       f5networks.f5_modules.bigip_gtm_server:
         provider: "{{ provider }}"
-        partition: "{{ item.partition | default(partition) }}"
+        partition: "{{ item.partition | default('Common') }}"
         name: "{{ item.name }}"
         datacenter: "{{ item.datacenter }}"
         server_type: bigip
@@ -296,7 +332,7 @@
         gtm_pools_flat: "{{ gtm_pools_flat | default([]) + [ item.1 | combine({
           'wide_ip_name': item.0.name,
           'record_type': item.0.record_type | default('a'),
-          'partition': item.1.partition | default(item.0.partition | default(partition))
+          'partition': item.1.partition | default(item.0.partition | default('Common'))
         }) ] }}"
       loop: "{{ query('subelements', gtm_wide_ips, 'pools') }}"
 
@@ -320,7 +356,7 @@
       when: enable_gtm | bool
       f5networks.f5_modules.bigip_gtm_virtual_server:
         provider: "{{ provider }}"
-        partition: "{{ item.1.partition | default(item.0.partition | default(partition)) }}"
+        partition: "{{ item.1.partition | default(item.0.partition | default('Common')) }}"
         server_name: "{{ item.1.server }}"
         name: "{{ item.1.virtual_server }}"
         address: "{{ item.1.address }}"
@@ -328,7 +364,7 @@
         translation_address: "{{ item.1.translation_address | default('') }}"
         translation_port: "{{ item.1.translation_port | default('') }}"
         monitors: "{{ item.1.monitors | default(item.0.default_monitors | default(omit)) }}"
-        state: "{{ item.1.state | default('present') }}"
+        state: "{{ item.1.state | default((item.1.enabled | default(true)) | ternary('enabled', 'disabled')) }}"
       loop: "{{ query('subelements', gtm_pools_flat, 'members') }}"
 
     - name: Build GTM pool members by pool
@@ -351,26 +387,26 @@
       when: enable_gtm | bool
       f5networks.f5_modules.bigip_gtm_pool:
         provider: "{{ provider }}"
-        partition: "{{ item.partition | default(partition) }}"
+        partition: "{{ item.partition | default('Common') }}"
         name: "{{ item.name }}"
         type: "{{ item.record_type }}"
         preferred_lb_method: "{{ item.preferred_lb_method | default('topology') }}"
         alternate_lb_method: "{{ item.alternate_lb_method | default('global-availability') }}"
         fallback_lb_method: "{{ item.fallback_lb_method | default('round-robin') }}"
         members: "{{ gtm_pool_members_by_pool[item.name] | default([]) }}"
-        state: "{{ item.state | default('present') }}"
+        state: "{{ item.state | default((item.enabled | default(true)) | ternary('enabled', 'disabled')) }}"
       loop: "{{ gtm_pools_flat | default([]) }}"
 
     - name: Create Wide IPs
       when: enable_gtm | bool
       f5networks.f5_modules.bigip_gtm_wide_ip:
         provider: "{{ provider }}"
-        partition: "{{ item.partition | default(partition) }}"
+        partition: "{{ item.partition | default('Common') }}"
         name: "{{ item.name }}"
         type: "{{ item.record_type | default('a') }}"
         pool_lb_method: "{{ item.pool_lb_method | default('topology') }}"
         pools: "{{ gtm_wide_ip_pool_refs[item.name] | default([]) }}"
-        state: "{{ item.state | default('present') }}"
+        state: "{{ item.state | default((item.enabled | default(true)) | ternary('enabled', 'disabled')) }}"
       loop: "{{ gtm_wide_ips }}"
 
     - name: Explain health-check behavior for GTM Wide IPs
