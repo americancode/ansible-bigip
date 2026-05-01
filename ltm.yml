@@ -15,7 +15,14 @@
           {{
             lookup(
               'ansible.builtin.pipe',
-              "find vars/ltm/monitors -type f -name '*.yml' ! -name 'settings.yml' | sort"
+              "find vars/ltm/monitors -type f -name '*.yml' ! -name 'settings.yml' 2>/dev/null | sort"
+            ).splitlines() | reject('equalto', '') | list
+          }}
+        ltm_monitor_deletion_files: >-
+          {{
+            lookup(
+              'ansible.builtin.pipe',
+              "find vars/ltm/deletions/monitors -type f -name '*.yml' ! -name 'settings.yml' 2>/dev/null | sort"
             ).splitlines() | reject('equalto', '') | list
           }}
 
@@ -25,6 +32,13 @@
         name: ltm_monitor_fragment
       loop: "{{ ltm_monitor_files }}"
       register: ltm_monitor_include_results
+
+    - name: Load LTM monitor deletion fragments
+      ansible.builtin.include_vars:
+        file: "{{ item }}"
+        name: ltm_monitor_deletion_fragment
+      loop: "{{ ltm_monitor_deletion_files }}"
+      register: ltm_monitor_deletion_include_results
 
     - name: Aggregate LTM monitors with directory settings
       ansible.builtin.set_fact:
@@ -41,13 +55,35 @@
             ).ltm_monitor_defaults | default({})
           }}
 
+    - name: Aggregate LTM monitor deletions with directory settings
+      ansible.builtin.set_fact:
+        ltm_monitor_deletions: "{{ ltm_monitor_deletions | default([]) + [ (ltm_monitor_deletion_directory_defaults | combine(item.1, recursive=True)) | combine({'state': 'absent'}, recursive=True) ] }}"
+      loop: "{{ query('subelements', ltm_monitor_deletion_include_results.results, 'ansible_facts.ltm_monitor_deletion_fragment.ltm_monitors', {'skip_missing': True}) }}"
+      vars:
+        ltm_monitor_deletion_settings_path: "{{ item.0.item | regex_replace('/[^/]+$', '/settings.yml') }}"
+        ltm_monitor_deletion_directory_defaults: >-
+          {{
+            (
+              lookup('ansible.builtin.file', ltm_monitor_deletion_settings_path, errors='ignore')
+              | default('{}', true)
+              | from_yaml
+            ).ltm_monitor_defaults | default({})
+          }}
+
     - name: Discover LTM virtual server fragments
       ansible.builtin.set_fact:
         ltm_virtual_server_files: >-
           {{
             lookup(
               'ansible.builtin.pipe',
-              "find vars/ltm/virtual_servers -type f -name '*.yml' ! -name 'settings.yml' | sort"
+              "find vars/ltm/virtual_servers -type f -name '*.yml' ! -name 'settings.yml' 2>/dev/null | sort"
+            ).splitlines() | reject('equalto', '') | list
+          }}
+        ltm_virtual_server_deletion_files: >-
+          {{
+            lookup(
+              'ansible.builtin.pipe',
+              "find vars/ltm/deletions/virtual_servers -type f -name '*.yml' ! -name 'settings.yml' 2>/dev/null | sort"
             ).splitlines() | reject('equalto', '') | list
           }}
 
@@ -57,6 +93,13 @@
         name: ltm_virtual_server_fragment
       loop: "{{ ltm_virtual_server_files }}"
       register: ltm_virtual_server_include_results
+
+    - name: Load LTM virtual server deletion fragments
+      ansible.builtin.include_vars:
+        file: "{{ item }}"
+        name: ltm_virtual_server_deletion_fragment
+      loop: "{{ ltm_virtual_server_deletion_files }}"
+      register: ltm_virtual_server_deletion_include_results
 
     - name: Aggregate LTM virtual servers with directory settings
       ansible.builtin.set_fact:
@@ -73,7 +116,133 @@
             ).ltm_virtual_server_defaults | default({})
           }}
 
+    - name: Aggregate LTM virtual server deletions with directory settings
+      ansible.builtin.set_fact:
+        ltm_virtual_server_deletions: "{{ ltm_virtual_server_deletions | default([]) + [ (ltm_virtual_server_deletion_directory_defaults | combine(item.1, recursive=True)) | combine({'state': 'absent'}, recursive=True) ] }}"
+      loop: "{{ query('subelements', ltm_virtual_server_deletion_include_results.results, 'ansible_facts.ltm_virtual_server_deletion_fragment.ltm_virtual_servers', {'skip_missing': True}) }}"
+      vars:
+        ltm_virtual_server_deletion_settings_path: "{{ item.0.item | regex_replace('/[^/]+$', '/settings.yml') }}"
+        ltm_virtual_server_deletion_directory_defaults: >-
+          {{
+            (
+              lookup('ansible.builtin.file', ltm_virtual_server_deletion_settings_path, errors='ignore')
+              | default('{}', true)
+              | from_yaml
+            ).ltm_virtual_server_defaults | default({})
+          }}
+
+    - name: Classify LTM monitor operations
+      ansible.builtin.set_fact:
+        ltm_monitors_delete: >-
+          {{
+            ((ltm_monitors | default([])) + (ltm_monitor_deletions | default([])))
+            | selectattr('state', 'defined')
+            | selectattr('state', 'equalto', 'absent')
+            | list
+          }}
+        ltm_monitors_present: >-
+          {{
+            (ltm_monitors | default([]))
+            | rejectattr('state', 'defined')
+            | list
+            +
+            (
+              (ltm_monitors | default([]))
+              | selectattr('state', 'defined')
+              | rejectattr('state', 'equalto', 'absent')
+              | list
+            )
+          }}
+
+    - name: Classify LTM virtual server operations
+      ansible.builtin.set_fact:
+        ltm_virtual_servers_delete: >-
+          {{
+            ((ltm_virtual_servers | default([])) + (ltm_virtual_server_deletions | default([])))
+            | selectattr('state', 'defined')
+            | selectattr('state', 'equalto', 'absent')
+            | list
+          }}
+        ltm_virtual_servers_present: >-
+          {{
+            (ltm_virtual_servers | default([]))
+            | rejectattr('state', 'defined')
+            | list
+            +
+            (
+              (ltm_virtual_servers | default([]))
+              | selectattr('state', 'defined')
+              | rejectattr('state', 'equalto', 'absent')
+              | list
+            )
+          }}
+
   tasks:
+    - name: Delete virtual servers
+      f5networks.f5_modules.bigip_virtual_server:
+        provider: "{{ provider }}"
+        partition: "{{ item.partition | default('Common') }}"
+        name: "{{ item.name }}"
+        state: absent
+      loop: "{{ ltm_virtual_servers_delete | default([]) }}"
+      loop_control:
+        label: "{{ item.partition | default('Common') }}/{{ item.name }}"
+
+    - name: Delete pools referenced by deleted virtual servers
+      f5networks.f5_modules.bigip_pool:
+        provider: "{{ provider }}"
+        partition: "{{ item.pool.partition | default(item.partition | default('Common')) }}"
+        name: "{{ item.pool.name }}"
+        state: absent
+      loop: "{{ ltm_virtual_servers_delete | default([]) }}"
+      loop_control:
+        label: "{{ item.pool.partition | default(item.partition | default('Common')) }}/{{ item.pool.name }}"
+      when: item.pool is defined
+
+    - name: Delete LTM TCP monitors
+      f5networks.f5_modules.bigip_monitor_tcp:
+        provider: "{{ provider }}"
+        partition: "{{ item.partition | default('Common') }}"
+        name: "{{ item.name }}"
+        state: absent
+      loop: "{{ ltm_monitors_delete | default([]) }}"
+      loop_control:
+        label: "{{ item.partition | default('Common') }}/{{ item.name }}"
+      when: item.type == 'tcp'
+
+    - name: Delete LTM HTTP monitors
+      f5networks.f5_modules.bigip_monitor_http:
+        provider: "{{ provider }}"
+        partition: "{{ item.partition | default('Common') }}"
+        name: "{{ item.name }}"
+        state: absent
+      loop: "{{ ltm_monitors_delete | default([]) }}"
+      loop_control:
+        label: "{{ item.partition | default('Common') }}/{{ item.name }}"
+      when: item.type == 'http'
+
+    - name: Delete LTM HTTPS monitors
+      f5networks.f5_modules.bigip_monitor_https:
+        provider: "{{ provider }}"
+        partition: "{{ item.partition | default('Common') }}"
+        name: "{{ item.name }}"
+        state: absent
+      loop: "{{ ltm_monitors_delete | default([]) }}"
+      loop_control:
+        label: "{{ item.partition | default('Common') }}/{{ item.name }}"
+      when: item.type == 'https'
+
+    - name: Delete LTM gateway ICMP monitors
+      f5networks.f5_modules.bigip_monitor_gateway_icmp:
+        provider: "{{ provider }}"
+        partition: "{{ item.partition | default('Common') }}"
+        name: "{{ item.name }}"
+        state: absent
+      loop: "{{ ltm_monitors_delete | default([]) }}"
+      loop_control:
+        label: "{{ item.partition | default('Common') }}/{{ item.name }}"
+      when: item.type == 'gateway_icmp'
+
     - name: Create LTM TCP monitors
       f5networks.f5_modules.bigip_monitor_tcp:
         provider: "{{ provider }}"
@@ -87,7 +256,7 @@
         transparent: "{{ item.transparent | default(omit) }}"
         reverse: "{{ item.reverse | default(omit) }}"
         state: "{{ item.state | default('present') }}"
-      loop: "{{ ltm_monitors | default([]) }}"
+      loop: "{{ ltm_monitors_present | default([]) }}"
       loop_control:
         label: "{{ item.name }}"
       when: item.type == 'tcp'
@@ -107,7 +276,7 @@
         ip: "{{ item.ip | default(omit) }}"
         port: "{{ item.port | default(omit) }}"
         state: "{{ item.state | default('present') }}"
-      loop: "{{ ltm_monitors | default([]) }}"
+      loop: "{{ ltm_monitors_present | default([]) }}"
       loop_control:
         label: "{{ item.name }}"
       when: item.type == 'http'
@@ -131,7 +300,7 @@
         client_cert: "{{ item.client_cert | default(omit) }}"
         client_key: "{{ item.client_key | default(omit) }}"
         state: "{{ item.state | default('present') }}"
-      loop: "{{ ltm_monitors | default([]) }}"
+      loop: "{{ ltm_monitors_present | default([]) }}"
       loop_control:
         label: "{{ item.name }}"
       when: item.type == 'https'
@@ -147,7 +316,7 @@
         ip: "{{ item.ip | default(omit) }}"
         transparent: "{{ item.transparent | default(omit) }}"
         state: "{{ item.state | default('present') }}"
-      loop: "{{ ltm_monitors | default([]) }}"
+      loop: "{{ ltm_monitors_present | default([]) }}"
       loop_control:
         label: "{{ item.name }}"
       when: item.type == 'gateway_icmp'
@@ -160,7 +329,9 @@
         lb_method: "{{ item.pool.lb_method | default('round-robin') }}"
         monitors: "{{ item.pool.monitors | default(omit) }}"
         state: "{{ item.pool.state | default('present') }}"
-      loop: "{{ ltm_virtual_servers }}"
+      loop: "{{ ltm_virtual_servers_present | default([]) }}"
+      loop_control:
+        label: "{{ item.pool.partition | default(item.partition | default('Common')) }}/{{ item.pool.name }}"
 
     - name: Add members to pools
       f5networks.f5_modules.bigip_pool_member:
@@ -170,7 +341,9 @@
         host: "{{ item.1.host }}"
         port: "{{ item.1.port }}"
         state: "{{ item.1.state | default((item.1.enabled | default(true)) | ternary('enabled', 'disabled')) }}"
-      loop: "{{ query('subelements', ltm_virtual_servers, 'pool.members') }}"
+      loop: "{{ query('subelements', ltm_virtual_servers_present | default([]), 'pool.members', {'skip_missing': True}) }}"
+      loop_control:
+        label: "{{ item.0.pool.name }}:{{ item.1.host }}:{{ item.1.port }}"
 
     - name: Create virtual servers
       f5networks.f5_modules.bigip_virtual_server:
@@ -184,4 +357,6 @@
         all_profiles: "{{ item.profiles | default(['tcp']) }}"
         description: "{{ item.description | default(omit) }}"
         state: "{{ item.state | default((item.enabled | default(true)) | ternary('enabled', 'disabled')) }}"
-      loop: "{{ ltm_virtual_servers }}"
+      loop: "{{ ltm_virtual_servers_present | default([]) }}"
+      loop_control:
+        label: "{{ item.partition | default('Common') }}/{{ item.name }}"

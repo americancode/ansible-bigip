@@ -15,7 +15,14 @@
           {{
             lookup(
               'ansible.builtin.pipe',
-              "find vars/network/vlans -type f -name '*.yml' ! -name 'settings.yml' | sort"
+              "find vars/network/vlans -type f -name '*.yml' ! -name 'settings.yml' 2>/dev/null | sort"
+            ).splitlines() | reject('equalto', '') | list
+          }}
+        vlan_deletion_files: >-
+          {{
+            lookup(
+              'ansible.builtin.pipe',
+              "find vars/network/deletions/vlans -type f -name '*.yml' ! -name 'settings.yml' 2>/dev/null | sort"
             ).splitlines() | reject('equalto', '') | list
           }}
 
@@ -25,6 +32,13 @@
         name: vlan_fragment
       loop: "{{ vlan_files }}"
       register: vlan_include_results
+
+    - name: Load VLAN deletion fragments
+      ansible.builtin.include_vars:
+        file: "{{ item }}"
+        name: vlan_deletion_fragment
+      loop: "{{ vlan_deletion_files }}"
+      register: vlan_deletion_include_results
 
     - name: Aggregate VLANs with directory settings
       ansible.builtin.set_fact:
@@ -41,13 +55,35 @@
             ).network_vlan_defaults | default({})
           }}
 
+    - name: Aggregate VLAN deletions with directory settings
+      ansible.builtin.set_fact:
+        bigip_vlan_deletions: "{{ bigip_vlan_deletions | default([]) + [ (vlan_deletion_directory_defaults | combine(item.1, recursive=True)) | combine({'state': 'absent'}, recursive=True) ] }}"
+      loop: "{{ query('subelements', vlan_deletion_include_results.results, 'ansible_facts.vlan_deletion_fragment.bigip_vlans', {'skip_missing': True}) }}"
+      vars:
+        vlan_deletion_settings_path: "{{ item.0.item | regex_replace('/[^/]+$', '/settings.yml') }}"
+        vlan_deletion_directory_defaults: >-
+          {{
+            (
+              lookup('ansible.builtin.file', vlan_deletion_settings_path, errors='ignore')
+              | default('{}', true)
+              | from_yaml
+            ).network_vlan_defaults | default({})
+          }}
+
     - name: Discover self IP fragments
       ansible.builtin.set_fact:
         self_ip_files: >-
           {{
             lookup(
               'ansible.builtin.pipe',
-              "find vars/network/self_ips -type f -name '*.yml' ! -name 'settings.yml' | sort"
+              "find vars/network/self_ips -type f -name '*.yml' ! -name 'settings.yml' 2>/dev/null | sort"
+            ).splitlines() | reject('equalto', '') | list
+          }}
+        self_ip_deletion_files: >-
+          {{
+            lookup(
+              'ansible.builtin.pipe',
+              "find vars/network/deletions/self_ips -type f -name '*.yml' ! -name 'settings.yml' 2>/dev/null | sort"
             ).splitlines() | reject('equalto', '') | list
           }}
 
@@ -57,6 +93,13 @@
         name: self_ip_fragment
       loop: "{{ self_ip_files }}"
       register: self_ip_include_results
+
+    - name: Load self IP deletion fragments
+      ansible.builtin.include_vars:
+        file: "{{ item }}"
+        name: self_ip_deletion_fragment
+      loop: "{{ self_ip_deletion_files }}"
+      register: self_ip_deletion_include_results
 
     - name: Aggregate self IPs with directory settings
       ansible.builtin.set_fact:
@@ -73,7 +116,85 @@
             ).network_self_ip_defaults | default({})
           }}
 
+    - name: Aggregate self IP deletions with directory settings
+      ansible.builtin.set_fact:
+        bigip_self_ip_deletions: "{{ bigip_self_ip_deletions | default([]) + [ (self_ip_deletion_directory_defaults | combine(item.1, recursive=True)) | combine({'state': 'absent'}, recursive=True) ] }}"
+      loop: "{{ query('subelements', self_ip_deletion_include_results.results, 'ansible_facts.self_ip_deletion_fragment.bigip_self_ips', {'skip_missing': True}) }}"
+      vars:
+        self_ip_deletion_settings_path: "{{ item.0.item | regex_replace('/[^/]+$', '/settings.yml') }}"
+        self_ip_deletion_directory_defaults: >-
+          {{
+            (
+              lookup('ansible.builtin.file', self_ip_deletion_settings_path, errors='ignore')
+              | default('{}', true)
+              | from_yaml
+            ).network_self_ip_defaults | default({})
+          }}
+
+    - name: Classify network object operations
+      ansible.builtin.set_fact:
+        bigip_vlans_delete: >-
+          {{
+            ((bigip_vlans | default([])) + (bigip_vlan_deletions | default([])))
+            | selectattr('state', 'defined')
+            | selectattr('state', 'equalto', 'absent')
+            | list
+          }}
+        bigip_vlans_present: >-
+          {{
+            (bigip_vlans | default([]))
+            | rejectattr('state', 'defined')
+            | list
+            +
+            (
+              (bigip_vlans | default([]))
+              | selectattr('state', 'defined')
+              | rejectattr('state', 'equalto', 'absent')
+              | list
+            )
+          }}
+        bigip_self_ips_delete: >-
+          {{
+            ((bigip_self_ips | default([])) + (bigip_self_ip_deletions | default([])))
+            | selectattr('state', 'defined')
+            | selectattr('state', 'equalto', 'absent')
+            | list
+          }}
+        bigip_self_ips_present: >-
+          {{
+            (bigip_self_ips | default([]))
+            | rejectattr('state', 'defined')
+            | list
+            +
+            (
+              (bigip_self_ips | default([]))
+              | selectattr('state', 'defined')
+              | rejectattr('state', 'equalto', 'absent')
+              | list
+            )
+          }}
+
   tasks:
+    - name: Delete self IPs
+      f5networks.f5_modules.bigip_selfip:
+        provider: "{{ provider }}"
+        partition: "{{ item.partition | default('Common') }}"
+        name: "{{ item.name }}"
+        state: absent
+      loop: "{{ bigip_self_ips_delete | default([]) }}"
+      loop_control:
+        label: "{{ item.partition | default('Common') }}/{{ item.name }}"
+
+    - name: Delete VLANs
+      f5networks.f5_modules.bigip_vlan:
+        provider: "{{ provider }}"
+        partition: "{{ item.partition | default('Common') }}"
+        name: "{{ item.name }}"
+        state: absent
+      loop: "{{ bigip_vlans_delete | default([]) }}"
+      loop_control:
+        label: "{{ item.partition | default('Common') }}/{{ item.name }}"
+
     - name: Create VLANs
       f5networks.f5_modules.bigip_vlan:
         provider: "{{ provider }}"
@@ -84,7 +205,9 @@
         interfaces: "{{ item.interfaces | default(omit) }}"
         description: "{{ item.description | default(omit) }}"
         state: "{{ item.state | default('present') }}"
-      loop: "{{ bigip_vlans }}"
+      loop: "{{ bigip_vlans_present | default([]) }}"
+      loop_control:
+        label: "{{ item.partition | default('Common') }}/{{ item.name }}"
 
     - name: Create self IPs
       f5networks.f5_modules.bigip_selfip:
@@ -97,4 +220,6 @@
         traffic_group: "{{ item.traffic_group | default(omit) }}"
         allow_service: "{{ item.allow_service | default(omit) }}"
         state: "{{ item.state | default('present') }}"
-      loop: "{{ bigip_self_ips }}"
+      loop: "{{ bigip_self_ips_present | default([]) }}"
+      loop_control:
+        label: "{{ item.partition | default('Common') }}/{{ item.name }}"
