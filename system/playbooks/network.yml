@@ -1,0 +1,36 @@
+---
+- name: Configure BIG-IP VLANs and self IPs
+  hosts: localhost
+  gather_facts: false
+  collections:
+    - f5networks.f5_modules
+
+  vars_files:
+    - ../../vars/common.yml
+    - ../vars/network_config.yml
+
+  tasks:
+    - name: Create VLANs
+      f5networks.f5_modules.bigip_vlan:
+        provider: "{{ provider }}"
+        partition: "{{ partition }}"
+        name: "{{ item.name }}"
+        tag: "{{ item.tag | default(omit) }}"
+        mtu: "{{ item.mtu | default(omit) }}"
+        interfaces: "{{ item.interfaces | default(omit) }}"
+        description: "{{ item.description | default(omit) }}"
+        state: "{{ item.state | default('present') }}"
+      loop: "{{ bigip_vlans }}"
+
+    - name: Create self IPs
+      f5networks.f5_modules.bigip_selfip:
+        provider: "{{ provider }}"
+        partition: "{{ partition }}"
+        name: "{{ item.name }}"
+        address: "{{ item.address }}"
+        netmask: "{{ item.netmask }}"
+        vlan: "{{ item.vlan }}"
+        traffic_group: "{{ item.traffic_group | default(omit) }}"
+        allow_service: "{{ item.allow_service | default(omit) }}"
+        state: "{{ item.state | default('present') }}"
+      loop: "{{ bigip_self_ips }}"

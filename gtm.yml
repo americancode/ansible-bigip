@@ -1,5 +1,5 @@
 ---
-- name: Configure BIG-IP DNS/GTM objects for app
+- name: Configure BIG-IP DNS/GTM objects
   hosts: localhost
   gather_facts: false
 
@@ -11,86 +11,289 @@
     - vars/gtm_config.yml
 
   tasks:
-    - name: Create GTM datacenter for the A/B mirror pair
+    - name: Create GTM BIG-IP monitors
+      f5networks.f5_modules.bigip_gtm_monitor_bigip:
+        provider: "{{ provider }}"
+        partition: "{{ item.partition | default(partition) }}"
+        name: "{{ item.name }}"
+        parent: "{{ item.parent | default(omit) }}"
+        ip: "{{ item.ip | default(omit) }}"
+        port: "{{ item.port | default(omit) }}"
+        interval: "{{ item.interval | default(omit) }}"
+        timeout: "{{ item.timeout | default(omit) }}"
+        ignore_down_response: "{{ item.ignore_down_response | default(omit) }}"
+        aggregate_dynamic_ratios: "{{ item.aggregate_dynamic_ratios | default(omit) }}"
+        state: "{{ item.state | default('present') }}"
+      loop: "{{ gtm_monitors | default([]) }}"
+      loop_control:
+        label: "{{ item.name }}"
+      when:
+        - enable_gtm | bool
+        - item.type == 'bigip'
+
+    - name: Create GTM external monitors
+      f5networks.f5_modules.bigip_gtm_monitor_external:
+        provider: "{{ provider }}"
+        partition: "{{ item.partition | default(partition) }}"
+        name: "{{ item.name }}"
+        parent: "{{ item.parent | default(omit) }}"
+        ip: "{{ item.ip | default(omit) }}"
+        port: "{{ item.port | default(omit) }}"
+        interval: "{{ item.interval | default(omit) }}"
+        timeout: "{{ item.timeout | default(omit) }}"
+        external_program: "{{ item.external_program | default(omit) }}"
+        arguments: "{{ item.arguments | default(omit) }}"
+        variables: "{{ item.variables | default(omit) }}"
+        state: "{{ item.state | default('present') }}"
+      loop: "{{ gtm_monitors | default([]) }}"
+      loop_control:
+        label: "{{ item.name }}"
+      when:
+        - enable_gtm | bool
+        - item.type == 'external'
+
+    - name: Create GTM FirePass monitors
+      f5networks.f5_modules.bigip_gtm_monitor_firepass:
+        provider: "{{ provider }}"
+        partition: "{{ item.partition | default(partition) }}"
+        name: "{{ item.name }}"
+        parent: "{{ item.parent | default(omit) }}"
+        ip: "{{ item.ip | default(omit) }}"
+        port: "{{ item.port | default(omit) }}"
+        interval: "{{ item.interval | default(omit) }}"
+        timeout: "{{ item.timeout | default(omit) }}"
+        probe_timeout: "{{ item.probe_timeout | default(omit) }}"
+        ignore_down_response: "{{ item.ignore_down_response | default(omit) }}"
+        target_username: "{{ item.target_username | default(omit) }}"
+        target_password: "{{ item.target_password | default(omit) }}"
+        update_password: "{{ item.update_password | default(omit) }}"
+        cipher_list: "{{ item.cipher_list | default(omit) }}"
+        max_load_average: "{{ item.max_load_average | default(omit) }}"
+        concurrency_limit: "{{ item.concurrency_limit | default(omit) }}"
+        state: "{{ item.state | default('present') }}"
+      loop: "{{ gtm_monitors | default([]) }}"
+      loop_control:
+        label: "{{ item.name }}"
+      when:
+        - enable_gtm | bool
+        - item.type == 'firepass'
+
+    - name: Create GTM HTTP monitors
+      f5networks.f5_modules.bigip_gtm_monitor_http:
+        provider: "{{ provider }}"
+        partition: "{{ item.partition | default(partition) }}"
+        name: "{{ item.name }}"
+        parent: "{{ item.parent | default(omit) }}"
+        send: "{{ item.send | default(omit) }}"
+        receive: "{{ item.receive | default(omit) }}"
+        ip: "{{ item.ip | default(omit) }}"
+        port: "{{ item.port | default(omit) }}"
+        interval: "{{ item.interval | default(omit) }}"
+        timeout: "{{ item.timeout | default(omit) }}"
+        probe_timeout: "{{ item.probe_timeout | default(omit) }}"
+        ignore_down_response: "{{ item.ignore_down_response | default(omit) }}"
+        transparent: "{{ item.transparent | default(omit) }}"
+        reverse: "{{ item.reverse | default(omit) }}"
+        target_username: "{{ item.target_username | default(omit) }}"
+        target_password: "{{ item.target_password | default(omit) }}"
+        update_password: "{{ item.update_password | default(omit) }}"
+        state: "{{ item.state | default('present') }}"
+      loop: "{{ gtm_monitors | default([]) }}"
+      loop_control:
+        label: "{{ item.name }}"
+      when:
+        - enable_gtm | bool
+        - item.type == 'http'
+
+    - name: Create GTM HTTPS monitors
+      f5networks.f5_modules.bigip_gtm_monitor_https:
+        provider: "{{ provider }}"
+        partition: "{{ item.partition | default(partition) }}"
+        name: "{{ item.name }}"
+        parent: "{{ item.parent | default(omit) }}"
+        send: "{{ item.send | default(omit) }}"
+        receive: "{{ item.receive | default(omit) }}"
+        ip: "{{ item.ip | default(omit) }}"
+        port: "{{ item.port | default(omit) }}"
+        interval: "{{ item.interval | default(omit) }}"
+        timeout: "{{ item.timeout | default(omit) }}"
+        probe_timeout: "{{ item.probe_timeout | default(omit) }}"
+        ignore_down_response: "{{ item.ignore_down_response | default(omit) }}"
+        transparent: "{{ item.transparent | default(omit) }}"
+        reverse: "{{ item.reverse | default(omit) }}"
+        target_username: "{{ item.target_username | default(omit) }}"
+        target_password: "{{ item.target_password | default(omit) }}"
+        update_password: "{{ item.update_password | default(omit) }}"
+        cipher_list: "{{ item.cipher_list | default(omit) }}"
+        compatibility: "{{ item.compatibility | default(omit) }}"
+        client_cert: "{{ item.client_cert | default(omit) }}"
+        client_key: "{{ item.client_key | default(omit) }}"
+        state: "{{ item.state | default('present') }}"
+      loop: "{{ gtm_monitors | default([]) }}"
+      loop_control:
+        label: "{{ item.name }}"
+      when:
+        - enable_gtm | bool
+        - item.type == 'https'
+
+    - name: Create GTM TCP monitors
+      f5networks.f5_modules.bigip_gtm_monitor_tcp:
+        provider: "{{ provider }}"
+        partition: "{{ item.partition | default(partition) }}"
+        name: "{{ item.name }}"
+        parent: "{{ item.parent | default(omit) }}"
+        send: "{{ item.send | default(omit) }}"
+        receive: "{{ item.receive | default(omit) }}"
+        ip: "{{ item.ip | default(omit) }}"
+        port: "{{ item.port | default(omit) }}"
+        interval: "{{ item.interval | default(omit) }}"
+        timeout: "{{ item.timeout | default(omit) }}"
+        probe_timeout: "{{ item.probe_timeout | default(omit) }}"
+        ignore_down_response: "{{ item.ignore_down_response | default(omit) }}"
+        transparent: "{{ item.transparent | default(omit) }}"
+        reverse: "{{ item.reverse | default(omit) }}"
+        state: "{{ item.state | default('present') }}"
+      loop: "{{ gtm_monitors | default([]) }}"
+      loop_control:
+        label: "{{ item.name }}"
+      when:
+        - enable_gtm | bool
+        - item.type == 'tcp'
+
+    - name: Create GTM TCP half-open monitors
+      f5networks.f5_modules.bigip_gtm_monitor_tcp_half_open:
+        provider: "{{ provider }}"
+        partition: "{{ item.partition | default(partition) }}"
+        name: "{{ item.name }}"
+        parent: "{{ item.parent | default(omit) }}"
+        ip: "{{ item.ip | default(omit) }}"
+        port: "{{ item.port | default(omit) }}"
+        interval: "{{ item.interval | default(omit) }}"
+        timeout: "{{ item.timeout | default(omit) }}"
+        probe_interval: "{{ item.probe_interval | default(omit) }}"
+        probe_timeout: "{{ item.probe_timeout | default(omit) }}"
+        probe_attempts: "{{ item.probe_attempts | default(omit) }}"
+        ignore_down_response: "{{ item.ignore_down_response | default(omit) }}"
+        transparent: "{{ item.transparent | default(omit) }}"
+        state: "{{ item.state | default('present') }}"
+      loop: "{{ gtm_monitors | default([]) }}"
+      loop_control:
+        label: "{{ item.name }}"
+      when:
+        - enable_gtm | bool
+        - item.type == 'tcp_half_open'
+
+    - name: Create GTM datacenters referenced by servers
       when: enable_gtm | bool
       f5networks.f5_modules.bigip_gtm_datacenter:
         provider: "{{ provider }}"
         partition: "{{ partition }}"
-        name: "{{ gtm_mirror_pair.datacenter }}"
+        name: "{{ item }}"
         state: present
+      loop: "{{ gtm_servers | map(attribute='datacenter') | unique | list }}"
 
-    - name: Register cluster LTMs as GTM servers
+    - name: Register GTM servers
       when: enable_gtm | bool
       f5networks.f5_modules.bigip_gtm_server:
         provider: "{{ provider }}"
         partition: "{{ partition }}"
-        name: "{{ item.gtm_server }}"
-        datacenter: "{{ gtm_mirror_pair.datacenter }}"
+        name: "{{ item.name }}"
+        datacenter: "{{ item.datacenter }}"
         server_type: bigip
         devices:
-          - name: "{{ item.gtm_server }}"
-            address: "{{ item.gtm_server_ip | trim }}"
+          - name: "{{ item.name }}"
+            address: "{{ item.address | trim }}"
         virtual_server_discovery: disabled
         link_discovery: disabled
-        state: present
-      loop: "{{ gtm_mirror_pair.members }}"
+        state: "{{ item.state | default('present') }}"
+      loop: "{{ gtm_servers }}"
 
-    - name: Create manual GTM virtual servers for cluster ingress VIPs
+    - name: Build flat GTM pool definitions
+      when: enable_gtm | bool
+      ansible.builtin.set_fact:
+        gtm_pools_flat: "{{ gtm_pools_flat | default([]) + [ item.1 | combine({
+          'wide_ip_name': item.0.name,
+          'record_type': item.0.record_type | default('a')
+        }) ] }}"
+      loop: "{{ query('subelements', gtm_wide_ips, 'pools') }}"
+
+    - name: Build Wide IP pool references
+      when: enable_gtm | bool
+      ansible.builtin.set_fact:
+        gtm_wide_ip_pool_refs: >-
+          {{
+            gtm_wide_ip_pool_refs | default({}) | combine({
+              item.0.name: (gtm_wide_ip_pool_refs | default({})).get(item.0.name, []) + [
+                {
+                  'name': item.1.name,
+                  'ratio': item.1.ratio | default(1)
+                }
+              ]
+            })
+          }}
+      loop: "{{ query('subelements', gtm_wide_ips, 'pools') }}"
+
+    - name: Create manual GTM virtual servers for pool members
       when: enable_gtm | bool
       f5networks.f5_modules.bigip_gtm_virtual_server:
         provider: "{{ provider }}"
         partition: "{{ partition }}"
-        server_name: "{{ item.gtm_server }}"
-        name: "{{ item.virtual_server }}"
-        address: "{{ item.address }}"
-        port: "{{ item.port }}"
-        translation_address: "{{ item.translation_address | default('') }}"
-        translation_port: "{{ item.translation_port | default('') }}"
-        monitors: "{{ item.monitors | default(['/Common/https']) }}"
-        state: present
-      loop: "{{ gtm_mirror_pair.members }}"
+        server_name: "{{ item.1.server }}"
+        name: "{{ item.1.virtual_server }}"
+        address: "{{ item.1.address }}"
+        port: "{{ item.1.port }}"
+        translation_address: "{{ item.1.translation_address | default('') }}"
+        translation_port: "{{ item.1.translation_port | default('') }}"
+        monitors: "{{ item.1.monitors | default(item.0.default_monitors | default(omit)) }}"
+        state: "{{ item.1.state | default('present') }}"
+      loop: "{{ query('subelements', gtm_pools_flat, 'members') }}"
 
-    - name: Build GTM pool members
+    - name: Build GTM pool members by pool
       when: enable_gtm | bool
       ansible.builtin.set_fact:
-        gtm_pool_members: "{{ gtm_pool_members | default([]) + [
-          {
-            'server': item.gtm_server,
-            'virtual_server': item.virtual_server
-          }
-        ] }}"
-      loop: "{{ gtm_mirror_pair.members }}"
+        gtm_pool_members_by_pool: >-
+          {{
+            gtm_pool_members_by_pool | default({}) | combine({
+              item.0.name: (gtm_pool_members_by_pool | default({})).get(item.0.name, []) + [
+                {
+                  'server': item.1.server,
+                  'virtual_server': item.1.virtual_server
+                }
+              ]
+            })
+          }}
+      loop: "{{ query('subelements', gtm_pools_flat, 'members') }}"
 
-    - name: Create GTM pool for app using manual GTM virtual servers
+    - name: Create GTM pools
       when: enable_gtm | bool
       f5networks.f5_modules.bigip_gtm_pool:
         provider: "{{ provider }}"
         partition: "{{ partition }}"
-        name: "{{ gtm_mirror_pair.pool_name }}"
-        type: a
-        preferred_lb_method: topology
-        alternate_lb_method: global-availability
-        fallback_lb_method: round-robin
-        members: "{{ gtm_pool_members }}"
-        state: present
+        name: "{{ item.name }}"
+        type: "{{ item.record_type }}"
+        preferred_lb_method: "{{ item.preferred_lb_method | default('topology') }}"
+        alternate_lb_method: "{{ item.alternate_lb_method | default('global-availability') }}"
+        fallback_lb_method: "{{ item.fallback_lb_method | default('round-robin') }}"
+        members: "{{ gtm_pool_members_by_pool[item.name] | default([]) }}"
+        state: "{{ item.state | default('present') }}"
+      loop: "{{ gtm_pools_flat | default([]) }}"
 
-    - name: Create the Wide IP for app
+    - name: Create Wide IPs
       when: enable_gtm | bool
       f5networks.f5_modules.bigip_gtm_wide_ip:
         provider: "{{ provider }}"
         partition: "{{ partition }}"
-        name: "{{ gtm_mirror_pair.wide_ip }}"
-        type: a
-        pool_lb_method: topology
-        pools:
-          - name: "{{ gtm_mirror_pair.pool_name }}"
-            ratio: 1
-        state: present
+        name: "{{ item.name }}"
+        type: "{{ item.record_type | default('a') }}"
+        pool_lb_method: "{{ item.pool_lb_method | default('topology') }}"
+        pools: "{{ gtm_wide_ip_pool_refs[item.name] | default([]) }}"
+        state: "{{ item.state | default('present') }}"
+      loop: "{{ gtm_wide_ips }}"
 
-    - name: Explain health-check behavior for this GTM example
+    - name: Explain health-check behavior for GTM Wide IPs
       when: enable_gtm | bool
       ansible.builtin.debug:
         msg:
-          - "GTM pool members point at manually defined GTM virtual servers, not auto-discovered LTM virtuals."
-          - "GTM health checks run directly against the configured VIP and port for each cluster member."
-          - "This avoids the /Common to /K8s LTM virtual discovery/reference problem, but still requires GTM server and datacenter objects."
+          - "Custom GTM monitors are declared in `gtm_monitors` and created before pools and Wide IPs."
+          - "Each Wide IP can reference one or more pools, and each pool defines its own members and default health monitors."
+          - "Assign monitors with fully qualified names, either in `default_monitors` on the pool or `monitors` on individual members."

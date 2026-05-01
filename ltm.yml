@@ -1,5 +1,5 @@
 ---
-- name: Configure BIG-IP LTM objects for RKE2 and Kubernetes HA
+- name: Configure BIG-IP LTM objects
   hosts: localhost
   gather_facts: false
   collections:
@@ -10,93 +10,114 @@
     - vars/ltm_config.yml
 
   tasks:
-    - name: Create TCP monitors for backend services
+    - name: Create LTM TCP monitors
       f5networks.f5_modules.bigip_monitor_tcp:
         provider: "{{ provider }}"
-        partition: "{{ partition }}"
-        name: "{{ item.value.monitor_name }}"
-        state: present
-      loop: "{{ ltm_services | dict2items }}"
+        partition: "{{ item.partition | default(partition) }}"
+        name: "{{ item.name }}"
+        parent: "{{ item.parent | default(omit) }}"
+        send: "{{ item.send | default(omit) }}"
+        receive: "{{ item.receive | default(omit) }}"
+        interval: "{{ item.interval | default(omit) }}"
+        timeout: "{{ item.timeout | default(omit) }}"
+        transparent: "{{ item.transparent | default(omit) }}"
+        reverse: "{{ item.reverse | default(omit) }}"
+        state: "{{ item.state | default('present') }}"
+      loop: "{{ ltm_monitors | default([]) }}"
+      loop_control:
+        label: "{{ item.name }}"
+      when: item.type == 'tcp'
 
-    - name: Create LTM pools for every cluster/service pair
+    - name: Create LTM HTTP monitors
+      f5networks.f5_modules.bigip_monitor_http:
+        provider: "{{ provider }}"
+        partition: "{{ item.partition | default(partition) }}"
+        name: "{{ item.name }}"
+        parent: "{{ item.parent | default(omit) }}"
+        send: "{{ item.send | default(omit) }}"
+        receive: "{{ item.receive | default(omit) }}"
+        interval: "{{ item.interval | default(omit) }}"
+        timeout: "{{ item.timeout | default(omit) }}"
+        transparent: "{{ item.transparent | default(omit) }}"
+        reverse: "{{ item.reverse | default(omit) }}"
+        ip: "{{ item.ip | default(omit) }}"
+        port: "{{ item.port | default(omit) }}"
+        state: "{{ item.state | default('present') }}"
+      loop: "{{ ltm_monitors | default([]) }}"
+      loop_control:
+        label: "{{ item.name }}"
+      when: item.type == 'http'
+
+    - name: Create LTM HTTPS monitors
+      f5networks.f5_modules.bigip_monitor_https:
+        provider: "{{ provider }}"
+        partition: "{{ item.partition | default(partition) }}"
+        name: "{{ item.name }}"
+        parent: "{{ item.parent | default(omit) }}"
+        send: "{{ item.send | default(omit) }}"
+        receive: "{{ item.receive | default(omit) }}"
+        interval: "{{ item.interval | default(omit) }}"
+        timeout: "{{ item.timeout | default(omit) }}"
+        transparent: "{{ item.transparent | default(omit) }}"
+        reverse: "{{ item.reverse | default(omit) }}"
+        ip: "{{ item.ip | default(omit) }}"
+        port: "{{ item.port | default(omit) }}"
+        cipher_list: "{{ item.cipher_list | default(omit) }}"
+        compatibility: "{{ item.compatibility | default(omit) }}"
+        client_cert: "{{ item.client_cert | default(omit) }}"
+        client_key: "{{ item.client_key | default(omit) }}"
+        state: "{{ item.state | default('present') }}"
+      loop: "{{ ltm_monitors | default([]) }}"
+      loop_control:
+        label: "{{ item.name }}"
+      when: item.type == 'https'
+
+    - name: Create LTM gateway ICMP monitors
+      f5networks.f5_modules.bigip_monitor_gateway_icmp:
+        provider: "{{ provider }}"
+        partition: "{{ item.partition | default(partition) }}"
+        name: "{{ item.name }}"
+        parent: "{{ item.parent | default(omit) }}"
+        interval: "{{ item.interval | default(omit) }}"
+        timeout: "{{ item.timeout | default(omit) }}"
+        ip: "{{ item.ip | default(omit) }}"
+        transparent: "{{ item.transparent | default(omit) }}"
+        state: "{{ item.state | default('present') }}"
+      loop: "{{ ltm_monitors | default([]) }}"
+      loop_control:
+        label: "{{ item.name }}"
+      when: item.type == 'gateway_icmp'
+
+    - name: Create pools for virtual servers
       f5networks.f5_modules.bigip_pool:
         provider: "{{ provider }}"
         partition: "{{ partition }}"
-        name: "pool_{{ item.0.key }}_{{ item.1.key }}"
-        lb_method: "round-robin"
-        monitors:
-          - "/{{ partition }}/{{ item.1.value.monitor_name }}"
-        state: present
-      loop: "{{ cluster_definitions | dict2items | product(ltm_services | dict2items) | list }}"
+        name: "{{ item.pool.name }}"
+        lb_method: "{{ item.pool.lb_method | default('round-robin') }}"
+        monitors: "{{ item.pool.monitors | default(omit) }}"
+        state: "{{ item.pool.state | default('present') }}"
+      loop: "{{ ltm_virtual_servers }}"
 
-    - name: Add RKE2 registration members to pool
+    - name: Add members to pools
       f5networks.f5_modules.bigip_pool_member:
         provider: "{{ provider }}"
         partition: "{{ partition }}"
-        pool: "pool_{{ item.0.key }}_rke2_registration"
-        host: "{{ item.1 }}"
-        port: "{{ ltm_services.rke2_registration.member_port }}"
-        state: present
-      loop: "{{ query('subelements', cluster_definitions | dict2items, 'value.control_plane_nodes') }}"
+        pool: "{{ item.0.pool.name }}"
+        host: "{{ item.1.host }}"
+        port: "{{ item.1.port }}"
+        state: "{{ item.1.state | default('present') }}"
+      loop: "{{ query('subelements', ltm_virtual_servers, 'pool.members') }}"
 
-    - name: Add Kubernetes API members to pool
-      f5networks.f5_modules.bigip_pool_member:
-        provider: "{{ provider }}"
-        partition: "{{ partition }}"
-        pool: "pool_{{ item.0.key }}_k8s_api"
-        host: "{{ item.1 }}"
-        port: "{{ ltm_services.k8s_api.member_port }}"
-        state: present
-      loop: "{{ query('subelements', cluster_definitions | dict2items, 'value.control_plane_nodes') }}"
-
-    - name: Add Traefik NodePort members to ingress pool
-      f5networks.f5_modules.bigip_pool_member:
-        provider: "{{ provider }}"
-        partition: "{{ partition }}"
-        pool: "pool_{{ item.0.key }}_ingress_https"
-        host: "{{ item.1 }}"
-        port: "{{ ltm_services.ingress_https.member_port }}"
-        state: present
-      loop: "{{ query('subelements', cluster_definitions | dict2items, 'value.worker_nodes') }}"
-
-    - name: Create RKE2 registration virtual servers on 9345
+    - name: Create virtual servers
       f5networks.f5_modules.bigip_virtual_server:
         provider: "{{ provider }}"
         partition: "{{ partition }}"
-        name: "vs_{{ item.key }}_rke2_9345"
-        destination: "{{ item.value.virtual_addresses.rke2_registration | default(item.value.virtual_addresses.control_plane) }}"
-        port: "{{ ltm_services.rke2_registration.destination_port }}"
-        pool: "pool_{{ item.key }}_rke2_registration"
-        snat: "Automap"
-        all_profiles:
-          - tcp
-        state: present
-      loop: "{{ cluster_definitions | dict2items }}"
-
-    - name: Create Kubernetes API virtual servers on 6443
-      f5networks.f5_modules.bigip_virtual_server:
-        provider: "{{ provider }}"
-        partition: "{{ partition }}"
-        name: "vs_{{ item.key }}_k8s_api_6443"
-        destination: "{{ item.value.virtual_addresses.k8s_api | default(item.value.virtual_addresses.control_plane) }}"
-        port: "{{ ltm_services.k8s_api.destination_port }}"
-        pool: "pool_{{ item.key }}_k8s_api"
-        snat: "Automap"
-        all_profiles:
-          - tcp
-        state: present
-      loop: "{{ cluster_definitions | dict2items }}"
-
-    - name: Create ingress virtual servers on 443 forwarding to NodePort 30043
-      f5networks.f5_modules.bigip_virtual_server:
-        provider: "{{ provider }}"
-        partition: "{{ partition }}"
-        name: "vs_{{ item.key }}_ingress_443"
-        destination: "{{ item.value.virtual_addresses.ingress_https }}"
-        port: "{{ ltm_services.ingress_https.destination_port }}"
-        pool: "pool_{{ item.key }}_ingress_https"
-        snat: "Automap"
-        all_profiles:
-          - tcp
-        state: present
-      loop: "{{ cluster_definitions | dict2items }}"
+        name: "{{ item.name }}"
+        destination: "{{ item.destination }}"
+        port: "{{ item.destination_port }}"
+        pool: "{{ item.pool.name }}"
+        snat: "{{ item.snat | default('Automap') }}"
+        all_profiles: "{{ item.profiles | default(['tcp']) }}"
+        description: "{{ item.description | default(omit) }}"
+        state: "{{ item.state | default('present') }}"
+      loop: "{{ ltm_virtual_servers }}"
