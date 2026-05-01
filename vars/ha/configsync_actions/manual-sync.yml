@@ -1,0 +1,5 @@
+---
+ha_configsync_actions:
+  - device_group: "dg_platform_sync_failover"
+    sync_device_to_group: true
+    overwrite_config: false

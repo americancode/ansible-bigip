@@ -57,6 +57,41 @@ class Validator:
         self.settings_cache: dict[Path, dict[str, Any]] = {}
         self.tree_specs = [
             TreeSpec(
+                name="ha_device_trusts",
+                active_dir=VARS_DIR / "ha" / "device_trust",
+                deletion_dir=VARS_DIR / "ha" / "deletions" / "device_trust",
+                top_key="ha_device_trusts",
+                settings_key="ha_device_trust_defaults",
+            ),
+            TreeSpec(
+                name="ha_device_groups",
+                active_dir=VARS_DIR / "ha" / "device_groups",
+                deletion_dir=VARS_DIR / "ha" / "deletions" / "device_groups",
+                top_key="ha_device_groups",
+                settings_key="ha_device_group_defaults",
+            ),
+            TreeSpec(
+                name="ha_device_group_members",
+                active_dir=VARS_DIR / "ha" / "device_group_members",
+                deletion_dir=VARS_DIR / "ha" / "deletions" / "device_group_members",
+                top_key="ha_device_group_members",
+                settings_key="ha_device_group_member_defaults",
+            ),
+            TreeSpec(
+                name="ha_traffic_groups",
+                active_dir=VARS_DIR / "ha" / "traffic_groups",
+                deletion_dir=VARS_DIR / "ha" / "deletions" / "traffic_groups",
+                top_key="ha_traffic_groups",
+                settings_key="ha_traffic_group_defaults",
+            ),
+            TreeSpec(
+                name="ha_configsync_actions",
+                active_dir=VARS_DIR / "ha" / "configsync_actions",
+                deletion_dir=VARS_DIR / "ha" / "deletions" / "configsync_actions",
+                top_key="ha_configsync_actions",
+                settings_key="ha_configsync_action_defaults",
+            ),
+            TreeSpec(
                 name="network_vlans",
                 active_dir=VARS_DIR / "network" / "vlans",
                 deletion_dir=VARS_DIR / "network" / "deletions" / "vlans",
@@ -190,6 +225,7 @@ class Validator:
 
         self.validate_network()
         self.validate_system()
+        self.validate_ha()
         self.validate_ltm()
         self.validate_gtm()
 
@@ -359,6 +395,73 @@ class Validator:
         for obj in config:
             if "save" in obj.data and not isinstance(obj.data.get("save"), bool):
                 self.error(obj.relpath, "`save` must be a boolean")
+
+    def validate_ha(self) -> None:
+        trusts = self.objects.get("ha_device_trusts", [])
+        groups = self.objects.get("ha_device_groups", [])
+        members = self.objects.get("ha_device_group_members", [])
+        traffic_groups = self.objects.get("ha_traffic_groups", [])
+        configsync_actions = self.objects.get("ha_configsync_actions", [])
+
+        active_group_names = set()
+
+        for obj in trusts:
+            self.require_fields(obj, ["peer_server"])
+            if obj.data.get("type") not in (None, "peer", "subordinate"):
+                self.error(obj.relpath, f"HA device trust `{obj.data.get('peer_server')}` has unsupported `type`")
+
+        self.check_duplicates(
+            trusts,
+            lambda obj: ("ha_device_trust", obj.data.get("peer_server"), obj.data.get("peer_hostname")),
+            "HA device trust",
+        )
+
+        for obj in groups:
+            self.require_fields(obj, ["name"])
+            if obj.effective_state == "absent":
+                continue
+            active_group_names.add(str(obj.data["name"]))
+            if obj.data.get("type") not in (None, "sync-failover", "sync-only"):
+                self.error(obj.relpath, f"HA device group `{obj.data.get('name')}` has unsupported `type`")
+
+        self.check_duplicates(groups, lambda obj: ("ha_device_group", obj.data.get("name")), "HA device group")
+
+        for obj in members:
+            self.require_fields(obj, ["device_group", "name"])
+            if obj.effective_state != "absent" and str(obj.data["device_group"]) not in active_group_names:
+                self.error(obj.relpath, f"HA device group member `{obj.data.get('name')}` references undefined device group `{obj.data.get('device_group')}`")
+
+        self.check_duplicates(
+            members,
+            lambda obj: ("ha_device_group_member", obj.data.get("device_group"), obj.data.get("name")),
+            "HA device group member",
+        )
+
+        for obj in traffic_groups:
+            self.require_fields(obj, ["name"])
+            if obj.effective_state == "absent":
+                continue
+            if obj.data.get("auto_failback_time") is not None and obj.data.get("auto_failback") is None:
+                self.error(obj.relpath, f"HA traffic group `{obj.data.get('name')}` sets `auto_failback_time` without `auto_failback`")
+            if obj.data.get("ha_group") not in (None, "") and obj.data.get("ha_order") not in (None, ""):
+                self.error(obj.relpath, f"HA traffic group `{obj.data.get('name')}` cannot set both `ha_group` and `ha_order`")
+
+        self.check_duplicates(
+            traffic_groups,
+            lambda obj: ("ha_traffic_group", obj.partition, obj.data.get("name")),
+            "HA traffic group",
+        )
+
+        for obj in configsync_actions:
+            self.require_fields(obj, ["device_group"])
+            if obj.from_deletions:
+                self.error(obj.relpath, "HA config sync actions do not support deletion trees")
+            push = bool(obj.data.get("sync_device_to_group"))
+            pull = bool(obj.data.get("sync_group_to_device"))
+            if push == pull:
+                self.error(obj.relpath, "HA config sync action must set exactly one of `sync_device_to_group` or `sync_group_to_device`")
+            if str(obj.data.get("device_group")) not in active_group_names:
+                self.error(obj.relpath, f"HA config sync action references undefined device group `{obj.data.get('device_group')}`")
 
     def validate_ltm(self) -> None:
         nodes = self.objects.get("ltm_nodes", [])

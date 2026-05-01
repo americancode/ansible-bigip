@@ -1,0 +1,5 @@
+---
+ha_device_trusts:
+  - peer_server: "192.0.2.20"
+    peer_hostname: "bigip-west.example.com"
+    type: "peer"

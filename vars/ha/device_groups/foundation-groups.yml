@@ -1,0 +1,9 @@
+---
+ha_device_groups:
+  - name: "dg_platform_sync_failover"
+    type: "sync-failover"
+    auto_sync: true
+    network_failover: true
+    save_on_auto_sync: true
+    full_sync: false
+    description: "Primary sync-failover device group for the platform estate"

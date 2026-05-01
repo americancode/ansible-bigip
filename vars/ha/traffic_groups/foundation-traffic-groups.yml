@@ -1,0 +1,10 @@
+---
+ha_traffic_groups:
+  - name: "traffic-group-apps"
+    partition: "Common"
+    ha_order:
+      - "/Common/bigip-east.example.com"
+      - "/Common/bigip-west.example.com"
+    auto_failback: true
+    auto_failback_time: 60
+    ha_load_factor: 10

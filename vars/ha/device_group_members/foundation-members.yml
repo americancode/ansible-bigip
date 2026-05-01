@@ -1,0 +1,7 @@
+---
+ha_device_group_members:
+  - device_group: "dg_platform_sync_failover"
+    name: "bigip-east.example.com"
+
+  - device_group: "dg_platform_sync_failover"
+    name: "bigip-west.example.com"
