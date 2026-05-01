@@ -1,0 +1,61 @@
+---
+gtm_monitors:
+  - name: "mon_gtm_platform_https"
+    type: "https"
+    send: "GET /ping HTTP/1.1\\r\\nHost: platform.apps.example.com\\r\\nConnection: close\\r\\n\\r\\n"
+    receive: "200 OK"
+    interval: 15
+    timeout: 46
+    probe_timeout: 5
+    compatibility: true
+
+  - name: "mon_gtm_rke2_kubeapi_tcp"
+    type: "tcp"
+    interval: 10
+    timeout: 31
+
+  - name: "mon_gtm_rke2_registration_tcp"
+    type: "tcp"
+    interval: 10
+    timeout: 31
+
+  - name: "mon_gtm_postgres_tcp"
+    type: "tcp"
+    interval: 15
+    timeout: 46
+
+  - name: "mon_gtm_argocd_https"
+    type: "https"
+    send: "GET /healthz HTTP/1.1\\r\\nHost: argocd.platform.example.com\\r\\nConnection: close\\r\\n\\r\\n"
+    receive: "200 OK"
+    interval: 15
+    timeout: 46
+    probe_timeout: 5
+    compatibility: true
+
+  - name: "mon_gtm_grafana_https"
+    type: "https"
+    send: "GET /login HTTP/1.1\\r\\nHost: grafana.platform.example.com\\r\\nConnection: close\\r\\n\\r\\n"
+    receive: "200 OK"
+    interval: 15
+    timeout: 46
+    probe_timeout: 5
+    compatibility: true
+
+  - name: "mon_gtm_inventory_https"
+    type: "https"
+    send: "GET /healthz HTTP/1.1\\r\\nHost: inventory.internal.example.com\\r\\nConnection: close\\r\\n\\r\\n"
+    receive: "200 OK"
+    interval: 15
+    timeout: 46
+    probe_timeout: 5
+    compatibility: true
+
+  - name: "mon_gtm_reporting_https"
+    type: "https"
+    send: "GET /healthz HTTP/1.1\\r\\nHost: reporting.internal.example.com\\r\\nConnection: close\\r\\n\\r\\n"
+    receive: "200 OK"
+    interval: 15
+    timeout: 46
+    probe_timeout: 5
+    compatibility: true

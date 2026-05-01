@@ -1,0 +1,4 @@
+---
+gtm_wide_ip_defaults:
+  partition: "Common"
+  enabled: true

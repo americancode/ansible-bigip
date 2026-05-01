@@ -1,0 +1,27 @@
+---
+ltm_pools:
+  - name: "pool_pg_vm_east_5432"
+    description: "Shared east PostgreSQL VM pool"
+    lb_method: "least-connections-member"
+    monitors:
+      - "/Common/tcp"
+    members:
+      - name: "pg-vm-east-1"
+        host: "10.201.30.11"
+        port: 5432
+      - name: "pg-vm-east-2"
+        host: "10.201.30.12"
+        port: 5432
+
+  - name: "pool_pg_vm_west_5432"
+    description: "Shared west PostgreSQL VM pool"
+    lb_method: "least-connections-member"
+    monitors:
+      - "/Common/tcp"
+    members:
+      - name: "pg-vm-west-1"
+        host: "10.202.30.11"
+        port: 5432
+      - name: "pg-vm-west-2"
+        host: "10.202.30.12"
+        port: 5432

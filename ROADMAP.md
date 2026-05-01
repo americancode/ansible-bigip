@@ -20,17 +20,76 @@ The repository already supports:
 - split var trees for scale
 - per-directory `settings.yml` inheritance
 - object-level partition overrides with `Common` fallback
+- hybrid object modeling:
+  - embedded pools under LTM virtual servers
+  - embedded pools under GTM Wide IPs
+  - first-class shared trees for reusable objects
 - explicit deletion trees under `vars/*/deletions`
 - reusable monitor definitions
+- universal `enabled: true` default where modules support admin state
+- offline validation through `tools/validate-vars`
+- `make validate` wrapper
+- `system.yml` for hostname, DNS, NTP, provisioning, users, and config save
 
 The main remaining gaps are:
 
-- platform and HA lifecycle
-- deeper LTM object coverage
-- deeper GTM object coverage
+- HA lifecycle
+- deeper LTM object coverage beyond pools/nodes/virtuals/monitors
+- deeper GTM object coverage beyond datacenters/servers/pools/Wide IPs/monitors
 - TLS/certificate management
 - security module coverage
-- validation, drift detection, and promotion workflows
+- drift detection and promotion workflows
+
+## Current Implementation Audit
+
+This section is the roadmap-to-repo check.
+
+Implemented today:
+
+- `network.yml`
+  - VLANs
+  - self IPs
+  - deletion trees
+  - per-directory `settings.yml`
+- `system.yml`
+  - hostname
+  - DNS
+  - NTP/timezone
+  - provisioning
+  - users
+  - config save
+- `ltm.yml`
+  - custom LTM monitors
+  - first-class nodes
+  - first-class pools
+  - virtual-server-centric embedded pools
+  - per-object and per-directory partition handling
+  - enabled/disabled semantics where supported
+  - deletion trees
+- `gtm.yml`
+  - custom GTM monitors
+  - first-class datacenters
+  - first-class servers
+  - first-class pools
+  - Wide-IP-centric embedded pools
+  - static server model
+  - per-object and per-directory partition handling
+  - enabled/disabled semantics where supported
+  - deletion trees
+- validation/tooling
+  - YAML/schema/reference validation
+  - duplicate detection
+  - Ansible syntax-check wrapper
+
+Not implemented yet:
+
+- `ha.yml`
+- `tls.yml`
+- routes, route domains, SNATs, NATs, trunks
+- LTM profiles, persistence, policies, iRules, data groups
+- GTM topology and regions
+- security modules
+- live drift/import/promotion tooling
 
 ## Target Repo Shape
 
@@ -111,6 +170,9 @@ This is the recommended end-state layout.
 - Object-level values override sibling `settings.yml`.
 - Sibling `settings.yml` overrides playbook defaults.
 - Shared objects should be modeled as first-class trees, not only nested under applications.
+- The preferred authoring model is hybrid:
+  - embed app-local objects for readability
+  - promote shared or reused objects into first-class trees
 - Validation must fail fast before playbook execution.
 - Runtime drift should be detectable against live BIG-IP state.
 
@@ -239,7 +301,7 @@ Goal: complete the layer below LTM so traffic plumbing is fully managed.
 
 ## Phase 4: LTM Shared Object Model
 
-Goal: stop treating the virtual server as the only authoritative LTM unit.
+Goal: support both app-centric and shared-object-centric LTM authoring cleanly.
 
 ### Scope
 
@@ -257,6 +319,7 @@ Goal: stop treating the virtual server as the only authoritative LTM unit.
 - `vars/ltm/profiles`
 - `vars/ltm/persistence`
 - updated `ltm.yml` or split playbooks by object family
+- documented hybrid authoring guidance for embedded vs first-class objects
 
 ### Work Items
 
@@ -283,11 +346,16 @@ Goal: stop treating the virtual server as the only authoritative LTM unit.
   - policy attachments
   - log profiles
   - client/server SSL profiles
+- Add hybrid readability shortcuts:
+  - subdirectory `pool_defaults`
+  - `member_defaults`
+  - reusable `monitor_sets`
+  - subdirectory maintenance/disable defaults
 
 ### Exit Criteria
 
-- most LTM app delivery changes can be expressed without nested one-off patterns
-- shared objects are reusable across many applications
+- most LTM app delivery changes can be expressed in one readable app file when desired
+- shared objects are reusable across many applications when needed
 
 ## Phase 5: TLS and Certificate Lifecycle
 
@@ -344,12 +412,20 @@ Goal: move GTM beyond Wide IP centric examples into a complete DNS traffic model
   - BIG-IP servers
   - static servers
 - Promote GTM pools to first-class objects
+- Preserve the hybrid GTM authoring model:
+  - inline pools under Wide IPs for app readability
+  - first-class GTM pools for shared/reused service definitions
 - Support advanced Wide IP fields:
   - aliases
   - persistence
   - last resort pool
   - load-balancing policy combinations
 - Add topology and region support
+- Add hybrid readability shortcuts:
+  - subdirectory `pool_defaults`
+  - reusable `monitor_sets`
+  - subdirectory maintenance/disable defaults
+  - optional deterministic resolution of `address`/`port` from repo-known LTM virtual servers
 - Add dependency validation across:
   - Wide IPs
   - GTM pools
@@ -435,6 +511,11 @@ This is the practical next sequence for the current repo.
 5. [ ] Add `ha.yml` for trust/sync/failover
 6. [ ] Add `tls.yml` for certs and SSL profiles
 7. [ ] Add network routes, route domains, and SNAT/NAT support
+8. [ ] Add hybrid readability shortcuts:
+   - `pool_defaults`
+   - `member_defaults`
+   - `monitor_sets`
+   - subdirectory maintenance defaults
 
 ## Issue-Sized Execution Plan
 
@@ -453,7 +534,8 @@ These are the first concrete tickets I would open.
 - [x] Add `vars/ltm/nodes`
 - [x] Add `vars/ltm/pools`
 - [x] Refactor `ltm.yml` to support first-class pool and node objects
-- [x] Keep backward compatibility for current virtual-server-centric fragments during transition
+- [x] Keep hybrid support for virtual-server-centric embedded pools
+- [ ] Add `pool_defaults`, `member_defaults`, and `monitor_sets`
 
 ### Milestone 3: GTM Shared Objects
 
@@ -461,6 +543,8 @@ These are the first concrete tickets I would open.
 - [x] Add `vars/gtm/pools`
 - [x] Refactor `gtm.yml` so datacenters and pools are explicit managed trees
 - [x] Add separate static server model
+- [x] Restore hybrid Wide IP embedded-pool support
+- [ ] Add GTM hybrid shortcuts and optional LTM virtual resolution
 
 ### Milestone 4: Platform and HA
 
@@ -496,7 +580,8 @@ These choices affect almost every later phase.
 This program is succeeding when:
 
 - teams stop using the BIG-IP UI for routine change windows
-- shared objects are reusable and clearly owned
+- app-local objects are readable in one place when that helps operators
+- shared objects are reusable and clearly owned when reuse matters
 - destructive changes are explicit and reviewable
 - drift from Git becomes visible
 - new services can be onboarded by adding files, not by inventing playbook logic

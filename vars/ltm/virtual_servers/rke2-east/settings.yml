@@ -2,3 +2,6 @@
 ltm_virtual_server_defaults:
   partition: "Common"
   enabled: true
+  snat: "Automap"
+  profiles:
+    - "tcp"

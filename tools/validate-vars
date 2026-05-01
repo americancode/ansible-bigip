@@ -400,10 +400,11 @@ class Validator:
                     self.error(obj.relpath, f"virtual server `{obj.data.get('name')}` references undefined pool `{pool_ref}`")
                 continue
             if not isinstance(pool, dict):
-                self.error(obj.relpath, f"virtual server `{obj.data.get('name')}` pool must be a string or mapping")
+                self.error(obj.relpath, f"virtual server `{obj.data.get('name')}` pool must be a string reference or embedded pool mapping")
                 continue
-            if "name" not in pool:
-                self.error(obj.relpath, f"virtual server `{obj.data.get('name')}` pool must define `name`")
+
+            if not pool.get("name"):
+                self.error(obj.relpath, f"virtual server `{obj.data.get('name')}` embedded pool must define `name`")
                 continue
 
             pool_partition = str(pool.get("partition", obj.partition))
@@ -411,7 +412,7 @@ class Validator:
 
             monitors_list = pool.get("monitors", [])
             if monitors_list is not None and not isinstance(monitors_list, list):
-                self.error(obj.relpath, f"virtual server `{obj.data.get('name')}` pool `monitors` must be a list")
+                self.error(obj.relpath, f"LTM pool `{pool.get('name')}` `monitors` must be a list")
             else:
                 for monitor in monitors_list or []:
                     self.validate_monitor_reference(
@@ -421,7 +422,13 @@ class Validator:
                         kind="LTM pool monitor",
                     )
 
-            self.validate_ltm_pool_members(obj.relpath, obj.data.get("name"), pool_partition, pool.get("members"), active_node_names)
+            self.validate_ltm_pool_members(
+                obj.relpath,
+                pool.get("name"),
+                pool_partition,
+                pool.get("members"),
+                active_node_names,
+            )
 
         self.check_duplicates(
             virtual_servers,
@@ -468,6 +475,10 @@ class Validator:
             self.require_fields(obj, ["name"])
             if obj.effective_state != "absent":
                 active_datacenter_names.add(self.fq_name(obj.partition, str(obj.data["name"])))
+
+        for obj in servers:
+            if obj.effective_state != "absent" and obj.data.get("datacenter"):
+                active_datacenter_names.add(self.fq_name(obj.partition, str(obj.data["datacenter"])))
 
         self.check_duplicates(datacenters, lambda obj: ("gtm_datacenter", obj.partition, obj.data.get("name")), "GTM datacenter")
 
@@ -543,6 +554,7 @@ class Validator:
                     if pool_ref not in active_pool_names:
                         self.error(obj.relpath, f"GTM Wide IP `{obj.data.get('name')}` references undefined pool `{pool_ref}`")
                     continue
+
                 if not isinstance(pool, dict):
                     self.error(obj.relpath, f"GTM Wide IP `{obj.data.get('name')}` pool {pool_index} must be a string or mapping")
                     continue
@@ -552,6 +564,7 @@ class Validator:
 
                 pool_partition = str(pool.get("partition", obj.partition))
                 if self.is_inline_gtm_pool(pool):
+                    active_pool_names.add(self.fq_gtm_pool_name(pool_partition, record_type, str(pool["name"])))
                     for monitor in pool.get("monitors", pool.get("default_monitors", [])) or []:
                         self.validate_monitor_reference(
                             source=obj.relpath,
@@ -567,11 +580,14 @@ class Validator:
                         active_server_names=active_server_names,
                         active_monitor_names=active_monitor_names,
                     )
-                    active_pool_names.add(self.fq_gtm_pool_name(pool_partition, record_type, str(pool["name"])))
-                else:
-                    pool_ref = self.fq_gtm_pool_name(pool_partition, record_type, str(pool["name"]))
-                    if pool_ref not in active_pool_names:
-                        self.error(obj.relpath, f"GTM Wide IP `{obj.data.get('name')}` references undefined pool `{pool_ref}`")
+                    continue
+
+                unsupported = sorted(set(pool) - {"name", "partition", "ratio"})
+                if unsupported:
+                    self.error(obj.relpath, f"GTM Wide IP `{obj.data.get('name')}` pool reference `{pool.get('name')}` contains unsupported keys: {', '.join(unsupported)}")
+                pool_ref = self.fq_gtm_pool_name(pool_partition, record_type, str(pool["name"]))
+                if pool_ref not in active_pool_names:
+                    self.error(obj.relpath, f"GTM Wide IP `{obj.data.get('name')}` references undefined pool `{pool_ref}`")
 
         self.check_duplicates(
             wide_ips,
@@ -618,25 +634,6 @@ class Validator:
                     known_monitors=active_monitor_names,
                     kind="GTM member monitor",
                 )
-
-    def is_inline_gtm_pool(self, pool: dict[str, Any]) -> bool:
-        return any(
-            key in pool
-            for key in (
-                "members",
-                "default_monitors",
-                "monitors",
-                "preferred_lb_method",
-                "alternate_lb_method",
-                "fallback_lb_method",
-                "fallback_ip",
-                "ttl",
-                "max_answers_returned",
-                "availability_requirements",
-                "enabled",
-                "state",
-            )
-        )
 
     def validate_monitor_reference(
         self,
@@ -711,6 +708,9 @@ class Validator:
                 return f"/{parts[0]}/{record_type}/{parts[1]}"
             return f"/{default_partition}/{record_type}/{reference.strip('/')}"
         return self.fq_gtm_pool_name(default_partition, record_type, reference)
+
+    def is_inline_gtm_pool(self, pool: dict[str, Any]) -> bool:
+        return "members" in pool or "monitors" in pool or "default_monitors" in pool
 
     def load_yaml(self, path: Path) -> Any:
         try:

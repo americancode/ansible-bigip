@@ -1,0 +1,15 @@
+---
+gtm_wide_ips:
+  - name: "inventory.internal.example.com"
+    record_type: "a"
+    pool_lb_method: "topology"
+    pools:
+      - name: "pool_inventory_global"
+        ratio: 1
+
+  - name: "reporting.internal.example.com"
+    record_type: "a"
+    pool_lb_method: "topology"
+    pools:
+      - name: "pool_reporting_global"
+        ratio: 1

@@ -1,0 +1,37 @@
+---
+ltm_virtual_servers:
+  - name: "vs_inventory_east_443"
+    description: "East region inventory application VIP"
+    destination: "10.201.0.80"
+    destination_port: 443
+    profiles:
+      - "tcp"
+    snat: "Automap"
+    pool: "pool_inventory_east_8443"
+
+  - name: "vs_inventory_west_443"
+    description: "West region inventory application VIP"
+    destination: "10.202.0.80"
+    destination_port: 443
+    profiles:
+      - "tcp"
+    snat: "Automap"
+    pool: "pool_inventory_west_8443"
+
+  - name: "vs_reporting_east_443"
+    description: "East region reporting application VIP"
+    destination: "10.201.0.81"
+    destination_port: 443
+    profiles:
+      - "tcp"
+    snat: "Automap"
+    pool: "pool_reporting_east_8443"
+
+  - name: "vs_reporting_west_443"
+    description: "West region reporting application VIP"
+    destination: "10.202.0.81"
+    destination_port: 443
+    profiles:
+      - "tcp"
+    snat: "Automap"
+    pool: "pool_reporting_west_8443"

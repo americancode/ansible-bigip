@@ -1,0 +1,13 @@
+---
+gtm_servers:
+  - name: "bigip-east"
+    address: "192.0.2.10"
+    datacenter: "dc-us-east"
+    monitors:
+      - "/Common/bigip"
+
+  - name: "bigip-west"
+    address: "192.0.2.20"
+    datacenter: "dc-us-west"
+    monitors:
+      - "/Common/bigip"

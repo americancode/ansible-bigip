@@ -1,0 +1,49 @@
+---
+ltm_virtual_servers:
+  - name: "vs_rke2_west_kubeapi_6443"
+    description: "West region RKE2 Kubernetes API VIP"
+    destination: "10.202.0.20"
+    destination_port: 6443
+    pool:
+      name: "pool_rke2_west_kubeapi_6443"
+      monitors:
+        - "/Common/mon_rke2_kubeapi_tcp"
+      members:
+        - host: "10.202.10.11"
+          port: 6443
+        - host: "10.202.10.12"
+          port: 6443
+        - host: "10.202.10.13"
+          port: 6443
+
+  - name: "vs_rke2_west_registration_9345"
+    description: "West region RKE2 server registration VIP using the same control-plane IP"
+    destination: "10.202.0.20"
+    destination_port: 9345
+    pool:
+      name: "pool_rke2_west_registration_9345"
+      monitors:
+        - "/Common/mon_rke2_registration_tcp"
+      members:
+        - host: "10.202.10.11"
+          port: 9345
+        - host: "10.202.10.12"
+          port: 9345
+        - host: "10.202.10.13"
+          port: 9345
+
+  - name: "vs_rke2_west_traefik_443"
+    description: "West region Traefik ingress VIP"
+    destination: "10.202.0.30"
+    destination_port: 443
+    pool:
+      name: "pool_rke2_west_traefik_443"
+      monitors:
+        - "/Common/mon_traefik_https"
+      members:
+        - host: "10.202.20.21"
+          port: 443
+        - host: "10.202.20.22"
+          port: 443
+        - host: "10.202.20.23"
+          port: 443

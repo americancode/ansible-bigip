@@ -417,77 +417,79 @@
             )
           }}
 
-    - name: Derive GTM datacenters from servers
+    - name: Gather embedded GTM datacenter names from deleted servers
       ansible.builtin.set_fact:
-        gtm_embedded_datacenters_present: "{{ gtm_embedded_datacenters_present | default([]) + [ {'name': item.datacenter, 'partition': item.partition | default('Common')} ] }}"
-      loop: "{{ gtm_servers_present | default([]) }}"
-      when: item.datacenter is defined
-
-    - name: Derive GTM datacenter deletions from deleted servers
-      ansible.builtin.set_fact:
-        gtm_embedded_datacenters_delete: "{{ gtm_embedded_datacenters_delete | default([]) + [ {'name': item.datacenter, 'partition': item.partition | default('Common'), 'state': 'absent'} ] }}"
-      loop: "{{ gtm_servers_delete | default([]) }}"
-      when: item.datacenter is defined
-
-    - name: Combine GTM datacenter sources
-      ansible.builtin.set_fact:
-        gtm_all_datacenters_present: "{{ (gtm_datacenters_present | default([])) + (gtm_embedded_datacenters_present | default([])) }}"
-        gtm_all_datacenters_delete: "{{ (gtm_datacenters_delete | default([])) + (gtm_embedded_datacenters_delete | default([])) }}"
-
-    - name: Derive inline GTM pool deletions from Wide IP deletions
-      ansible.builtin.set_fact:
-        gtm_inline_pool_deletions: "{{ gtm_inline_pool_deletions | default([]) + [ gtm_inline_pool_delete ] }}"
-      loop: "{{ query('subelements', gtm_wide_ips_delete | default([]), 'pools', {'skip_missing': True}) }}"
-      vars:
-        gtm_inline_pool_delete: >-
+        gtm_embedded_datacenter_names_delete: >-
           {{
             (
-              item.1 if item.1 is mapping else {'name': item.1}
-            ) | combine({
-              'partition': (
-                item.1.partition if (item.1 is mapping and item.1.partition is defined)
-                else item.0.partition | default('Common')
-              ),
-              'record_type': item.0.record_type | default('a'),
-              'state': 'absent'
-            }, recursive=True)
-          }}
-
-    - name: Derive inline GTM pools from active Wide IPs
-      ansible.builtin.set_fact:
-        gtm_inline_pools_present: "{{ gtm_inline_pools_present | default([]) + [ gtm_inline_pool_present ] }}"
-      loop: "{{ query('subelements', gtm_wide_ips_present | default([]), 'pools', {'skip_missing': True}) }}"
-      vars:
-        gtm_pool_is_inline: >-
-          {{
-            item.1 is mapping and (
-              item.1.members is defined or
-              item.1.default_monitors is defined or
-              item.1.monitors is defined or
-              item.1.preferred_lb_method is defined or
-              item.1.alternate_lb_method is defined or
-              item.1.fallback_lb_method is defined or
-              item.1.fallback_ip is defined or
-              item.1.ttl is defined or
-              item.1.max_answers_returned is defined or
-              item.1.availability_requirements is defined or
-              item.1.enabled is defined or
-              item.1.state is defined
+              (gtm_servers_delete | default([]))
+              | selectattr('datacenter', 'defined')
+              | map(attribute='datacenter')
+              | unique
+              | list
             )
           }}
-        gtm_inline_pool_present: >-
-          {{
-            item.1 | combine({
-              'partition': item.1.partition | default(item.0.partition | default('Common')),
-              'record_type': item.0.record_type | default('a')
-            }, recursive=True)
-          }}
-      when: gtm_pool_is_inline | bool
+        gtm_embedded_datacenters_delete: []
 
-    - name: Combine GTM pool sources
+    - name: Gather embedded GTM datacenter names from active servers
       ansible.builtin.set_fact:
-        gtm_all_pools_present: "{{ (gtm_pools_present | default([])) + (gtm_inline_pools_present | default([])) }}"
+        gtm_embedded_datacenter_names_present: >-
+          {{
+            (
+              (gtm_servers_present | default([]))
+              | selectattr('datacenter', 'defined')
+              | map(attribute='datacenter')
+              | unique
+              | list
+            )
+          }}
+        gtm_embedded_datacenters_present: []
+
+    - name: Build embedded GTM datacenter deletions
+      ansible.builtin.set_fact:
+        gtm_embedded_datacenters_delete: "{{ (gtm_embedded_datacenters_delete | default([])) + [ {'name': item} ] }}"
+      loop: "{{ gtm_embedded_datacenter_names_delete | default([]) }}"
+
+    - name: Build embedded GTM datacenters
+      ansible.builtin.set_fact:
+        gtm_embedded_datacenters_present: "{{ (gtm_embedded_datacenters_present | default([])) + [ {'name': item} ] }}"
+      loop: "{{ gtm_embedded_datacenter_names_present | default([]) }}"
+
+    - name: Combine first-class and embedded GTM datacenter operations
+      ansible.builtin.set_fact:
+        gtm_all_datacenters_delete: "{{ (gtm_datacenters_delete | default([])) + (gtm_embedded_datacenters_delete | default([])) }}"
+        gtm_all_datacenters_present: "{{ (gtm_datacenters_present | default([])) + (gtm_embedded_datacenters_present | default([])) }}"
+
+    - name: Derive embedded GTM pool deletions from Wide IPs
+      ansible.builtin.set_fact:
+        gtm_inline_pool_deletions: []
+
+    - name: Derive embedded GTM pools from active Wide IPs
+      ansible.builtin.set_fact:
+        gtm_inline_pools_present: []
+
+    - name: Collect embedded GTM pool deletions from deleted Wide IPs
+      ansible.builtin.set_fact:
+        gtm_inline_pool_deletions: "{{ (gtm_inline_pool_deletions | default([])) + [ {'partition': item.0.partition | default('Common'), 'record_type': item.0.record_type | default('a')} | combine(item.1, recursive=True) ] }}"
+      loop: "{{ query('subelements', gtm_wide_ips_delete | default([]), 'pools', {'skip_missing': True}) }}"
+      when:
+        - item.1 is mapping
+        - item.1.name is defined
+        - item.1.members is defined
+
+    - name: Collect embedded GTM pools from active Wide IPs
+      ansible.builtin.set_fact:
+        gtm_inline_pools_present: "{{ (gtm_inline_pools_present | default([])) + [ {'partition': item.0.partition | default('Common'), 'record_type': item.0.record_type | default('a')} | combine(item.1, recursive=True) ] }}"
+      loop: "{{ query('subelements', gtm_wide_ips_present | default([]), 'pools', {'skip_missing': True}) }}"
+      when:
+        - item.1 is mapping
+        - item.1.name is defined
+        - item.1.members is defined
+
+    - name: Combine first-class and embedded GTM pool operations
+      ansible.builtin.set_fact:
         gtm_all_pools_delete: "{{ (gtm_pools_delete | default([])) + (gtm_inline_pool_deletions | default([])) }}"
+        gtm_all_pools_present: "{{ (gtm_pools_present | default([])) + (gtm_inline_pools_present | default([])) }}"
 
   tasks:
     - name: Delete Wide IPs
@@ -899,23 +901,42 @@
                   []
                 ) + [
                   {
-                    'name': (
-                      item.1.name if item.1 is mapping else item.1
-                    ),
-                    'partition': (
-                      item.1.partition if (item.1 is mapping and item.1.partition is defined)
-                      else item.0.partition | default('Common')
-                    ),
-                    'ratio': (
-                      item.1.ratio if (item.1 is mapping and item.1.ratio is defined)
-                      else 1
-                    )
+                    'name': (item.1 if item.1 is string else item.1.name),
+                    'partition': (item.0.partition | default('Common')) if item.1 is string else (item.1.partition | default(item.0.partition | default('Common'))),
+                    'ratio': 1 if item.1 is string else (item.1.ratio | default(1))
                   }
                 ]
               )
             })
           }}
       loop: "{{ query('subelements', gtm_wide_ips_present | default([]), 'pools', {'skip_missing': True}) }}"
+      when:
+        - item.1 is string or (item.1 is mapping and item.1.members is not defined)
+
+    - name: Add embedded GTM pool references from Wide IPs
+      ansible.builtin.set_fact:
+        gtm_wide_ip_pool_refs: >-
+          {{
+            gtm_wide_ip_pool_refs | default({}) | combine({
+              item.0.partition | default('Common') ~ '|' ~ item.0.record_type | default('a') ~ '|' ~ item.0.name:
+              (
+                (gtm_wide_ip_pool_refs | default({})).get(
+                  item.0.partition | default('Common') ~ '|' ~ item.0.record_type | default('a') ~ '|' ~ item.0.name,
+                  []
+                ) + [
+                  {
+                    'name': item.1.name,
+                    'partition': item.1.partition | default(item.0.partition | default('Common')),
+                    'ratio': item.1.ratio | default(1)
+                  }
+                ]
+              )
+            })
+          }}
+      loop: "{{ query('subelements', gtm_wide_ips_present | default([]), 'pools', {'skip_missing': True}) }}"
+      when:
+        - item.1 is mapping
+        - item.1.members is defined
 
     - name: Create Wide IPs
       f5networks.f5_modules.bigip_gtm_wide_ip:
@@ -934,5 +955,5 @@
       ansible.builtin.debug:
         msg:
           - "Custom GTM monitors are declared in `gtm_monitors` and created before pools and Wide IPs."
-          - "GTM datacenters and pools can now be declared as first-class objects, or kept inline during transition."
-          - "Assign pool monitors with fully qualified names in `monitors` or `default_monitors`, and reference explicit pools from Wide IPs by name."
+          - "GTM supports a hybrid model: inline pools under a Wide IP for readability, or first-class objects in `vars/gtm/pools` for reuse."
+          - "Datacenters can be declared explicitly or inferred from `gtm_servers`."

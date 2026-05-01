@@ -347,21 +347,29 @@
 
     - name: Derive embedded LTM pool deletions from virtual servers
       ansible.builtin.set_fact:
-        ltm_embedded_pool_deletions: "{{ ltm_embedded_pool_deletions | default([]) + [ item.pool | combine({'partition': item.pool.partition | default(item.partition | default('Common')), 'state': 'absent'}, recursive=True) ] }}"
+        ltm_embedded_pool_deletions: []
+
+    - name: Derive embedded LTM pools from active virtual servers
+      ansible.builtin.set_fact:
+        ltm_embedded_pools_present: []
+
+    - name: Collect embedded LTM pool deletions
+      ansible.builtin.set_fact:
+        ltm_embedded_pool_deletions: "{{ (ltm_embedded_pool_deletions | default([])) + [ {'partition': item.partition | default('Common')} | combine(item.pool, recursive=True) ] }}"
       loop: "{{ ltm_virtual_servers_delete | default([]) }}"
       when:
         - item.pool is defined
         - item.pool is mapping
 
-    - name: Derive embedded LTM pools from virtual servers
+    - name: Collect embedded LTM pools
       ansible.builtin.set_fact:
-        ltm_embedded_pools_present: "{{ ltm_embedded_pools_present | default([]) + [ item.pool | combine({'partition': item.pool.partition | default(item.partition | default('Common'))}, recursive=True) ] }}"
+        ltm_embedded_pools_present: "{{ (ltm_embedded_pools_present | default([])) + [ {'partition': item.partition | default('Common')} | combine(item.pool, recursive=True) ] }}"
       loop: "{{ ltm_virtual_servers_present | default([]) }}"
       when:
         - item.pool is defined
         - item.pool is mapping
 
-    - name: Combine explicit and embedded LTM pools
+    - name: Combine first-class and embedded LTM pool operations
       ansible.builtin.set_fact:
         ltm_all_pools_delete: "{{ (ltm_pools_delete | default([])) + (ltm_embedded_pool_deletions | default([])) }}"
         ltm_all_pools_present: "{{ (ltm_pools_present | default([])) + (ltm_embedded_pools_present | default([])) }}"

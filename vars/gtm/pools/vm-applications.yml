@@ -1,0 +1,35 @@
+---
+gtm_pools:
+  - name: "pool_inventory_global"
+    record_type: "a"
+    preferred_lb_method: "topology"
+    alternate_lb_method: "round-robin"
+    fallback_lb_method: "none"
+    monitors:
+      - "/Common/mon_gtm_inventory_https"
+    members:
+      - server: "bigip-east"
+        virtual_server: "vs_inventory_east_443"
+        address: "10.201.0.80"
+        port: 443
+      - server: "bigip-west"
+        virtual_server: "vs_inventory_west_443"
+        address: "10.202.0.80"
+        port: 443
+
+  - name: "pool_reporting_global"
+    record_type: "a"
+    preferred_lb_method: "topology"
+    alternate_lb_method: "round-robin"
+    fallback_lb_method: "none"
+    monitors:
+      - "/Common/mon_gtm_reporting_https"
+    members:
+      - server: "bigip-east"
+        virtual_server: "vs_reporting_east_443"
+        address: "10.201.0.81"
+        port: 443
+      - server: "bigip-west"
+        virtual_server: "vs_reporting_west_443"
+        address: "10.202.0.81"
+        port: 443

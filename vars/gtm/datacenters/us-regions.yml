@@ -1,0 +1,7 @@
+---
+gtm_datacenters:
+  - name: "dc-us-east"
+    location: "US East production region"
+
+  - name: "dc-us-west"
+    location: "US West production region"

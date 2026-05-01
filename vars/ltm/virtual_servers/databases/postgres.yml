@@ -1,0 +1,19 @@
+---
+ltm_virtual_servers:
+  - name: "vs_pg_vm_east_5432"
+    description: "East region PostgreSQL VIP using a first-class shared pool"
+    destination: "10.201.0.70"
+    destination_port: 5432
+    profiles:
+      - "tcp"
+    snat: "Automap"
+    pool: "pool_pg_vm_east_5432"
+
+  - name: "vs_pg_vm_west_5432"
+    description: "West region PostgreSQL VIP using a first-class shared pool"
+    destination: "10.202.0.70"
+    destination_port: 5432
+    profiles:
+      - "tcp"
+    snat: "Automap"
+    pool: "pool_pg_vm_west_5432"
