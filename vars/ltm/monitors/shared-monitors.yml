@@ -1,0 +1,21 @@
+---
+# Built-in BIG-IP monitors such as `/Common/tcp` or `/Common/https` can be
+# referenced directly in `pool.monitors` and do not need to be declared here.
+ltm_monitors:
+  - name: "mon_tcp_9345"
+    type: "tcp"
+    interval: 30
+    timeout: 91
+
+  - name: "mon_tcp_6443"
+    type: "tcp"
+    interval: 30
+    timeout: 91
+
+  - name: "mon_https_ingress"
+    type: "https"
+    send: "GET / HTTP/1.1\\r\\nHost: ingress.example.com\\r\\nConnection: close\\r\\n\\r\\n"
+    receive: "200 OK"
+    interval: 30
+    timeout: 91
+    compatibility: true

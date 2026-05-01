@@ -1,0 +1,90 @@
+---
+- name: Configure BIG-IP VLANs and self IPs
+  hosts: localhost
+  gather_facts: false
+  collections:
+    - f5networks.f5_modules
+
+  vars_files:
+    - vars/common.yml
+
+  pre_tasks:
+    - name: Load system settings fragments
+      ansible.builtin.include_vars:
+        file: "{{ item }}"
+        name: system_settings_fragment
+      loop: "{{ query('fileglob', 'vars/system/settings/*.yml') | sort }}"
+      register: system_settings_include_results
+
+    - name: Aggregate system settings
+      ansible.builtin.set_fact:
+        partition: >-
+          {{
+            (
+              system_settings_include_results.results
+              | map(attribute='ansible_facts.system_settings_fragment.partition')
+              | select('defined')
+              | list
+              | last
+            ) | default(partition)
+          }}
+
+    - name: Load VLAN fragments
+      ansible.builtin.include_vars:
+        file: "{{ item }}"
+        name: vlan_fragment
+      loop: "{{ query('fileglob', 'vars/system/vlans/*.yml') | sort }}"
+      register: vlan_include_results
+
+    - name: Aggregate VLANs
+      ansible.builtin.set_fact:
+        bigip_vlans: >-
+          {{
+            vlan_include_results.results
+            | map(attribute='ansible_facts.vlan_fragment.bigip_vlans')
+            | select('defined')
+            | flatten
+          }}
+
+    - name: Load self IP fragments
+      ansible.builtin.include_vars:
+        file: "{{ item }}"
+        name: self_ip_fragment
+      loop: "{{ query('fileglob', 'vars/system/self_ips/*.yml') | sort }}"
+      register: self_ip_include_results
+
+    - name: Aggregate self IPs
+      ansible.builtin.set_fact:
+        bigip_self_ips: >-
+          {{
+            self_ip_include_results.results
+            | map(attribute='ansible_facts.self_ip_fragment.bigip_self_ips')
+            | select('defined')
+            | flatten
+          }}
+
+  tasks:
+    - name: Create VLANs
+      f5networks.f5_modules.bigip_vlan:
+        provider: "{{ provider }}"
+        partition: "{{ item.partition | default(partition) }}"
+        name: "{{ item.name }}"
+        tag: "{{ item.tag | default(omit) }}"
+        mtu: "{{ item.mtu | default(omit) }}"
+        interfaces: "{{ item.interfaces | default(omit) }}"
+        description: "{{ item.description | default(omit) }}"
+        state: "{{ item.state | default('present') }}"
+      loop: "{{ bigip_vlans }}"
+
+    - name: Create self IPs
+      f5networks.f5_modules.bigip_selfip:
+        provider: "{{ provider }}"
+        partition: "{{ item.partition | default(partition) }}"
+        name: "{{ item.name }}"
+        address: "{{ item.address }}"
+        netmask: "{{ item.netmask }}"
+        vlan: "{{ item.vlan }}"
+        traffic_group: "{{ item.traffic_group | default(omit) }}"
+        allow_service: "{{ item.allow_service | default(omit) }}"
+        state: "{{ item.state | default('present') }}"
+      loop: "{{ bigip_self_ips }}"

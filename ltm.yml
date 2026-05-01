@@ -7,7 +7,41 @@
 
   vars_files:
     - vars/common.yml
-    - vars/ltm_config.yml
+
+  pre_tasks:
+    - name: Load LTM monitor fragments
+      ansible.builtin.include_vars:
+        file: "{{ item }}"
+        name: ltm_monitor_fragment
+      loop: "{{ query('fileglob', 'vars/ltm/monitors/*.yml') | sort }}"
+      register: ltm_monitor_include_results
+
+    - name: Aggregate LTM monitors
+      ansible.builtin.set_fact:
+        ltm_monitors: >-
+          {{
+            ltm_monitor_include_results.results
+            | map(attribute='ansible_facts.ltm_monitor_fragment.ltm_monitors')
+            | select('defined')
+            | flatten
+          }}
+
+    - name: Load LTM virtual server fragments
+      ansible.builtin.include_vars:
+        file: "{{ item }}"
+        name: ltm_virtual_server_fragment
+      loop: "{{ query('fileglob', 'vars/ltm/virtual_servers/*.yml') | sort }}"
+      register: ltm_virtual_server_include_results
+
+    - name: Aggregate LTM virtual servers
+      ansible.builtin.set_fact:
+        ltm_virtual_servers: >-
+          {{
+            ltm_virtual_server_include_results.results
+            | map(attribute='ansible_facts.ltm_virtual_server_fragment.ltm_virtual_servers')
+            | select('defined')
+            | flatten
+          }}
 
   tasks:
     - name: Create LTM TCP monitors
@@ -91,7 +125,7 @@
     - name: Create pools for virtual servers
       f5networks.f5_modules.bigip_pool:
         provider: "{{ provider }}"
-        partition: "{{ partition }}"
+        partition: "{{ item.pool.partition | default(item.partition | default(partition)) }}"
         name: "{{ item.pool.name }}"
         lb_method: "{{ item.pool.lb_method | default('round-robin') }}"
         monitors: "{{ item.pool.monitors | default(omit) }}"
@@ -101,7 +135,7 @@
     - name: Add members to pools
       f5networks.f5_modules.bigip_pool_member:
         provider: "{{ provider }}"
-        partition: "{{ partition }}"
+        partition: "{{ item.0.pool.partition | default(item.0.partition | default(partition)) }}"
         pool: "{{ item.0.pool.name }}"
         host: "{{ item.1.host }}"
         port: "{{ item.1.port }}"
@@ -111,7 +145,7 @@
     - name: Create virtual servers
       f5networks.f5_modules.bigip_virtual_server:
         provider: "{{ provider }}"
-        partition: "{{ partition }}"
+        partition: "{{ item.partition | default(partition) }}"
         name: "{{ item.name }}"
         destination: "{{ item.destination }}"
         port: "{{ item.destination_port }}"

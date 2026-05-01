@@ -1,0 +1,22 @@
+---
+gtm_wide_ips:
+  - name: "postgres.my.domain.com"
+    record_type: "a"
+    pool_lb_method: "global-availability"
+    pools:
+      - name: "pool_postgres_primary"
+        ratio: 1
+        preferred_lb_method: "global-availability"
+        alternate_lb_method: "round-robin"
+        fallback_lb_method: "none"
+        default_monitors:
+          - "/Common/mon_tcp_postgres"
+        members:
+          - server: "gtm-ltm-site-a"
+            virtual_server: "gtm_vs_a_postgres_5432"
+            address: "10.10.11.120"
+            port: 5432
+          - server: "gtm-ltm-site-b"
+            virtual_server: "gtm_vs_b_postgres_5432"
+            address: "10.10.12.120"
+            port: 5432
