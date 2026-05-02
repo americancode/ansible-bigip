@@ -320,6 +320,28 @@
   loop_control:
     label: "{{ item.partition | default('Common') }}/{{ item.name }}"
 
+- name: Create GTM topology regions
+  f5networks.f5_modules.bigip_gtm_topology_region:
+    provider: "{{ provider }}"
+    name: "{{ item.name }}"
+    region_members: "{{ item.region_members | default(omit) }}"
+    state: "{{ item.state | default('present') }}"
+  loop: "{{ gtm_topology_regions_present | default([]) }}"
+  loop_control:
+    label: "{{ item.name }}"
+
+- name: Create GTM topology records
+  f5networks.f5_modules.bigip_gtm_topology_record:
+    provider: "{{ provider }}"
+    partition: "{{ item.partition | default('Common') }}"
+    source: "{{ item.source }}"
+    destination: "{{ item.destination }}"
+    weight: "{{ item.weight | default(omit) }}"
+    state: "{{ item.state | default('present') }}"
+  loop: "{{ gtm_topology_records_present | default([]) }}"
+  loop_control:
+    label: "source={{ item.source | to_json }} destination={{ item.destination | to_json }}"
+
 - name: Explain health-check behavior for GTM Wide IPs
   ansible.builtin.debug:
     msg:

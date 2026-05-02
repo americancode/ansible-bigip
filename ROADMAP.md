@@ -28,6 +28,7 @@ The repository already supports:
   - embedded pools under GTM Wide IPs
   - first-class shared trees for reusable objects
   - first-class persistence profiles, iRules, data groups, and LTM policies
+  - first-class GTM topology regions and topology records
   - hybrid readability shortcuts (`pool_defaults`, `member_defaults`, `monitor_sets`)
 - explicit deletion trees under `vars/*/deletions` and `state: absent` inline pattern
 - reusable monitor definitions
@@ -38,7 +39,6 @@ The repository already supports:
 The main remaining gaps are:
 
 - deeper HA lifecycle beyond trust, groups, traffic groups, and config sync
-- GTM topology records and regions
 - security module coverage (AFM, WAF/ASM, APM)
 - drift detection and promotion workflows
 
@@ -111,6 +111,8 @@ Implemented today:
   - Wide-IP-centric embedded pools
   - static server model
   - optional LTM virtual resolution for GTM pool members
+  - topology regions
+  - topology records
   - per-object and per-directory partition handling
   - enabled/disabled semantics where supported
   - deletion trees
@@ -123,7 +125,6 @@ Implemented today:
 
 Not implemented yet:
 
-- GTM topology records and regions
 - security modules
 - live drift/import/promotion tooling
 
@@ -632,6 +633,7 @@ This is the practical next sequence for the current repo.
  11. [x] Complete missing documentation
  12. [x] Add LTM persistence, iRules, data groups, and policies
  13. [x] Add virtual server VLAN filtering, metadata, and log profiles
+ 14. [x] Add GTM topology regions and topology records
 
 ## Issue-Sized Execution Plan
 
@@ -688,6 +690,14 @@ These are the first concrete tickets I would open.
 - [x] Add virtual server fields: `default_persistence_profile`, `fallback_persistence_profile`, `irules`, `policies`
 - [x] Add virtual server fields: `vlans`, `vlans_enabled`, `metadata`, `log_profiles`
 - [x] Add deletion trees for all new object types
+
+### Milestone 8: GTM Topology
+
+- [x] Add `vars/gtm/regions` for first-class topology regions
+- [x] Add `vars/gtm/topology` for first-class topology records
+- [x] Update `gtm.yml` apply/delete tasks for regions and topology records
+- [x] Add deletion trees for topology regions and records
+- [x] Add cross-validation: topology records reference declared regions
 
 ## Network Expansion Status
 

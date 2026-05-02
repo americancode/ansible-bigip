@@ -1,0 +1,35 @@
+---
+# Example GTM topology regions for geographic traffic steering.
+# Regions are logical groupings of continents, countries, datacenters, subnets, or ISPs.
+gtm_topology_regions:
+  - name: "us-east"
+    description: "US East Coast region"
+    region_members:
+      - continent: "North America"
+      - country: "US"
+      - datacenter: "/Common/dc-east"
+
+  - name: "us-west"
+    description: "US West Coast region"
+    region_members:
+      - continent: "North America"
+      - country: "US"
+      - datacenter: "/Common/dc-west"
+
+  - name: "emea"
+    description: "Europe, Middle East, and Africa region"
+    region_members:
+      - continent: "Europe"
+      - continent: "Africa"
+      - country: "GB"
+      - country: "DE"
+      - country: "FR"
+
+  - name: "apac"
+    description: "Asia-Pacific region"
+    region_members:
+      - continent: "Asia"
+      - continent: "Australia"
+      - country: "JP"
+      - country: "AU"
+      - country: "SG"

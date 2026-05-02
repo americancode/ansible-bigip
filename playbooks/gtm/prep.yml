@@ -440,6 +440,128 @@
         ).gtm_wide_ip_defaults | default({})
       }}
 
+- name: Discover GTM topology region fragments
+  ansible.builtin.set_fact:
+    gtm_topology_region_files: >-
+      {{
+        lookup(
+          'ansible.builtin.pipe',
+          "find {{ repo_root }}/vars/gtm/regions -type f -name '*.yml' ! -name 'settings.yml' 2>/dev/null | sort"
+        ).splitlines() | reject('equalto', '') | list
+      }}
+    gtm_topology_region_deletion_files: >-
+      {{
+        lookup(
+          'ansible.builtin.pipe',
+          "find {{ repo_root }}/vars/gtm/deletions/regions -type f -name '*.yml' ! -name 'settings.yml' 2>/dev/null | sort"
+        ).splitlines() | reject('equalto', '') | list
+      }}
+
+- name: Load GTM topology region fragments
+  ansible.builtin.include_vars:
+    file: "{{ item }}"
+    name: gtm_topology_region_fragment
+  loop: "{{ gtm_topology_region_files }}"
+  register: gtm_topology_region_include_results
+
+- name: Load GTM topology region deletion fragments
+  ansible.builtin.include_vars:
+    file: "{{ item }}"
+    name: gtm_topology_region_deletion_fragment
+  loop: "{{ gtm_topology_region_deletion_files }}"
+  register: gtm_topology_region_deletion_include_results
+
+- name: Aggregate GTM topology regions with directory settings
+  ansible.builtin.set_fact:
+    gtm_topology_regions: "{{ gtm_topology_regions | default([]) + [ gtm_topology_region_directory_defaults | combine(item.1, recursive=True) ] }}"
+  loop: "{{ query('subelements', gtm_topology_region_include_results.results, 'ansible_facts.gtm_topology_region_fragment.gtm_topology_regions', {'skip_missing': True}) }}"
+  vars:
+    gtm_topology_region_settings_path: "{{ item.0.item | regex_replace('/[^/]+$', '/settings.yml') }}"
+    gtm_topology_region_directory_defaults: >-
+      {{
+        (
+          lookup('ansible.builtin.file', gtm_topology_region_settings_path, errors='ignore')
+          | default('{}', true)
+          | from_yaml
+        ).gtm_topology_region_defaults | default({})
+      }}
+
+- name: Aggregate GTM topology region deletions with directory settings
+  ansible.builtin.set_fact:
+    gtm_topology_region_deletions: "{{ gtm_topology_region_deletions | default([]) + [ (gtm_topology_region_deletion_directory_defaults | combine(item.1, recursive=True)) | combine({'state': 'absent'}, recursive=True) ] }}"
+  loop: "{{ query('subelements', gtm_topology_region_deletion_include_results.results, 'ansible_facts.gtm_topology_region_deletion_fragment.gtm_topology_regions', {'skip_missing': True}) }}"
+  vars:
+    gtm_topology_region_deletion_settings_path: "{{ item.0.item | regex_replace('/[^/]+$', '/settings.yml') }}"
+    gtm_topology_region_deletion_directory_defaults: >-
+      {{
+        (
+          lookup('ansible.builtin.file', gtm_topology_region_deletion_settings_path, errors='ignore')
+          | default('{}', true)
+          | from_yaml
+        ).gtm_topology_region_defaults | default({})
+      }}
+
+- name: Discover GTM topology record fragments
+  ansible.builtin.set_fact:
+    gtm_topology_record_files: >-
+      {{
+        lookup(
+          'ansible.builtin.pipe',
+          "find {{ repo_root }}/vars/gtm/topology -type f -name '*.yml' ! -name 'settings.yml' 2>/dev/null | sort"
+        ).splitlines() | reject('equalto', '') | list
+      }}
+    gtm_topology_record_deletion_files: >-
+      {{
+        lookup(
+          'ansible.builtin.pipe',
+          "find {{ repo_root }}/vars/gtm/deletions/topology -type f -name '*.yml' ! -name 'settings.yml' 2>/dev/null | sort"
+        ).splitlines() | reject('equalto', '') | list
+      }}
+
+- name: Load GTM topology record fragments
+  ansible.builtin.include_vars:
+    file: "{{ item }}"
+    name: gtm_topology_record_fragment
+  loop: "{{ gtm_topology_record_files }}"
+  register: gtm_topology_record_include_results
+
+- name: Load GTM topology record deletion fragments
+  ansible.builtin.include_vars:
+    file: "{{ item }}"
+    name: gtm_topology_record_deletion_fragment
+  loop: "{{ gtm_topology_record_deletion_files }}"
+  register: gtm_topology_record_deletion_include_results
+
+- name: Aggregate GTM topology records with directory settings
+  ansible.builtin.set_fact:
+    gtm_topology_records: "{{ gtm_topology_records | default([]) + [ gtm_topology_record_directory_defaults | combine(item.1, recursive=True) ] }}"
+  loop: "{{ query('subelements', gtm_topology_record_include_results.results, 'ansible_facts.gtm_topology_record_fragment.gtm_topology_records', {'skip_missing': True}) }}"
+  vars:
+    gtm_topology_record_settings_path: "{{ item.0.item | regex_replace('/[^/]+$', '/settings.yml') }}"
+    gtm_topology_record_directory_defaults: >-
+      {{
+        (
+          lookup('ansible.builtin.file', gtm_topology_record_settings_path, errors='ignore')
+          | default('{}', true)
+          | from_yaml
+        ).gtm_topology_record_defaults | default({})
+      }}
+
+- name: Aggregate GTM topology record deletions with directory settings
+  ansible.builtin.set_fact:
+    gtm_topology_record_deletions: "{{ gtm_topology_record_deletions | default([]) + [ (gtm_topology_record_deletion_directory_defaults | combine(item.1, recursive=True)) | combine({'state': 'absent'}, recursive=True) ] }}"
+  loop: "{{ query('subelements', gtm_topology_record_deletion_include_results.results, 'ansible_facts.gtm_topology_record_deletion_fragment.gtm_topology_records', {'skip_missing': True}) }}"
+  vars:
+    gtm_topology_record_deletion_settings_path: "{{ item.0.item | regex_replace('/[^/]+$', '/settings.yml') }}"
+    gtm_topology_record_deletion_directory_defaults: >-
+      {{
+        (
+          lookup('ansible.builtin.file', gtm_topology_record_deletion_settings_path, errors='ignore')
+          | default('{}', true)
+          | from_yaml
+        ).gtm_topology_record_defaults | default({})
+      }}
+
 - name: Classify GTM object operations
   ansible.builtin.set_fact:
     gtm_datacenters_delete: >-
@@ -537,6 +659,46 @@
         +
         (
           (gtm_wide_ips | default([]))
+          | selectattr('state', 'defined')
+          | rejectattr('state', 'equalto', 'absent')
+          | list
+        )
+      }}
+    gtm_topology_regions_delete: >-
+      {{
+        ((gtm_topology_regions | default([])) + (gtm_topology_region_deletions | default([])))
+        | selectattr('state', 'defined')
+        | selectattr('state', 'equalto', 'absent')
+        | list
+      }}
+    gtm_topology_regions_present: >-
+      {{
+        (gtm_topology_regions | default([]))
+        | rejectattr('state', 'defined')
+        | list
+        +
+        (
+          (gtm_topology_regions | default([]))
+          | selectattr('state', 'defined')
+          | rejectattr('state', 'equalto', 'absent')
+          | list
+        )
+      }}
+    gtm_topology_records_delete: >-
+      {{
+        ((gtm_topology_records | default([])) + (gtm_topology_record_deletions | default([])))
+        | selectattr('state', 'defined')
+        | selectattr('state', 'equalto', 'absent')
+        | list
+      }}
+    gtm_topology_records_present: >-
+      {{
+        (gtm_topology_records | default([]))
+        | rejectattr('state', 'defined')
+        | list
+        +
+        (
+          (gtm_topology_records | default([]))
           | selectattr('state', 'defined')
           | rejectattr('state', 'equalto', 'absent')
           | list

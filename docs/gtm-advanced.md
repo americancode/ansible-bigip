@@ -233,6 +233,99 @@ gtm_servers:
     prober_preference: "inside-datacenter"
 ```
 
+## GTM Topology Regions
+
+Location: `vars/gtm/regions/`
+
+Topology regions define logical geographic or network groupings used by topology-based load balancing. Regions combine continents, countries, datacenters, subnets, or ISPs into named groupings:
+
+```yaml
+gtm_topology_regions:
+  - name: "us-east"
+    description: "US East Coast region"
+    region_members:
+      - continent: "North America"
+      - country: "US"
+      - datacenter: "/Common/dc-east"
+
+  - name: "emea"
+    description: "Europe, Middle East, and Africa"
+    region_members:
+      - continent: "Europe"
+      - continent: "Africa"
+      - country: "GB"
+      - country: "DE"
+```
+
+### Region Member Keys
+
+| Key | Example | Description |
+|---|---|---|
+| `continent` | `"North America"` | Geographic continent |
+| `country` | `"US"` | ISO country code |
+| `datacenter` | `"/Common/dc-east"` | GTM datacenter name |
+| `subnet` | `"10.0.0.0/8"` | IP subnet (CIDR) |
+| `isp` | `"AOL"` | ISP name |
+
+## GTM Topology Records
+
+Location: `vars/gtm/topology/`
+
+Topology records define source-to-destination weighted mappings for DNS traffic steering. When a GTM pool or Wide IP uses `preferred_lb_method: topology`, the system evaluates these records to determine which pool serves which source:
+
+```yaml
+gtm_topology_records:
+  - source:
+      - region: "us-east"
+    destination:
+      - pool: "/Common/pool_app_east"
+    weight: 100
+
+  - source:
+      - region: "emea"
+    destination:
+      - pool: "/Common/pool_app_europe"
+    weight: 100
+
+  - source:
+      - subnet: "10.0.0.0/8"
+    destination:
+      - pool: "/Common/pool_internal"
+    weight: 100
+```
+
+### Source and Destination Keys
+
+Both `source` and `destination` lists use the same member keys as regions, plus `region` and `pool`:
+
+| Key | Example | Description |
+|---|---|---|
+| `region` | `"us-east"` | Topology region name |
+| `pool` | `"/Common/pool_app"` | GTM pool name |
+| `continent` | `"North America"` | Geographic continent |
+| `country` | `"US"` | ISO country code |
+| `datacenter` | `"/Common/dc-east"` | GTM datacenter name |
+| `subnet` | `"10.0.0.0/8"` | IP subnet (CIDR) |
+| `isp` | `"AOL"` | ISP name |
+| `negate` | `true` | Invert the match (used with any key above) |
+
+### Negation Example
+
+```yaml
+gtm_topology_records:
+  - source:
+      - region: "us-east"
+      - negate: true
+    destination:
+      - pool: "/Common/pool_fallback"
+    weight: 50
+    description: "All non-US-East traffic to fallback pool"
+```
+
+### Weights
+
+Higher weights are preferred. If multiple records match a source, the record with the highest weight wins. Set `weight: 0` to disable a record without deleting it.
+
 ## GTM Monitors
 
 The playbook supports these GTM monitor types, selected by `type`:
@@ -262,8 +355,6 @@ gtm_monitors:
 
 The following GTM fields are roadmap items:
 
-- topology records
-- GTM regions
 - advanced persistence options beyond basic type
 - cname wide IP advanced fields
 

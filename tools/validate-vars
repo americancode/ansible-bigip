@@ -345,6 +345,20 @@ class Validator:
                 settings_key="gtm_wide_ip_defaults",
                 extra_settings_keys=("gtm_pool_defaults", "gtm_member_defaults", "gtm_monitor_sets"),
             ),
+            TreeSpec(
+                name="gtm_topology_regions",
+                active_dir=VARS_DIR / "gtm" / "regions",
+                deletion_dir=VARS_DIR / "gtm" / "deletions" / "regions",
+                top_key="gtm_topology_regions",
+                settings_key="gtm_topology_region_defaults",
+            ),
+            TreeSpec(
+                name="gtm_topology_records",
+                active_dir=VARS_DIR / "gtm" / "topology",
+                deletion_dir=VARS_DIR / "gtm" / "deletions" / "topology",
+                top_key="gtm_topology_records",
+                settings_key="gtm_topology_record_defaults",
+            ),
         ]
 
     def run(self) -> int:
@@ -1108,6 +1122,8 @@ class Validator:
         pools = self.objects.get("gtm_pools", [])
         wide_ips = self.objects.get("gtm_wide_ips", [])
         ltm_virtual_servers = self.objects.get("ltm_virtual_servers", [])
+        topology_regions = self.objects.get("gtm_topology_regions", [])
+        topology_records = self.objects.get("gtm_topology_records", [])
 
         active_datacenter_names = set()
         for obj in datacenters:
@@ -1254,6 +1270,78 @@ class Validator:
             lambda obj: ("gtm_wide_ip", obj.partition, obj.data.get("name"), obj.data.get("record_type", "a")),
             "GTM Wide IP",
         )
+
+        active_region_names = set()
+        for obj in topology_regions:
+            self.require_fields(obj, ["name"])
+            if obj.effective_state != "absent":
+                active_region_names.add(str(obj.data["name"]))
+                region_members = obj.data.get("region_members")
+                if region_members is not None:
+                    if not isinstance(region_members, list):
+                        self.error(obj.relpath, f"topology region `{obj.data.get('name')}` `region_members` must be a list")
+                    else:
+                        self.validate_topology_members(region_members, obj.relpath, f"topology region `{obj.data.get('name')}`")
+
+        self.check_duplicates(
+            topology_regions,
+            lambda obj: ("gtm_topology_region", obj.data.get("name")),
+            "GTM topology region",
+        )
+
+        allowed_topology_member_keys = {"continent", "country", "datacenter", "subnet", "isp", "region", "pool", "negate"}
+        for obj in topology_records:
+            if obj.effective_state == "absent":
+                continue
+            self.require_fields(obj, ["source", "destination"])
+            source_members = obj.data.get("source")
+            destination_members = obj.data.get("destination")
+            if source_members is not None:
+                if not isinstance(source_members, list) or not source_members:
+                    self.error(obj.relpath, f"topology record `{self._topology_record_id(obj)}` `source` must be a non-empty list")
+                else:
+                    self.validate_topology_members(source_members, obj.relpath, f"topology record `{self._topology_record_id(obj)}` source")
+            if destination_members is not None:
+                if not isinstance(destination_members, list) or not destination_members:
+                    self.error(obj.relpath, f"topology record `{self._topology_record_id(obj)}` `destination` must be a non-empty list")
+                else:
+                    self.validate_topology_members(destination_members, obj.relpath, f"topology record `{self._topology_record_id(obj)}` destination")
+            for member in (source_members or []) + (destination_members or []):
+                if isinstance(member, dict):
+                    region_ref = member.get("region")
+                    if region_ref is not None:
+                        if str(region_ref) not in active_region_names:
+                            self.error(obj.relpath, f"topology record `{self._topology_record_id(obj)}` references undefined region `{region_ref}`")
+            weight = obj.data.get("weight")
+            if weight is not None:
+                if not isinstance(weight, int) or weight < 0:
+                    self.error(obj.relpath, f"topology record `{self._topology_record_id(obj)}` `weight` must be a non-negative integer")
+
+        self.check_duplicates(
+            topology_records,
+            lambda obj: ("gtm_topology_record", self._topology_record_id(obj)),
+            "GTM topology record",
+        )
+
+    @staticmethod
+    def _topology_record_id(obj: LoadedObject) -> str:
+        source = obj.data.get("source", [])
+        destination = obj.data.get("destination", [])
+        return f"source={source} destination={destination}"
+
+    def validate_topology_members(self, members: list, source: str, context: str) -> None:
+        allowed_keys = {"continent", "country", "datacenter", "subnet", "isp", "region", "pool", "negate"}
+        for idx, member in enumerate(members):
+            if not isinstance(member, dict):
+                self.error(source, f"{context} member {idx} must be a mapping")
+                continue
+            location_keys = {"continent", "country", "datacenter", "subnet", "isp", "region", "pool"}
+            used_location_keys = set(member) & location_keys
+            if not used_location_keys and "negate" not in member:
+                self.error(source, f"{context} member {idx} must define at least one of: {', '.join(sorted(location_keys))}")
+            unsupported = set(member) - allowed_keys
+            if unsupported:
+                self.error(source, f"{context} member {idx} contains unsupported keys: {', '.join(sorted(unsupported))}")
 
     def validate_gtm_pool_members(
         self,
