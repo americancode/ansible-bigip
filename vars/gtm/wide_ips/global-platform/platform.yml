@@ -1,4 +1,13 @@
 ---
+# Concise/hybrid GTM example.
+# Each Wide IP embeds its GTM pools inline so one file tells the story for the service.
+# The embedded `members` point to GTM servers in `vars/gtm/servers/regional-bigips.yml`.
+# The `virtual_server` strings point to repo-known LTM virtual servers in:
+# - `vars/ltm/virtual_servers/rke2-east/platform-cluster.yml`
+# - `vars/ltm/virtual_servers/rke2-west/platform-cluster.yml`
+# Here the member `address` and `port` are still shown explicitly for readability, but they could
+# be omitted when the repo-known LTM virtual server should be the source of truth.
+# Monitor aliases such as `platform_https` expand through the sibling `settings.yml`.
 gtm_wide_ips:
   - name: "platform.apps.example.com"
     record_type: "a"

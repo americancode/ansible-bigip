@@ -1,4 +1,6 @@
 ---
+# First-class node examples for the verbose LTM model.
+# These names are referenced by `vars/ltm/pools/vm-applications.yml`.
 ltm_nodes:
   - name: "inventory-east-1"
     address: "10.201.40.11"

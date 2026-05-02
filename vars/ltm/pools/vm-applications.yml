@@ -1,4 +1,8 @@
 ---
+# Verbose/shared-object LTM example.
+# These pools are referenced by `vars/ltm/virtual_servers/vm-apps/business-apps.yml`.
+# The member `name` fields link to first-class nodes in `vars/ltm/nodes/vm-applications.yml`.
+# The `standard_https` monitor alias expands through `vars/ltm/pools/settings.yml` to `/Common/https`.
 ltm_pools:
   - name: "pool_inventory_east_8443"
     description: "East region inventory application pool"

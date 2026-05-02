@@ -1,0 +1,24 @@
+---
+# Concise/app-local LTM example.
+# This file is the shortest supported authoring model: the virtual server, pool, members, and
+# health check live together in one object.
+# The pool is embedded inline under `pool`, so there is no reference into `vars/ltm/pools/...`.
+# The monitor reference `/Common/https` is an out-of-the-box BIG-IP health check, not a custom
+# monitor declared in `vars/ltm/monitors/platform-monitors.yml`.
+ltm_virtual_servers:
+  - name: "vs_status_demo_443"
+    description: "Demo inline virtual server using an embedded pool and built-in HTTPS monitor"
+    destination: "10.201.0.90"
+    destination_port: 443
+    profiles:
+      - "tcp"
+    snat: "Automap"
+    pool:
+      name: "pool_status_demo_8443"
+      monitors:
+        - "/Common/https"
+      members:
+        - host: "10.201.42.11"
+          port: 8443
+        - host: "10.201.42.12"
+          port: 8443

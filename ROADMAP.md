@@ -191,6 +191,16 @@ This is the recommended end-state layout.
 - Validation must fail fast before playbook execution.
 - Runtime drift should be detectable against live BIG-IP state.
 
+## Execution Discipline
+
+These are binding repo maintenance rules for every feature change, including future AI agents working in this repository.
+
+- Update `ROADMAP.md` current state, backlog items, and milestone checklists when scope changes.
+- Update example var files when a feature adds or changes an authoring pattern.
+- Update docs alongside code so linkages and reference strings are explained where operators read them.
+- Validate after each major change before moving to the next implementation step.
+- Include a suggested commit name only after the implementation and validation are complete.
+
 ## Program Phases
 
 ## Phase 1: GitOps Foundation

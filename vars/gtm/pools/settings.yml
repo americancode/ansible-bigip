@@ -1,4 +1,6 @@
 ---
+# Per-directory defaults for first-class GTM pools under `vars/gtm/pools/`.
+# Files in this subtree can use short monitor aliases defined below.
 gtm_pool_defaults:
   enabled: true
   alternate_lb_method: "round-robin"
@@ -7,6 +9,8 @@ gtm_pool_defaults:
 gtm_member_defaults:
   enabled: true
 
+# `inventory_https` and similar aliases expand to repo-created GTM monitors from
+# `vars/gtm/monitors/platform-monitors.yml`.
 gtm_monitor_sets:
   postgres_tcp:
     - "/Common/mon_gtm_postgres_tcp"

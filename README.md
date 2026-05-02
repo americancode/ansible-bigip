@@ -2,6 +2,16 @@
 
 Declarative BIG-IP playbooks organized for GitOps-style management.
 
+## Binding Repo Rules
+
+These are binding maintenance rules for anyone changing this repository, including future AI agents:
+
+- keep `ROADMAP.md` in sync with actual implementation state and remaining backlog items
+- update docs and example var files whenever a feature changes authoring patterns or references
+- explain cross-file linkages and reference strings inline where operators will read them
+- validate after each major change before moving to the next implementation step
+- print or suggest a commit name only after implementation and validation are complete
+
 ## Playbooks
 
 - `network.yml`: VLANs, route domains, self IPs, static routes, SNAT translations, and SNAT pools
@@ -51,6 +61,8 @@ Examples:
 - GTM Wide IPs can embed their own GTM pools
 - shared nodes, pools, datacenters, and TLS objects can live in first-class trees
 - GTM pool members can resolve `address` and `port` from repo-known LTM virtual servers when `virtual_server` names already match
+
+Example walkthroughs live in [docs/example-models.md](/Users/nathanielchurchill/source/ansible-bigip/docs/example-models.md). The example var files also carry inline comments that point to related files and explain how cross-file linkages work.
 
 ## Deletions
 

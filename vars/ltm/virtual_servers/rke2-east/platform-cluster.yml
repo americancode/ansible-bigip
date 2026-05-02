@@ -1,4 +1,8 @@
 ---
+# Concise/hybrid LTM example using embedded pools.
+# Each virtual server keeps its pool and members inline so one file explains the full service.
+# The short monitor names map through the sibling `settings.yml` to custom monitors in
+# `vars/ltm/monitors/platform-monitors.yml`.
 ltm_virtual_servers:
   - name: "vs_rke2_east_kubeapi_6443"
     description: "East region RKE2 Kubernetes API VIP"
@@ -36,6 +40,9 @@ ltm_virtual_servers:
     description: "East region Traefik ingress VIP"
     destination: "10.201.0.30"
     destination_port: 443
+# Inline pool example:
+# `pool.name` exists only inside this virtual server object and is not a first-class pool in
+# `vars/ltm/pools/...`.
     pool:
       name: "pool_rke2_east_traefik_443"
       monitors:

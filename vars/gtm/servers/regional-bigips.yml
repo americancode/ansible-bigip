@@ -1,4 +1,7 @@
 ---
+# First-class GTM server examples for the verbose GTM model.
+# GTM pool member `server` references point here.
+# The built-in `/Common/bigip` monitor is an out-of-the-box GTM health check, not a repo-created monitor.
 gtm_servers:
   - name: "bigip-east"
     address: "192.0.2.10"
