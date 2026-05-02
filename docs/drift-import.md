@@ -78,6 +78,7 @@ The tool reports drift in three categories:
 | `afm_rules` | `/mgmt/tm/security/firewall/rule` |
 | `afm_policies` | `/mgmt/tm/security/firewall/rule-list` |
 | `waf_policies` | `/mgmt/tm/asm/policies` |
+| `waf_server_technologies` | `/mgmt/tm/asm/policies` with per-policy `serverTechnologyReference` subcollection traversal |
 | `apm_acls` | `/mgmt/tm/access/policy/acl` |
 | `apm_auth_servers` | `/mgmt/tm/auth/remote-server` |
 | `apm_sso_configs` | `/mgmt/tm/apm/sso` |
@@ -85,6 +86,7 @@ The tool reports drift in three categories:
 | `apm_access_profiles` | `/mgmt/tm/access/profile` |
 | `apm_per_session_policies` | `/mgmt/tm/access/per-session-policy` |
 | `apm_macros` | `/mgmt/tm/access/macro` |
+| `apm_policy_nodes` | `/mgmt/tm/apm/policy/access-policy` with `items` array traversal |
 | `tls_keys` | `/mgmt/tm/sys/crypto/key` |
 | `tls_certificates` | `/mgmt/tm/sys/crypto/cert` |
 | `tls_ca_bundles` | `/mgmt/tm/sys/crypto/ca-bundle` |
@@ -96,11 +98,12 @@ The tool reports drift in three categories:
 Runtime playbook coverage is broader than helper-tool coverage. The following object families are still runtime-managed only and are not yet handled accurately enough for drift/import:
 
 - `system` and `ha` domain objects
-- WAF server technologies
-- APM policy nodes
 - SNAT translations under `vars/network/snat_translations`
 
-For several newer supported families, drift/import is present but still not full-fidelity. Treat generated output as a starting point for review, not as an authoritative round-trip export of every field.
+For several newer supported families, drift/import is present but still not full-fidelity. Treat generated output as a starting point for review, not as an authoritative round-trip export of every field. This is especially true for:
+
+- APM policy nodes, where helper tooling currently flattens parent access-policy items to `name`, `policy`, optional `partition`, and basic `type`
+- any object family where nested child properties or subcollections are represented more richly in runtime than in import output
 
 ## Import from BIG-IP
 

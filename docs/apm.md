@@ -376,18 +376,23 @@ The `security.yml` playbook handles this ordering automatically.
 - Access profiles via `access/profile` endpoint
 - Per-session policies via `access/per-session-policy` endpoint
 - Macros via `access/macro` endpoint
+- Policy nodes by traversing `apm/policy/access-policy` objects and flattening their `items` arrays into the repo's `policy` + `name` model
 
-APM policy nodes are runtime-managed by `playbooks/security.yml`, but they are not yet part of drift detection because the helper tooling still needs model-accurate handling of access-policy items and nested properties.
+Current limitation:
+- helper-tool coverage for APM policy nodes currently focuses on existence plus basic `type` drift
+- nested `properties` are still runtime-managed and not yet compared or reconstructed exhaustively
 
 ## Import
 
 `tools/import-from-bigip` can import live APM objects:
 
 ```sh
-F5_HOST=bigip.example.com F5_PASSWORD=secret python3 tools/import-from-bigip --out imported/ --types apm_acls apm_auth_servers apm_sso_configs apm_resources apm_access_profiles apm_per_session_policies apm_macros
+F5_HOST=bigip.example.com F5_PASSWORD=secret python3 tools/import-from-bigip --out imported/ --types apm_acls apm_auth_servers apm_sso_configs apm_resources apm_access_profiles apm_per_session_policies apm_macros apm_policy_nodes
 ```
 
-APM policy nodes are not yet imported. The repo models them as policy items attached to parent access policies, and `tools/import-from-bigip` still needs policy-item extraction that can reconstruct those attachments faithfully.
+Current limitation:
+- imported APM policy nodes currently include `name`, `policy`, optional `partition`, and basic `type`
+- nested `properties` are not reconstructed yet, so imported node files should be treated as a starting point for review, not as a full-fidelity round-trip export
 
 ## Related Docs
 

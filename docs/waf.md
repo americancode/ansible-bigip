@@ -153,9 +153,12 @@ ltm_virtual_servers:
 
 ## Drift Detection
 
-`tools/drift-check` currently compares declared WAF policies against live ASM policies using the `asm/policies` endpoint.
+`tools/drift-check` compares:
+- WAF policies against live ASM policies using the `asm/policies` endpoint
+- WAF server technologies by traversing each policy's `serverTechnologyReference` subcollection and flattening it into the repo's `policy_name` + `name` model
 
-WAF server technologies are runtime-managed by `playbooks/security.yml`, but they are not yet included in drift detection because the helper tooling does not yet walk the per-policy server-technology subcollection accurately enough to reconstruct the repo model.
+Current limitation:
+- helper-tool coverage for WAF server technologies is identity-focused; deeper field-level comparison is not needed yet because the repo model only declares `policy_name` and technology `name`
 
 ## Import
 
@@ -165,4 +168,8 @@ WAF server technologies are runtime-managed by `playbooks/security.yml`, but the
 F5_HOST=bigip.example.com F5_PASSWORD=secret python3 tools/import-from-bigip --out imported/ --types waf_policies
 ```
 
-WAF server technologies are not yet imported by `tools/import-from-bigip` for the same reason: the repo models them as per-policy attachments, and the helper tooling still needs model-accurate subcollection handling before that import path can be trusted.
+`tools/import-from-bigip` can also import WAF server technologies by traversing each policy's server-technology subcollection and generating files under `vars/security/waf/server_technologies/`:
+
+```sh
+F5_HOST=bigip.example.com F5_PASSWORD=secret python3 tools/import-from-bigip --out imported/ --types waf_policies waf_server_technologies
+```

@@ -93,6 +93,32 @@ class BigIPConnection:
         resp.raise_for_status()
         return resp.json()
 
+    def get_all(self, uri: str, params: dict | None = None) -> list[dict[str, Any]]:
+        url = f"{self.base_url}/{uri}"
+        query = dict(params or {})
+        if "$top" not in query:
+            query["$top"] = 1000
+        items: list[dict[str, Any]] = []
+
+        while url:
+            resp = requests.get(
+                url,
+                auth=(self.username, self.password),
+                params=query,
+                verify=False,
+                timeout=30,
+            )
+            resp.raise_for_status()
+            data = resp.json()
+            if isinstance(data, dict):
+                items.extend(data.get("items", []))
+                url = data.get("nextSelfLink")
+            else:
+                url = None
+            query = {}
+
+        return items
+
 
 @dataclass
 class DriftEntry:
@@ -227,6 +253,7 @@ class DriftChecker:
         "afm_rules": "security/firewall/rule",
         "afm_policies": "security/firewall/rule-list",
         "waf_policies": "asm/policies",
+        "waf_server_technologies": "asm/policies",
         "apm_acls": "access/policy/acl",
         "apm_auth_servers": "auth/remote-server",
         "apm_sso_configs": "apm/sso",
@@ -234,6 +261,7 @@ class DriftChecker:
         "apm_access_profiles": "access/profile",
         "apm_per_session_policies": "access/per-session-policy",
         "apm_macros": "access/macro",
+        "apm_policy_nodes": "apm/policy/access-policy",
         "tls_keys": "sys/crypto/key",
         "tls_certificates": "sys/crypto/cert",
         "tls_ca_bundles": "sys/crypto/ca-bundle",
@@ -259,6 +287,12 @@ class DriftChecker:
 
         for obj_type, endpoint in endpoints.items():
             if obj_type not in self.var_loader.objects:
+                continue
+            if obj_type == "waf_server_technologies":
+                self._check_waf_server_technologies()
+                continue
+            if obj_type == "apm_policy_nodes":
+                self._check_apm_policy_nodes()
                 continue
             self._check_type(obj_type, endpoint)
 
@@ -368,6 +402,143 @@ class DriftChecker:
                 drifts.append(f"monitors: declared {declared_monitors} vs live {live_monitors}")
 
         return drifts
+
+    def _check_waf_server_technologies(self) -> None:
+        try:
+            policies = self.conn.get_all("asm/policies")
+        except Exception as exc:
+            print(f"WARN: could not query asm/policies for waf_server_technologies: {exc}", file=sys.stderr)
+            return
+
+        live_objects: list[dict[str, Any]] = []
+        for policy in policies:
+            policy_name = policy.get("name")
+            if not policy_name:
+                continue
+            partition = policy.get("partition", "Common")
+            tech_ref = policy.get("serverTechnologyReference", {})
+            tech_link = tech_ref.get("link") if isinstance(tech_ref, dict) else None
+            if not tech_link:
+                continue
+            try:
+                technologies = self.conn.get_all(tech_link.split("/mgmt/tm/")[-1])
+            except Exception:
+                continue
+            for technology in technologies:
+                tech_name = technology.get("name")
+                if not tech_name:
+                    continue
+                live_objects.append(
+                    {
+                        "partition": partition,
+                        "name": tech_name.split("/")[-1] if "/" in str(tech_name) else tech_name,
+                        "policy_name": policy_name.split("/")[-1] if "/" in str(policy_name) else policy_name,
+                    }
+                )
+
+        self._compare_custom_objects("waf_server_technologies", live_objects, ("partition", "policy_name", "name"))
+
+    def _check_apm_policy_nodes(self) -> None:
+        try:
+            policies = self.conn.get_all("apm/policy/access-policy")
+        except Exception as exc:
+            print(f"WARN: could not query apm/policy/access-policy for apm_policy_nodes: {exc}", file=sys.stderr)
+            return
+
+        live_objects: list[dict[str, Any]] = []
+        for policy in policies:
+            policy_name = policy.get("name")
+            if not policy_name:
+                continue
+            partition = policy.get("partition") or policy.get("tmPartition") or "Common"
+            items = policy.get("items", [])
+            if not isinstance(items, list):
+                continue
+            for item in items:
+                if not isinstance(item, dict):
+                    continue
+                node_name = item.get("name")
+                if not node_name:
+                    continue
+                live_objects.append(
+                    {
+                        "partition": partition,
+                        "name": node_name.split("/")[-1] if "/" in str(node_name) else node_name,
+                        "policy": policy_name.split("/")[-1] if "/" in str(policy_name) else policy_name,
+                        "type": item.get("type") or item.get("itemType") or item.get("item_type") or "",
+                    }
+                )
+
+        self._compare_custom_objects("apm_policy_nodes", live_objects, ("partition", "policy", "name"))
+
+    def _compare_custom_objects(
+        self,
+        obj_type: str,
+        live_objects: list[dict[str, Any]],
+        identity_fields: tuple[str, ...],
+    ) -> None:
+        declared = self.var_loader.objects.get(obj_type, [])
+        declared_by_id: dict[tuple[Any, ...], dict[str, Any]] = {}
+        declared_ids = set()
+
+        for obj in declared:
+            if obj.get("state") == "absent":
+                continue
+            identity = tuple(obj.get(field, "Common" if field == "partition" else "") for field in identity_fields)
+            if any(value in (None, "") for value in identity):
+                continue
+            declared_ids.add(identity)
+            declared_by_id[identity] = obj
+
+        live_by_id: dict[tuple[Any, ...], dict[str, Any]] = {}
+        live_ids = set()
+        for obj in live_objects:
+            identity = tuple(obj.get(field, "Common" if field == "partition" else "") for field in identity_fields)
+            if any(value in (None, "") for value in identity):
+                continue
+            live_ids.add(identity)
+            live_by_id[identity] = obj
+
+        for identity in live_ids - declared_ids:
+            partition = str(identity[0]) if identity_fields and identity_fields[0] == "partition" else "Common"
+            name = str(identity[-1])
+            detail = "exists on device but not declared in vars/"
+            if obj_type == "waf_server_technologies":
+                detail = f"policy={identity[1]} exists on device but not declared in vars/"
+            elif obj_type == "apm_policy_nodes":
+                detail = f"policy={identity[1]} exists on device but not declared in vars/"
+            self.report.missing_from_git.append(
+                DriftEntry(object_type=obj_type, name=name, partition=partition, detail=detail)
+            )
+
+        for identity in declared_ids - live_ids:
+            partition = str(identity[0]) if identity_fields and identity_fields[0] == "partition" else "Common"
+            name = str(identity[-1])
+            detail = "declared in vars/ but not found on device"
+            if obj_type == "waf_server_technologies":
+                detail = f"policy={identity[1]} declared in vars/ but not found on device"
+            elif obj_type == "apm_policy_nodes":
+                detail = f"policy={identity[1]} declared in vars/ but not found on device"
+            self.report.missing_from_device.append(
+                DriftEntry(object_type=obj_type, name=name, partition=partition, detail=detail)
+            )
+
+        for identity in declared_ids & live_ids:
+            declared_obj = declared_by_id[identity]
+            live_obj = live_by_id[identity]
+            drift_fields = self._find_value_drift(declared_obj, live_obj, obj_type)
+            if drift_fields:
+                partition = str(identity[0]) if identity_fields and identity_fields[0] == "partition" else "Common"
+                self.report.value_drift.append(
+                    DriftEntry(
+                        object_type=obj_type,
+                        name=str(identity[-1]),
+                        partition=partition,
+                        detail=", ".join(drift_fields),
+                    )
+                )
+            else:
+                self.report.unchanged += 1
 
 
 def main() -> int:

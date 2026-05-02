@@ -355,6 +355,12 @@ IMPORT_SPECS: dict[str, ImportSpec] = {
             "description": "description",
         },
     ),
+    "waf_server_technologies": ImportSpec(
+        endpoint="asm/policies",
+        top_key="waf_server_technologies",
+        output_dir="security/waf/server_technologies",
+        extract={},
+    ),
     "apm_acls": ImportSpec(
         endpoint="access/policy/acl",
         top_key="apm_acls",
@@ -417,6 +423,12 @@ IMPORT_SPECS: dict[str, ImportSpec] = {
             "name": "name",
             "description": "description",
         },
+    ),
+    "apm_policy_nodes": ImportSpec(
+        endpoint="apm/policy/access-policy",
+        top_key="apm_policy_nodes",
+        output_dir="security/apm/policy_nodes",
+        extract={},
     ),
     "tls_keys": ImportSpec(
         endpoint="sys/crypto/key",
@@ -499,6 +511,11 @@ class Importer:
         return results
 
     def _import_type(self, obj_type: str, spec: ImportSpec) -> int:
+        if obj_type == "waf_server_technologies":
+            return self._import_waf_server_technologies(spec)
+        if obj_type == "apm_policy_nodes":
+            return self._import_apm_policy_nodes(spec)
+
         items = self.conn.get_all(spec.endpoint)
         if not items:
             return 0
@@ -518,6 +535,90 @@ class Importer:
         filename = f"imported-{obj_type.replace('_', '-')}.yml"
         output_path = dir_path / filename
 
+        payload = {spec.top_key: objects}
+        with output_path.open("w") as f:
+            yaml.dump(payload, f, Dumper=VarTreeDumper, default_flow_style=False, allow_unicode=True)
+
+        print(f"  {obj_type}: {len(objects)} objects -> {output_path.relative_to(self.out_dir)}")
+        return len(objects)
+
+    def _import_waf_server_technologies(self, spec: ImportSpec) -> int:
+        policies = self.conn.get_all(spec.endpoint)
+        if not policies:
+            return 0
+
+        objects: list[dict[str, Any]] = []
+        for policy in policies:
+            policy_name = policy.get("name")
+            if not policy_name:
+                continue
+            partition = policy.get("partition", "Common")
+            tech_ref = policy.get("serverTechnologyReference", {})
+            tech_link = tech_ref.get("link") if isinstance(tech_ref, dict) else None
+            if not tech_link:
+                continue
+            try:
+                technologies = self.conn.get_all(tech_link.split("/mgmt/tm/")[-1])
+            except Exception:
+                continue
+
+            for technology in technologies:
+                tech_name = technology.get("name")
+                if not tech_name:
+                    continue
+                obj = {
+                    "name": tech_name.split("/")[-1] if "/" in str(tech_name) else tech_name,
+                    "policy_name": policy_name.split("/")[-1] if "/" in str(policy_name) else policy_name,
+                }
+                if partition != "Common":
+                    obj["partition"] = partition
+                objects.append(obj)
+
+        return self._write_import_objects("waf_server_technologies", spec, objects)
+
+    def _import_apm_policy_nodes(self, spec: ImportSpec) -> int:
+        policies = self.conn.get_all(spec.endpoint)
+        if not policies:
+            return 0
+
+        objects: list[dict[str, Any]] = []
+        for policy in policies:
+            policy_name = policy.get("name")
+            if not policy_name:
+                continue
+            partition = policy.get("partition") or policy.get("tmPartition") or "Common"
+            items = policy.get("items", [])
+            if not isinstance(items, list):
+                continue
+
+            for item in items:
+                if not isinstance(item, dict):
+                    continue
+                node_name = item.get("name")
+                if not node_name:
+                    continue
+                obj = {
+                    "name": node_name.split("/")[-1] if "/" in str(node_name) else node_name,
+                    "policy": policy_name.split("/")[-1] if "/" in str(policy_name) else policy_name,
+                }
+                node_type = item.get("type") or item.get("itemType") or item.get("item_type")
+                if node_type:
+                    obj["type"] = node_type
+                if partition != "Common":
+                    obj["partition"] = partition
+                objects.append(obj)
+
+        return self._write_import_objects("apm_policy_nodes", spec, objects)
+
+    def _write_import_objects(self, obj_type: str, spec: ImportSpec, objects: list[dict[str, Any]]) -> int:
+        if not objects:
+            return 0
+
+        dir_path = self.out_dir / spec.output_dir
+        dir_path.mkdir(parents=True, exist_ok=True)
+
+        filename = f"imported-{obj_type.replace('_', '-')}.yml"
+        output_path = dir_path / filename
         payload = {spec.top_key: objects}
         with output_path.open("w") as f:
             yaml.dump(payload, f, Dumper=VarTreeDumper, default_flow_style=False, allow_unicode=True)
