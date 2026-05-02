@@ -120,6 +120,67 @@
         ).ltm_node_defaults | default({})
       }}
 
+- name: Discover LTM profile fragments
+  ansible.builtin.set_fact:
+    ltm_profile_files: >-
+      {{
+        lookup(
+          'ansible.builtin.pipe',
+          "find {{ repo_root }}/vars/ltm/profiles -type f -name '*.yml' ! -name 'settings.yml' 2>/dev/null | sort"
+        ).splitlines() | reject('equalto', '') | list
+      }}
+    ltm_profile_deletion_files: >-
+      {{
+        lookup(
+          'ansible.builtin.pipe',
+          "find {{ repo_root }}/vars/ltm/deletions/profiles -type f -name '*.yml' ! -name 'settings.yml' 2>/dev/null | sort"
+        ).splitlines() | reject('equalto', '') | list
+      }}
+
+- name: Load LTM profile fragments
+  ansible.builtin.include_vars:
+    file: "{{ item }}"
+    name: ltm_profile_fragment
+  loop: "{{ ltm_profile_files }}"
+  register: ltm_profile_include_results
+
+- name: Load LTM profile deletion fragments
+  ansible.builtin.include_vars:
+    file: "{{ item }}"
+    name: ltm_profile_deletion_fragment
+  loop: "{{ ltm_profile_deletion_files }}"
+  register: ltm_profile_deletion_include_results
+
+- name: Aggregate LTM profiles with directory settings
+  ansible.builtin.set_fact:
+    ltm_profiles: "{{ ltm_profiles | default([]) + [ ltm_profile_directory_defaults | combine(item.1, recursive=True) ] }}"
+  loop: "{{ query('subelements', ltm_profile_include_results.results, 'ansible_facts.ltm_profile_fragment.ltm_profiles', {'skip_missing': True}) }}"
+  vars:
+    ltm_profile_settings_path: "{{ item.0.item | regex_replace('/[^/]+$', '/settings.yml') }}"
+    ltm_profile_directory_defaults: >-
+      {{
+        (
+          lookup('ansible.builtin.file', ltm_profile_settings_path, errors='ignore')
+          | default('{}', true)
+          | from_yaml
+        ).ltm_profile_defaults | default({})
+      }}
+
+- name: Aggregate LTM profile deletions with directory settings
+  ansible.builtin.set_fact:
+    ltm_profile_deletions: "{{ ltm_profile_deletions | default([]) + [ (ltm_profile_deletion_directory_defaults | combine(item.1, recursive=True)) | combine({'state': 'absent'}, recursive=True) ] }}"
+  loop: "{{ query('subelements', ltm_profile_deletion_include_results.results, 'ansible_facts.ltm_profile_deletion_fragment.ltm_profiles', {'skip_missing': True}) }}"
+  vars:
+    ltm_profile_deletion_settings_path: "{{ item.0.item | regex_replace('/[^/]+$', '/settings.yml') }}"
+    ltm_profile_deletion_directory_defaults: >-
+      {{
+        (
+          lookup('ansible.builtin.file', ltm_profile_deletion_settings_path, errors='ignore')
+          | default('{}', true)
+          | from_yaml
+        ).ltm_profile_defaults | default({})
+      }}
+
 - name: Discover LTM pool fragments
   ansible.builtin.set_fact:
     ltm_pool_files: >-
@@ -352,6 +413,29 @@
         )
       }}
 
+- name: Classify LTM profile operations
+  ansible.builtin.set_fact:
+    ltm_profiles_delete: >-
+      {{
+        ((ltm_profiles | default([])) + (ltm_profile_deletions | default([])))
+        | selectattr('state', 'defined')
+        | selectattr('state', 'equalto', 'absent')
+        | list
+      }}
+    ltm_profiles_present: >-
+      {{
+        (ltm_profiles | default([]))
+        | rejectattr('state', 'defined')
+        | list
+        +
+        (
+          (ltm_profiles | default([]))
+          | selectattr('state', 'defined')
+          | rejectattr('state', 'equalto', 'absent')
+          | list
+        )
+      }}
+
 - name: Classify LTM virtual server operations
   ansible.builtin.set_fact:
     ltm_virtual_servers_delete: >-
@@ -465,4 +549,3 @@
   ansible.builtin.set_fact:
     ltm_all_pools_delete: "{{ (ltm_pools_delete | default([])) + (ltm_embedded_pool_deletions | default([])) }}"
     ltm_all_pools_present: "{{ (ltm_pools_present | default([])) + (ltm_embedded_pools_present | default([])) }}"
-

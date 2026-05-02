@@ -37,7 +37,7 @@ The repository already supports:
 The main remaining gaps are:
 
 - deeper HA lifecycle beyond trust, groups, traffic groups, and config sync
-- deeper LTM object coverage beyond pools/nodes/virtuals/monitors
+- deeper LTM object coverage beyond pools/nodes/virtuals/monitors/profiles
 - deeper GTM object coverage beyond datacenters/servers/pools/Wide IPs/monitors
 - security module coverage
 - drift detection and promotion workflows
@@ -88,6 +88,7 @@ Implemented today:
   - internal split between canonical playbook wrapper, `prep.yml`, `tasks/manage.yml`, `tasks/delete.yml`, and `tasks/apply.yml`
 - `ltm.yml`
   - custom LTM monitors
+  - first-class non-TLS LTM profiles (`tcp`, `udp`, `fastl4`, `http`, `http2`, `oneconnect`)
   - first-class nodes
   - first-class pools
   - virtual-server-centric embedded pools
@@ -116,7 +117,7 @@ Implemented today:
 
 Not implemented yet:
 
-- LTM profiles, persistence, policies, iRules, data groups
+- LTM persistence, policies, iRules, data groups
 - GTM topology and regions
 - security modules
 - live drift/import/promotion tooling

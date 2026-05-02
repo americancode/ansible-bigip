@@ -20,12 +20,15 @@ Use the shared-object model when pools or nodes are reused, owned by another tea
 - Virtual servers: `vars/ltm/virtual_servers/vm-apps/business-apps.yml`
 - First-class pools: `vars/ltm/pools/vm-applications.yml`
 - First-class nodes: `vars/ltm/nodes/vm-applications.yml`
+- First-class non-TLS profiles: `vars/ltm/profiles/platform-profiles.yml`
 
 Linkage works like this:
 
 - `ltm_virtual_servers[*].pool: "pool_inventory_east_8443"` points at an object in `vars/ltm/pools/vm-applications.yml`
 - `ltm_pools[*].members[*].name: "inventory-east-1"` points at a node in `vars/ltm/nodes/vm-applications.yml`
 - `ltm_pools[*].monitors: ["standard_https"]` expands through `vars/ltm/pools/settings.yml`
+- `ltm_virtual_servers[*].profiles: ["http_platform_standard"]` points at an object in `vars/ltm/profiles/platform-profiles.yml`
+- `ltm_virtual_servers[*].profiles: ["/Common/tcp"]` uses an out-of-the-box BIG-IP profile and does not resolve to a repo file
 
 ## Concise GTM Model
 

@@ -251,6 +251,13 @@ class Validator:
                 settings_key="ltm_node_defaults",
             ),
             TreeSpec(
+                name="ltm_profiles",
+                active_dir=VARS_DIR / "ltm" / "profiles",
+                deletion_dir=VARS_DIR / "ltm" / "deletions" / "profiles",
+                top_key="ltm_profiles",
+                settings_key="ltm_profile_defaults",
+            ),
+            TreeSpec(
                 name="ltm_pools",
                 active_dir=VARS_DIR / "ltm" / "pools",
                 deletion_dir=VARS_DIR / "ltm" / "deletions" / "pools",
@@ -799,9 +806,12 @@ class Validator:
 
     def validate_ltm(self) -> None:
         nodes = self.objects.get("ltm_nodes", [])
+        profiles = self.objects.get("ltm_profiles", [])
         pools = self.objects.get("ltm_pools", [])
         monitors = self.objects.get("ltm_monitors", [])
         virtual_servers = self.objects.get("ltm_virtual_servers", [])
+        tls_client_ssl_profiles = self.objects.get("tls_client_ssl_profiles", [])
+        tls_server_ssl_profiles = self.objects.get("tls_server_ssl_profiles", [])
 
         active_node_names = set()
         for obj in nodes:
@@ -821,6 +831,27 @@ class Validator:
                 active_monitor_names.add(self.fq_name(obj.partition, str(obj.data["name"])))
 
         self.check_duplicates(monitors, lambda obj: ("ltm_monitor", obj.partition, obj.data.get("name")), "LTM monitor")
+
+        supported_profile_types = {"tcp", "udp", "fastl4", "http", "http2", "oneconnect"}
+        active_profile_names = set()
+        for obj in tls_client_ssl_profiles + tls_server_ssl_profiles:
+            if obj.effective_state != "absent" and obj.data.get("name"):
+                active_profile_names.add(self.fq_name(obj.partition, str(obj.data["name"])))
+
+        for obj in profiles:
+            self.require_fields(obj, ["name", "type"])
+            if obj.effective_state == "absent":
+                continue
+            profile_type = str(obj.data.get("type"))
+            if profile_type not in supported_profile_types:
+                self.error(
+                    obj.relpath,
+                    f"LTM profile `{obj.data.get('name')}` type `{profile_type}` is unsupported; use one of {sorted(supported_profile_types)}",
+                )
+                continue
+            active_profile_names.add(self.fq_name(obj.partition, str(obj.data["name"])))
+
+        self.check_duplicates(profiles, lambda obj: ("ltm_profile", obj.partition, obj.data.get("name")), "LTM profile")
 
         active_pool_names = set()
 
@@ -861,6 +892,19 @@ class Validator:
                 continue
 
             self.require_fields(obj, ["destination", "destination_port", "pool"])
+            profiles = obj.data.get("profiles")
+            if profiles is not None:
+                if not isinstance(profiles, list):
+                    self.error(obj.relpath, f"virtual server `{obj.data.get('name')}` `profiles` must be a list")
+                else:
+                    for profile_reference in profiles:
+                        self.validate_profile_reference(
+                            source=obj.relpath,
+                            reference=profile_reference,
+                            default_partition=obj.partition,
+                            known_profiles=active_profile_names,
+                            kind="LTM virtual server profile",
+                        )
             pool = obj.data.get("pool")
             if isinstance(pool, str):
                 pool_ref = self.normalize_pool_reference(pool, obj.partition)
@@ -1220,6 +1264,37 @@ class Validator:
         fq_reference = reference if reference.startswith("/") else self.fq_name(default_partition, reference)
         if fq_reference not in known_objects:
             self.error(source, f"{kind} reference `{reference}` does not match a declared object")
+
+    def validate_profile_reference(
+        self,
+        *,
+        source: str,
+        reference: Any,
+        default_partition: str,
+        known_profiles: set[str],
+        kind: str,
+    ) -> None:
+        builtin_profile_names = {
+            "tcp",
+            "udp",
+            "fastL4",
+            "fasthttp",
+            "http",
+            "http2",
+            "oneconnect",
+            "clientssl",
+            "serverssl",
+        }
+        if not isinstance(reference, str):
+            self.error(source, f"{kind} reference must be a string")
+            return
+        if reference.startswith("/Common/"):
+            return
+        fq_reference = reference if reference.startswith("/") else self.fq_name(default_partition, reference)
+        if reference in builtin_profile_names:
+            return
+        if fq_reference not in known_profiles:
+            self.error(source, f"{kind} reference `{reference}` does not match a declared custom profile or a `/Common/...` built-in profile")
 
     def validate_fq_or_common_reference(
         self,

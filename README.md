@@ -20,7 +20,7 @@ Canonical playbooks live under `playbooks/`. Root-level `*.yml` files remain as 
 - `playbooks/network.yml`: VLANs, trunks, route domains, self IPs, static routes, SNAT translations, SNAT pools, and NATs
 - `playbooks/system.yml`: base system settings like hostname, DNS, NTP, provisioning, users
 - `playbooks/ha.yml`: device trust, device groups, traffic groups, config sync actions
-- `playbooks/ltm.yml`: LTM monitors, nodes, pools, virtual servers
+- `playbooks/ltm.yml`: LTM monitors, non-TLS profiles, nodes, pools, virtual servers
 - `playbooks/gtm.yml`: GTM monitors, datacenters, servers, pools, Wide IPs
 - `playbooks/tls.yml`: SSL keys, certificates, CA bundles, client SSL profiles, server SSL profiles
 
@@ -78,6 +78,7 @@ Examples:
 - LTM virtual servers can embed their own pool definitions
 - GTM Wide IPs can embed their own GTM pools
 - shared nodes, pools, datacenters, and TLS objects can live in first-class trees
+- shared non-TLS LTM profiles can live in `vars/ltm/profiles/...` and be attached by name from virtual servers
 - GTM pool members can resolve `address` and `port` from repo-known LTM virtual servers when `virtual_server` names already match
 
 Example walkthroughs live in [docs/example-models.md](/Users/nathanielchurchill/source/ansible-bigip/docs/example-models.md). The example var files also carry inline comments that point to related files and explain how cross-file linkages work.

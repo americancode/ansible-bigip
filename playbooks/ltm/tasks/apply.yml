@@ -99,6 +99,168 @@
   loop_control:
     label: "{{ item.partition | default('Common') }}/{{ item.name }}"
 
+- name: Create LTM TCP profiles
+  f5networks.f5_modules.bigip_profile_tcp:
+    provider: "{{ provider }}"
+    partition: "{{ item.partition | default('Common') }}"
+    name: "{{ item.name }}"
+    parent: "{{ item.parent | default(omit) }}"
+    delayed_acks: "{{ item.delayed_acks | default(omit) }}"
+    early_retransmit: "{{ item.early_retransmit | default(omit) }}"
+    idle_timeout: "{{ item.idle_timeout | default(omit) }}"
+    initial_congestion_window_size: "{{ item.initial_congestion_window_size | default(omit) }}"
+    initial_receive_window_size: "{{ item.initial_receive_window_size | default(omit) }}"
+    ip_tos_to_client: "{{ item.ip_tos_to_client | default(omit) }}"
+    keep_alive_interval: "{{ item.keep_alive_interval | default(omit) }}"
+    nagle: "{{ item.nagle | default(omit) }}"
+    proxy_options: "{{ item.proxy_options | default(omit) }}"
+    syn_rto_base: "{{ item.syn_rto_base | default(omit) }}"
+    state: "{{ item.state | default('present') }}"
+  loop: "{{ ltm_profiles_present | default([]) }}"
+  loop_control:
+    label: "{{ item.partition | default('Common') }}/{{ item.name }}"
+  when: item.type == 'tcp'
+
+- name: Create LTM UDP profiles
+  f5networks.f5_modules.bigip_profile_udp:
+    provider: "{{ provider }}"
+    partition: "{{ item.partition | default('Common') }}"
+    name: "{{ item.name }}"
+    parent: "{{ item.parent | default(omit) }}"
+    datagram_load_balancing: "{{ item.datagram_load_balancing | default(omit) }}"
+    idle_timeout: "{{ item.idle_timeout | default(omit) }}"
+    state: "{{ item.state | default('present') }}"
+  loop: "{{ ltm_profiles_present | default([]) }}"
+  loop_control:
+    label: "{{ item.partition | default('Common') }}/{{ item.name }}"
+  when: item.type == 'udp'
+
+- name: Create LTM fastL4 profiles
+  f5networks.f5_modules.bigip_profile_fastl4:
+    provider: "{{ provider }}"
+    partition: "{{ item.partition | default('Common') }}"
+    name: "{{ item.name }}"
+    parent: "{{ item.parent | default(omit) }}"
+    description: "{{ item.description | default(omit) }}"
+    client_timeout: "{{ item.client_timeout | default(omit) }}"
+    explicit_flow_migration: "{{ item.explicit_flow_migration | default(omit) }}"
+    hardware_syn_cookie: "{{ item.hardware_syn_cookie | default(omit) }}"
+    idle_timeout: "{{ item.idle_timeout | default(omit) }}"
+    ip_df_mode: "{{ item.ip_df_mode | default(omit) }}"
+    ip_tos_to_client: "{{ item.ip_tos_to_client | default(omit) }}"
+    ip_tos_to_server: "{{ item.ip_tos_to_server | default(omit) }}"
+    ip_ttl_mode: "{{ item.ip_ttl_mode | default(omit) }}"
+    ip_ttl_v4: "{{ item.ip_ttl_v4 | default(omit) }}"
+    ip_ttl_v6: "{{ item.ip_ttl_v6 | default(omit) }}"
+    keep_alive_interval: "{{ item.keep_alive_interval | default(omit) }}"
+    late_binding: "{{ item.late_binding | default(omit) }}"
+    link_qos_to_client: "{{ item.link_qos_to_client | default(omit) }}"
+    link_qos_to_server: "{{ item.link_qos_to_server | default(omit) }}"
+    loose_close: "{{ item.loose_close | default(omit) }}"
+    loose_initialization: "{{ item.loose_initialization | default(omit) }}"
+    mss_override: "{{ item.mss_override | default(omit) }}"
+    pva_acceleration: "{{ item.pva_acceleration | default(omit) }}"
+    reassemble_fragments: "{{ item.reassemble_fragments | default(omit) }}"
+    receive_window_size: "{{ item.receive_window_size | default(omit) }}"
+    reset_on_timeout: "{{ item.reset_on_timeout | default(omit) }}"
+    rtt_from_client: "{{ item.rtt_from_client | default(omit) }}"
+    rtt_from_server: "{{ item.rtt_from_server | default(omit) }}"
+    server_sack: "{{ item.server_sack | default(omit) }}"
+    server_timestamp: "{{ item.server_timestamp | default(omit) }}"
+    syn_cookie_enable: "{{ item.syn_cookie_enable | default(omit) }}"
+    syn_cookie_mss: "{{ item.syn_cookie_mss | default(omit) }}"
+    tcp_close_timeout: "{{ item.tcp_close_timeout | default(omit) }}"
+    tcp_generate_isn: "{{ item.tcp_generate_isn | default(omit) }}"
+    tcp_handshake_timeout: "{{ item.tcp_handshake_timeout | default(omit) }}"
+    tcp_strip_sack: "{{ item.tcp_strip_sack | default(omit) }}"
+    tcp_time_wait_timeout: "{{ item.tcp_time_wait_timeout | default(omit) }}"
+    tcp_timestamp_mode: "{{ item.tcp_timestamp_mode | default(omit) }}"
+    tcp_wscale_mode: "{{ item.tcp_wscale_mode | default(omit) }}"
+    timeout_recovery: "{{ item.timeout_recovery | default(omit) }}"
+    state: "{{ item.state | default('present') }}"
+  loop: "{{ ltm_profiles_present | default([]) }}"
+  loop_control:
+    label: "{{ item.partition | default('Common') }}/{{ item.name }}"
+  when: item.type == 'fastl4'
+
+- name: Create LTM HTTP profiles
+  f5networks.f5_modules.bigip_profile_http:
+    provider: "{{ provider }}"
+    partition: "{{ item.partition | default('Common') }}"
+    name: "{{ item.name }}"
+    parent: "{{ item.parent | default(omit) }}"
+    accept_xff: "{{ item.accept_xff | default(omit) }}"
+    description: "{{ item.description | default(omit) }}"
+    dns_resolver: "{{ item.dns_resolver | default(omit) }}"
+    encrypt_cookie_secret: "{{ item.encrypt_cookie_secret | default(omit) }}"
+    encrypt_cookies: "{{ item.encrypt_cookies | default(omit) }}"
+    enforcement: "{{ item.enforcement | default(omit) }}"
+    fallback_host: "{{ item.fallback_host | default(omit) }}"
+    fallback_status_codes: "{{ item.fallback_status_codes | default(omit) }}"
+    header_erase: "{{ item.header_erase | default(omit) }}"
+    header_insert: "{{ item.header_insert | default(omit) }}"
+    hsts_mode: "{{ item.hsts_mode | default(omit) }}"
+    hsts_preload: "{{ item.hsts_preload | default(omit) }}"
+    include_subdomains: "{{ item.include_subdomains | default(omit) }}"
+    insert_xforwarded_for: "{{ item.insert_xforwarded_for | default(omit) }}"
+    maximum_age: "{{ item.maximum_age | default(omit) }}"
+    oneconnect_transformations: "{{ item.oneconnect_transformations | default(omit) }}"
+    proxy_type: "{{ item.proxy_type | default(omit) }}"
+    redirect_rewrite: "{{ item.redirect_rewrite | default(omit) }}"
+    request_chunking: "{{ item.request_chunking | default(omit) }}"
+    response_chunking: "{{ item.response_chunking | default(omit) }}"
+    server_agent_name: "{{ item.server_agent_name | default(omit) }}"
+    sflow: "{{ item.sflow | default(omit) }}"
+    update_password: "{{ item.update_password | default(omit) }}"
+    xff_alternative_names: "{{ item.xff_alternative_names | default(omit) }}"
+    state: "{{ item.state | default('present') }}"
+  loop: "{{ ltm_profiles_present | default([]) }}"
+  loop_control:
+    label: "{{ item.partition | default('Common') }}/{{ item.name }}"
+  when: item.type == 'http'
+
+- name: Create LTM HTTP/2 profiles
+  f5networks.f5_modules.bigip_profile_http2:
+    provider: "{{ provider }}"
+    partition: "{{ item.partition | default('Common') }}"
+    name: "{{ item.name }}"
+    parent: "{{ item.parent | default(omit) }}"
+    activation_modes: "{{ item.activation_modes | default(omit) }}"
+    description: "{{ item.description | default(omit) }}"
+    enforce_tls_requirements: "{{ item.enforce_tls_requirements | default(omit) }}"
+    frame_size: "{{ item.frame_size | default(omit) }}"
+    header_table_size: "{{ item.header_table_size | default(omit) }}"
+    idle_timeout: "{{ item.idle_timeout | default(omit) }}"
+    insert_header: "{{ item.insert_header | default(omit) }}"
+    insert_header_name: "{{ item.insert_header_name | default(omit) }}"
+    receive_window: "{{ item.receive_window | default(omit) }}"
+    streams: "{{ item.streams | default(omit) }}"
+    state: "{{ item.state | default('present') }}"
+  loop: "{{ ltm_profiles_present | default([]) }}"
+  loop_control:
+    label: "{{ item.partition | default('Common') }}/{{ item.name }}"
+  when: item.type == 'http2'
+
+- name: Create LTM OneConnect profiles
+  f5networks.f5_modules.bigip_profile_oneconnect:
+    provider: "{{ provider }}"
+    partition: "{{ item.partition | default('Common') }}"
+    name: "{{ item.name }}"
+    parent: "{{ item.parent | default(omit) }}"
+    description: "{{ item.description | default(omit) }}"
+    idle_timeout_override: "{{ item.idle_timeout_override | default(omit) }}"
+    limit_type: "{{ item.limit_type | default(omit) }}"
+    maximum_age: "{{ item.maximum_age | default(omit) }}"
+    maximum_reuse: "{{ item.maximum_reuse | default(omit) }}"
+    maximum_size: "{{ item.maximum_size | default(omit) }}"
+    share_pools: "{{ item.share_pools | default(omit) }}"
+    source_mask: "{{ item.source_mask | default(omit) }}"
+    state: "{{ item.state | default('present') }}"
+  loop: "{{ ltm_profiles_present | default([]) }}"
+  loop_control:
+    label: "{{ item.partition | default('Common') }}/{{ item.name }}"
+  when: item.type == 'oneconnect'
+
 - name: Create LTM pools
   f5networks.f5_modules.bigip_pool:
     provider: "{{ provider }}"

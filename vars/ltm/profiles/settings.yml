@@ -1,0 +1,6 @@
+---
+# Directory defaults for first-class non-TLS LTM profiles in `vars/ltm/profiles/*.yml`.
+# These objects are referenced from `ltm_virtual_servers[*].profiles` in files such as
+# `vars/ltm/virtual_servers/vm-apps/business-apps.yml`.
+ltm_profile_defaults:
+  partition: "Common"

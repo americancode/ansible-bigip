@@ -3,13 +3,18 @@
 # These virtual servers reference first-class pools by name instead of embedding a pool inline.
 # The referenced pools live in `vars/ltm/pools/vm-applications.yml`.
 # Those pools in turn reference nodes in `vars/ltm/nodes/vm-applications.yml`.
+# The `profiles` list below mixes built-in BIG-IP profiles and repo-managed custom profiles.
+# `http_platform_standard` and `oneconnect_platform_standard` are declared in
+# `vars/ltm/profiles/platform-profiles.yml`.
 ltm_virtual_servers:
   - name: "vs_inventory_east_443"
     description: "East region inventory application VIP"
     destination: "10.201.0.80"
     destination_port: 443
     profiles:
-      - "tcp"
+      - "/Common/tcp"
+      - "http_platform_standard"
+      - "oneconnect_platform_standard"
     snat: "Automap"
 # Magic reference string:
 # `pool: "pool_inventory_east_8443"` binds this virtual server to the object with the same `name`
@@ -21,7 +26,9 @@ ltm_virtual_servers:
     destination: "10.202.0.80"
     destination_port: 443
     profiles:
-      - "tcp"
+      - "/Common/tcp"
+      - "http_platform_standard"
+      - "oneconnect_platform_standard"
     snat: "Automap"
     pool: "pool_inventory_west_8443"
 
@@ -30,7 +37,9 @@ ltm_virtual_servers:
     destination: "10.201.0.81"
     destination_port: 443
     profiles:
-      - "tcp"
+      - "/Common/tcp"
+      - "http_platform_standard"
+      - "oneconnect_platform_standard"
     snat: "Automap"
     pool: "pool_reporting_east_8443"
 
@@ -39,6 +48,8 @@ ltm_virtual_servers:
     destination: "10.202.0.81"
     destination_port: 443
     profiles:
-      - "tcp"
+      - "/Common/tcp"
+      - "http_platform_standard"
+      - "oneconnect_platform_standard"
     snat: "Automap"
     pool: "pool_reporting_west_8443"

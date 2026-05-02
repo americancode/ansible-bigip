@@ -8,6 +8,72 @@
   loop_control:
     label: "{{ item.partition | default('Common') }}/{{ item.name }}"
 
+- name: Delete LTM TCP profiles
+  f5networks.f5_modules.bigip_profile_tcp:
+    provider: "{{ provider }}"
+    partition: "{{ item.partition | default('Common') }}"
+    name: "{{ item.name }}"
+    state: absent
+  loop: "{{ ltm_profiles_delete | default([]) }}"
+  loop_control:
+    label: "{{ item.partition | default('Common') }}/{{ item.name }}"
+  when: item.type == 'tcp'
+
+- name: Delete LTM UDP profiles
+  f5networks.f5_modules.bigip_profile_udp:
+    provider: "{{ provider }}"
+    partition: "{{ item.partition | default('Common') }}"
+    name: "{{ item.name }}"
+    state: absent
+  loop: "{{ ltm_profiles_delete | default([]) }}"
+  loop_control:
+    label: "{{ item.partition | default('Common') }}/{{ item.name }}"
+  when: item.type == 'udp'
+
+- name: Delete LTM fastL4 profiles
+  f5networks.f5_modules.bigip_profile_fastl4:
+    provider: "{{ provider }}"
+    partition: "{{ item.partition | default('Common') }}"
+    name: "{{ item.name }}"
+    state: absent
+  loop: "{{ ltm_profiles_delete | default([]) }}"
+  loop_control:
+    label: "{{ item.partition | default('Common') }}/{{ item.name }}"
+  when: item.type == 'fastl4'
+
+- name: Delete LTM HTTP profiles
+  f5networks.f5_modules.bigip_profile_http:
+    provider: "{{ provider }}"
+    partition: "{{ item.partition | default('Common') }}"
+    name: "{{ item.name }}"
+    state: absent
+  loop: "{{ ltm_profiles_delete | default([]) }}"
+  loop_control:
+    label: "{{ item.partition | default('Common') }}/{{ item.name }}"
+  when: item.type == 'http'
+
+- name: Delete LTM HTTP/2 profiles
+  f5networks.f5_modules.bigip_profile_http2:
+    provider: "{{ provider }}"
+    partition: "{{ item.partition | default('Common') }}"
+    name: "{{ item.name }}"
+    state: absent
+  loop: "{{ ltm_profiles_delete | default([]) }}"
+  loop_control:
+    label: "{{ item.partition | default('Common') }}/{{ item.name }}"
+  when: item.type == 'http2'
+
+- name: Delete LTM OneConnect profiles
+  f5networks.f5_modules.bigip_profile_oneconnect:
+    provider: "{{ provider }}"
+    partition: "{{ item.partition | default('Common') }}"
+    name: "{{ item.name }}"
+    state: absent
+  loop: "{{ ltm_profiles_delete | default([]) }}"
+  loop_control:
+    label: "{{ item.partition | default('Common') }}/{{ item.name }}"
+  when: item.type == 'oneconnect'
+
 - name: Delete pools
   f5networks.f5_modules.bigip_pool:
     provider: "{{ provider }}"
@@ -71,4 +137,3 @@
   loop_control:
     label: "{{ item.partition | default('Common') }}/{{ item.name }}"
   when: item.type == 'gateway_icmp'
-
