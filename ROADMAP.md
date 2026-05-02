@@ -766,13 +766,13 @@ This is the practical next sequence for the current repo.
    - [x] subdirectory maintenance defaults via `settings.yml` object defaults
 9. [x] Add optional LTM virtual resolution
 10. [x] Define TLS secret handling approach
- 11. [x] Complete missing documentation
- 12. [x] Add LTM persistence, iRules, data groups, and policies
- 13. [x] Add virtual server VLAN filtering, metadata, and log profiles
- 14. [x] Add GTM topology regions and topology records
- 15. [x] Add WAF/ASM policies and server technologies to security playbook
- 16. [x] Add APM ACLs and tmsh-driven resource objects to security playbook
- 17. [x] Add APM auth servers, SSO configs, and policy nodes (tmsh-driven)
+11. [x] Complete missing documentation
+12. [x] Add LTM persistence, iRules, data groups, and policies
+13. [x] Add virtual server VLAN filtering, metadata, and log profiles
+14. [x] Add GTM topology regions and topology records
+15. [x] Add WAF/ASM policies and server technologies to security playbook
+16. [x] Add APM ACLs and tmsh-driven resource objects to security playbook
+17. [x] Add APM auth servers, SSO configs, and policy nodes (tmsh-driven)
 18. [x] Add APM access profiles, per-session policies, and macros
 19. [x] Audit checked-off roadmap items against runtime, validation, drift/import tooling, docs, and examples
 20. [x] Correct drift/import endpoint and var-key mappings for newly added object families
