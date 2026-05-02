@@ -1,6 +1,7 @@
 ---
 - name: Configure BIG-IP DNS/GTM objects
-  hosts: localhost
+  hosts: all
+  connection: local
   gather_facts: false
   collections:
     - f5networks.f5_modules

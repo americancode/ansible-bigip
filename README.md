@@ -37,6 +37,7 @@ Canonical playbooks use a consistent split so the entrypoint stays small and the
 This pattern is the default for `network`, `system`, `ha`, `tls`, `ltm`, and `gtm`. If a future playbook stays small enough that splitting it adds no value, document that choice in the roadmap before keeping it monolithic.
 
 Path handling inside canonical playbooks is anchored from `playbook_dir`, so moving playbooks under `playbooks/` does not break references to `vars/`.
+The canonical playbooks target AWX inventory hosts with `connection: local`, so inventory host vars such as `f5_host` are available even though the BIG-IP API calls are made from the controller.
 
 ## Var Layout
 
@@ -99,8 +100,10 @@ Deletion trees are the preferred destructive workflow because they make review c
 This repository talks to one BIG-IP management endpoint per run.
 
 - the playbooks use the `provider` object in [vars/common.yml](/Users/nathanielchurchill/source/ansible-bigip/vars/common.yml)
-- `provider.server` is usually injected through `F5_HOST`
-- if `F5_HOST` points at one BIG-IP, only that BIG-IP is directly configured by that job
+- the canonical playbooks target AWX inventory hosts with `connection: local`
+- `provider.server` prefers the inventory host var `f5_host`
+- `F5_HOST` remains an environment fallback for local testing or one-off runs
+- if `f5_host` or `F5_HOST` points at one BIG-IP, only that BIG-IP is directly configured by that job
 
 For a normal BIG-IP sync-failover pair, most shared configuration should be applied to one designated device in the HA domain and then replicated through config sync.
 
@@ -114,14 +117,23 @@ The HA example vars under `vars/ha/...` are written with that same perspective:
 
 - `device_trust` examples are authored from the current target device toward its peer
 - `device_groups`, `device_group_members`, and `traffic_groups` describe shared HA state, but are still meant to be applied from one designated device in the sync domain
-- `configsync_actions.sync_device_to_group: true` means "push from the device currently addressed by `F5_HOST`"
+- `configsync_actions.sync_device_to_group: true` means "push from the device currently selected as the execution target"
 
 Recommended AWX pattern:
 
 - create one inventory per environment, for example `prod-bigip`
 - represent each HA sync domain with one execution target host, not one host per appliance for normal shared-config jobs
 - store the management endpoint in a host var such as `f5_host`
-- inject `F5_HOST`, `F5_USERNAME`, and `F5_PASSWORD` through the AWX credential or job template environment
+- use the custom credential for `F5_USERNAME`, `F5_PASSWORD`, and optional port/cert settings
+- do not put the host in the credential; let the selected inventory host choose the target
+
+Minimum required inventory host vars:
+
+```yaml
+f5_host: bigip-east.example.com
+```
+
+Only `f5_host` is required by the playbooks today. Additional fields such as pair name, role, datacenter, or peer metadata are optional inventory metadata.
 
 Example inventory host vars:
 
@@ -131,6 +143,13 @@ f5_pair_name: east-prod-pair
 f5_role: sync_owner
 f5_dc: east
 ```
+
+Example auth-only credential fields from [bigip-credential-config.yaml](/Users/nathanielchurchill/source/ansible-bigip/bigip-credential-config.yaml):
+
+- `f5_username`
+- `f5_password`
+- optional `f5_server_port`
+- optional `f5_validate_certs`
 
 Example AWX template split:
 
@@ -142,6 +161,8 @@ Example AWX template split:
 - `BIG-IP GTM Apply` -> `playbooks/gtm.yml`
 
 Operationally, treat each datacenter HA pair as its own execution boundary. If you need to update two datacenters, run one job per pair rather than one job per appliance.
+
+For a concrete two-device bootstrap example with AWX inventory layout, template names, auth-only credential injection, and the matching `vars/ha/...` files, see [docs/awx-ha-bootstrap.md](/Users/nathanielchurchill/source/ansible-bigip/docs/awx-ha-bootstrap.md).
 
 ## Validation
 

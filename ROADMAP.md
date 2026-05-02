@@ -23,6 +23,7 @@ The repository already supports:
 - split var trees for scale
 - per-directory `settings.yml` inheritance
 - object-level partition overrides with `Common` fallback
+- inventory-driven BIG-IP target selection through `f5_host` with `F5_HOST` env fallback
 - hybrid object modeling:
   - embedded pools under LTM virtual servers
   - embedded pools under GTM Wide IPs
