@@ -163,6 +163,7 @@ Example AWX template split:
 Operationally, treat each datacenter HA pair as its own execution boundary. If you need to update two datacenters, run one job per pair rather than one job per appliance.
 
 For a concrete two-device bootstrap example with AWX inventory layout, template names, auth-only credential injection, and the matching `vars/ha/...` files, see [docs/awx-ha-bootstrap.md](/Users/nathanielchurchill/source/ansible-bigip/docs/awx-ha-bootstrap.md).
+For a terminal-first bootstrap path that avoids AWX chicken-and-egg issues, see [docs/cli-bootstrap.md](/Users/nathanielchurchill/source/ansible-bigip/docs/cli-bootstrap.md).
 
 ## Validation
 

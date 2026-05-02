@@ -2,6 +2,8 @@
 
 This guide shows one practical way to bring up HA for two brand-new BIG-IP devices with this repository.
 
+If you need to initialize BIG-IP before AWX can safely depend on it, use the terminal-first guide in [docs/cli-bootstrap.md](/Users/nathanielchurchill/source/ansible-bigip/docs/cli-bootstrap.md) first and then adopt this AWX model afterward.
+
 Example topology:
 
 - east device: `bigip-east.example.com`
