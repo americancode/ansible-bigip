@@ -38,7 +38,11 @@ The repository already supports:
 
 The main remaining gaps are:
 
-- deeper HA lifecycle beyond trust, groups, traffic groups, and config sync
+- deeper HA lifecycle (connection mirroring, failover metadata, automated testing)
+- UCS backup/export workflow
+- certificate rotation automation
+- auth provider integration for system users
+- login banner management
 - drift detection and promotion workflows
 
 ## Current Implementation Audit
@@ -125,8 +129,13 @@ Implemented today:
   - WAF/ASM policies (built-in templates, active/apply flags)
   - WAF server technologies (parent policy references)
   - APM ACLs (L4/L7 entries, actions, host/path/scheme matching)
-  - APM network access (split tunnel, address spaces, lease pools)
-  - APM policy imports (tar.gz source, access_policy/access_profile types)
+  - APM authentication servers (AD, LDAP, RADIUS, TACACS, RSA, cert, localdb, SAML, OAuth)
+  - APM SSO configurations (Kerberos, form-based, HTTP Basic, NTLM, SAML, OAuth, Citrix, domain-join)
+  - APM resources (network access, webtop, remote desktop, portal access)
+  - APM policy nodes (VPE flow nodes with auth/SSO/resource references)
+  - APM access profiles (session timeouts, log levels, platform restrictions)
+  - APM per-session policies (session-level authentication flows)
+  - APM macros (reusable VPE building blocks)
   - per-directory `settings.yml` inheritance
   - deletion trees for all object types
   - canonical playbook entrypoint at `playbooks/security.yml`
@@ -143,7 +152,12 @@ Implemented today:
 
 Not implemented yet:
 
-- (none — all core BIG-IP modules covered)
+- HA connection mirroring and failover metadata
+- Automated failover testing workflows
+- UCS backup/export workflow
+- Certificate rotation automation
+- Auth provider integration for BIG-IP admin users
+- Login banner management
 
 ## Target Repo Shape
 
@@ -653,6 +667,18 @@ This is the practical next sequence for the current repo.
  14. [x] Add GTM topology regions and topology records
  15. [x] Add WAF/ASM policies and server technologies to security playbook
  16. [x] Add APM ACLs, network access, and policy imports to security playbook
+ 17. [x] Add APM auth servers, SSO configs, and policy nodes (tmsh-driven)
+ 18. [x] Add APM access profiles, per-session policies, and macros
+
+## Extended Backlog
+
+These are valuable enhancements identified during implementation:
+
+19. [ ] Deeper HA lifecycle management (connection mirroring, failover metadata, automated failover testing)
+20. [ ] UCS backup/export workflow for configuration snapshots
+21. [ ] Certificate rotation automation with renewal detection
+22. [ ] Auth provider integration for system users (LDAP/AD/RADIUS for BIG-IP admin auth)
+23. [ ] Login banner management for system compliance
 
 ## Issue-Sized Execution Plan
 
@@ -771,6 +797,32 @@ These are the first concrete tickets I would open.
 - [x] Add APM import specs for brownfield import
 - [x] Add `docs/apm.md` with object reference and authoring patterns
 - [x] Update `docs/security.md` to include APM coverage
+
+### Milestone 14: APM Authentication and SSO
+
+- [x] Add `vars/security/apm/auth_servers` for all authentication types (AD, LDAP, RADIUS, TACACS, RSA, cert, localdb, SAML, OAuth)
+- [x] Add `vars/security/apm/sso_configs` for all SSO methods (Kerberos, form-based, HTTP Basic, NTLM, SAML, OAuth, Citrix, domain-join)
+- [x] Add `vars/security/apm/resources` for network access, webtops, remote desktop, portal access
+- [x] Add `vars/security/apm/policy_nodes` for VPE flow nodes within access policies
+- [x] Add `vars/security/apm/access_profiles` for access profile definitions
+- [x] Add `vars/security/apm/per_session_policies` for per-session policy definitions
+- [x] Add `vars/security/apm/macros` for reusable VPE macro definitions
+- [x] Extend `security.yml` playbook with tmsh-driven APM apply/delete tasks
+- [x] Add deletion trees for all APM object types
+- [x] Add validation for all APM types with cross-reference checking
+- [x] Add APM endpoints to drift detection (`access/profile`, `access/per-session-policy`, `access/macro`)
+- [x] Add APM import specs for brownfield import
+- [x] Add `docs/authentication.md` with comprehensive auth/SSO type reference
+- [x] Update `docs/apm.md` with new object types and examples
+
+### Milestone 15: Extended Backlog (Optional Enhancements)
+
+- [ ] Add connection mirroring and failover metadata management to `ha.yml`
+- [ ] Add automated failover testing workflows
+- [ ] Add UCS backup/export workflow to `system.yml` or dedicated playbook
+- [ ] Add certificate rotation automation with expiry detection
+- [ ] Add auth provider integration for BIG-IP admin users (LDAP/AD/RADIUS)
+- [ ] Add login banner management to `system.yml`
 
 ## Network Expansion Status
 
