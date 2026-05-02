@@ -44,13 +44,13 @@ The repo is not yet at full GitOps parity for every lifecycle path. The main rem
 
 ## Immediate Stabilization Priorities
 
-These items come before claiming more feature completion.
+These items are the top priority before more feature expansion.
 
-- audit every checked-off roadmap item against actual code, examples, validator coverage, drift tooling, and import tooling
-- fix helper-tool object mappings where newer coverage was added against the wrong BIG-IP endpoints or wrong repo var keys
-- finish helper-tool parity for newer object trees where runtime playbook support exists but drift/import parity is still partial
-- align APM access-profile validation with the runtime and documented field model used by the security playbook
-- decide explicitly which domains are considered runtime-complete but not yet drift/import-complete, and document that boundary clearly
+1. audit every checked-off roadmap item against actual code, examples, validator coverage, drift tooling, and import tooling
+2. fix helper-tool object mappings where newer coverage was added against the wrong BIG-IP endpoints or wrong repo var keys
+3. align runtime, validator, docs, and example vars where the current field models drifted apart
+4. finish helper-tool parity for newer object trees where runtime playbook support exists but drift/import parity is still partial
+5. decide explicitly which domains are considered runtime-complete but not yet drift/import-complete, and document that boundary clearly
 
 ## Next Major Gaps
 
@@ -706,8 +706,8 @@ This is the practical next sequence for the current repo.
 18. [x] Add APM access profiles, per-session policies, and macros
 19. [ ] Audit checked-off roadmap items against runtime, validation, drift/import tooling, docs, and examples
 20. [ ] Correct drift/import endpoint and var-key mappings for newly added object families
-21. [ ] Complete exhaustive drift/import parity for every newest object tree
-22. [ ] Align APM access-profile validation with the runtime/documented field model
+21. [ ] Align runtime, validator, docs, and example vars where field models drifted apart
+22. [ ] Complete exhaustive drift/import parity for every newest object tree
 23. [ ] Deepen drift detection to compare meaningful fields for newly added object families
 24. [ ] Add day-0 BIG-IP onboarding for licensing and initial management bootstrap
 25. [ ] Document initial setup from first boot through handoff to Git-managed operation
@@ -868,9 +868,11 @@ These are the first concrete tickets I would open.
 
 ### Milestone 16: Coverage Stabilization
 
+- [ ] Treat correction of previously checked-off but partially implemented items as higher priority than adding new feature coverage
 - [ ] Audit each checked-off roadmap item against runtime, validation, drift/import tooling, docs, and example vars
 - [ ] Correct network helper-tool mappings for trunks and SNAT pools
 - [ ] Correct newer helper-tool mappings for WAF server technologies and APM policy nodes
+- [ ] Align runtime, validator, docs, and examples for any feature where the declared field model drifted
 - [ ] Decide whether `system` and `ha` should gain drift/import support now or be explicitly documented as runtime-only for the current phase
 - [ ] Align APM access-profile validation with the current runtime field model
 - [ ] Reconcile the roadmap, README, and docs whenever a checked-off item is found to be only partially complete
