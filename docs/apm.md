@@ -111,21 +111,22 @@ Common types: `logon_page`, `ad_auth`, `ldap_auth`, `kerberos_auth`, `kcd_sso`, 
 
 ### Access Profiles
 
-Access profiles define session timeouts, log levels, platform restrictions, and the startup URI for the VPE policy.
+Access profiles bind the declarative APM building blocks together. They reference an access policy, an optional per-session policy, and an optional SSO object, then set the primary session controls used at runtime.
 
 | Field | Type | Required | Description |
 |---|---|---|---|
 | `name` | string | yes | Profile name |
 | `partition` | string | no | Partition (default: Common) |
 | `description` | string | no | Human-readable description |
-| `default_timeout` | integer | no | Default session timeout in seconds |
-| `inactive_timeout` | integer | no | Inactivity timeout in seconds |
+| `default_access_policy` | string | no | Parent access policy name referenced from `vars/security/apm/policy_nodes/` |
+| `default_per_session_policy` | string | no | Parent per-session policy name referenced from `vars/security/apm/per_session_policies/` |
+| `sso_configuration` | string | no | SSO object name or fully qualified path referenced from `vars/security/apm/sso_configs/` |
+| `domain` | string | no | Cookie or domain scope used by the access profile |
+| `agent_cap` | bool | no | Enable or disable agent cap support |
 | `session_timeout` | integer | no | Maximum session lifetime in seconds |
-| `log_level` | string | no | One of: debug, info, notice, warning, error, emergency, alert, crit |
-| `startup_uri` | string | no | VPE policy URI (e.g., `/my.policy`) |
-| `use_for_default_url` | bool | no | Use as default URL handler |
-| `allow_mac_addresses` | bool | no | Allow MAC address filtering |
-| `allow_platforms` | list | no | Allowed client platforms (windows, mac, etc.) |
+| `idle_timeout` | integer | no | Inactivity timeout in seconds |
+| `max_sessions` | integer | no | Maximum concurrent sessions |
+| `cookie_fallback` | bool | no | Allow fallback cookie behavior |
 
 ### Per-Session Policies
 
@@ -261,11 +262,15 @@ apm_policy_nodes:
 apm_access_profiles:
   - name: corp-sso-profile
     description: Corporate SSO access profile with Kerberos
-    default_timeout: 3600
-    inactive_timeout: 1800
+    default_access_policy: ldap-kerberos-sso
+    default_per_session_policy: advanced-session-policy
+    sso_configuration: /Common/kcd-backend-app
+    domain: corp.example.com
+    agent_cap: true
     session_timeout: 28800
-    log_level: notice
-    startup_uri: /my.policy
+    idle_timeout: 1800
+    max_sessions: 500
+    cookie_fallback: true
 ```
 
 ### Example Per-Session Policy
@@ -356,7 +361,7 @@ The `security.yml` playbook handles this ordering automatically.
 - Resources: type-specific field validation (address_spaces for network_access, items for webtops)
 - Policy nodes: cross-reference validation against declared auth servers and SSO configs
 - ACLs: type validation, entry structure validation
-- Access profiles: log_level validation, allow_platforms structure validation
+- Access profiles: duplicate detection and structural checks
 - Per-session policies: node structure validation (name, type required)
 - Macros: node structure validation (name, type required)
 - No duplicate objects within the same partition

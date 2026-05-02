@@ -115,7 +115,7 @@ The playbooks include a `bigip_config` save step after changes. This means each 
   - name: Pre-change UCS backup
     bigip_ucs_fetch:
       dest: "/backups/pre-change-{{ ansible_date_time.date }}.ucs"
-      provider: "{{ f5_provider }}"
+      provider: "{{ provider }}"
     delegate_to: localhost
   ```
 

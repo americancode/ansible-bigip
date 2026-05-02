@@ -171,21 +171,13 @@ Start → SPNEGO/AD Auth → Realm A? → KCD A → Allow
                      Realm B? → KCD B → Allow
 ```
 
-## Git-Managed APM Policy
+## Git-Managed Kerberos Flows
 
-The repo manages APM through policy imports. To maintain Kerberos-authenticated policies:
+This repo keeps APM tmsh-driven. For Kerberos-authenticated access flows:
 
-1. Export the access policy from BIG-IP VPE:
-   ```
-   Access Policy → Policies → Export → Download tar.gz
-   ```
-2. Place the exported file on the Ansible control host
-3. Declare it in the APM policy import var tree:
-   ```yaml
-   # vars/security/apm/policies/access-policies.yml
-   apm_policies:
-     - name: kerberos-sso-policy
-       source: /opt/apm-policies/kerberos-sso-policy.tar.gz
-       type: access_policy
-       reuse_objects: true
-   ```
+1. Declare the Kerberos object in `vars/security/apm/sso_configs/`
+2. Declare any AD or LDAP auth server objects in `vars/security/apm/auth_servers/`
+3. Build the access-policy flow with `vars/security/apm/policy_nodes/`
+4. Attach the resulting access policy and any per-session policy through `vars/security/apm/access_profiles/`
+
+That keeps the entire Kerberos flow reviewable as YAML object definitions instead of opaque exported `tar.gz` policy bundles.

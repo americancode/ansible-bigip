@@ -9,9 +9,9 @@ Both tools use the same environment variables for authentication:
 | Variable | Default | Description |
 |---|---|---|
 | `F5_HOST` | — | BIG-IP hostname or IP address (required) |
-| `F5_USER` | `admin` | BIG-IP username |
+| `F5_USERNAME` | `admin` | BIG-IP username |
 | `F5_PASSWORD` | — | BIG-IP password (required) |
-| `F5_PORT` | `443` | BIG-IP REST API port |
+| `F5_SERVER_PORT` | `443` | BIG-IP REST API port |
 
 Python 3.10+ and the `requests` package are required. Install with:
 

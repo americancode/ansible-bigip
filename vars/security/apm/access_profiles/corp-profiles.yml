@@ -1,29 +1,31 @@
 ---
 # APM access profile examples for authentication and policy enforcement.
-# Access profiles reference VPE policy nodes defined in `vars/security/apm/policy_nodes/`
-# and macros defined in `vars/security/apm/macros/`.
-# Supported fields: `name`, `partition`, `description`, `allow_mac_addresses` (bool),
-# `allow_platforms` (list), `default_timeout` (seconds), `inactive_timeout` (seconds),
-# `log_level` (debug/info/notice/warning/error/emergency/alert/crit),
-# `session_timeout` (seconds), `startup_uri` (uri), `use_for_default_url` (bool).
+# Access profiles reference access-policy nodes in `vars/security/apm/policy_nodes/`,
+# per-session policies in `vars/security/apm/per_session_policies/`, and SSO objects in
+# `vars/security/apm/sso_configs/`.
+# Supported fields: `name`, `partition`, `description`, `default_access_policy`,
+# `default_per_session_policy`, `sso_configuration`, `domain`, `agent_cap`,
+# `session_timeout`, `idle_timeout`, `max_sessions`, and `cookie_fallback`.
 apm_access_profiles:
   - name: corp-sso-profile
     description: Corporate SSO access profile with Kerberos
-    default_timeout: 3600
-    inactive_timeout: 1800
+    default_access_policy: ldap-kerberos-sso
+    default_per_session_policy: advanced-session-policy
+    sso_configuration: /Common/kcd-backend-app
+    domain: corp.example.com
+    agent_cap: true
     session_timeout: 28800
-    log_level: notice
-    startup_uri: /my.policy
-    allow_mac_addresses: false
-    allow_platforms:
-      - windows
-      - mac
+    idle_timeout: 1800
+    max_sessions: 500
+    cookie_fallback: true
 
   - name: remote-vpn-profile
     description: Remote VPN access with network access resource
-    default_timeout: 7200
-    inactive_timeout: 3600
+    default_access_policy: /Common/remote-vpn.policy
+    default_per_session_policy: advanced-session-policy
+    domain: vpn.corp.example.com
+    agent_cap: false
     session_timeout: 43200
-    log_level: info
-    startup_uri: /Common/remote-vpn.policy
-    use_for_default_url: false
+    idle_timeout: 3600
+    max_sessions: 2000
+    cookie_fallback: false

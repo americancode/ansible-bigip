@@ -6,10 +6,10 @@ the repository's var tree structure under `vars/`. Output is written to a
 target directory for review before committing.
 
 Environment variables:
-    F5_HOST     — BIG-IP hostname or IP (required)
-    F5_USER     — BIG-IP username (default: admin)
-    F5_PASSWORD — BIG-IP password (required)
-    F5_PORT     — BIG-IP port (default: 443)
+    F5_HOST         — BIG-IP hostname or IP (required)
+    F5_USERNAME     — BIG-IP username (default: admin)
+    F5_PASSWORD     — BIG-IP password (required)
+    F5_SERVER_PORT  — BIG-IP port (default: 443)
 
 Usage:
     F5_HOST=10.0.0.1 F5_PASSWORD=secret python3 tools/import-from-bigip --out imported/
@@ -74,9 +74,9 @@ class BigIPConnection:
             sys.exit(1)
         return cls(
             host=host,
-            username=os.environ.get("F5_USER", "admin"),
+            username=os.environ.get("F5_USERNAME") or os.environ.get("F5_USER", "admin"),
             password=password,
-            port=int(os.environ.get("F5_PORT", "443")),
+            port=int(os.environ.get("F5_SERVER_PORT") or os.environ.get("F5_PORT", "443")),
         )
 
     def get_all(self, uri: str) -> list[dict[str, Any]]:

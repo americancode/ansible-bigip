@@ -20,7 +20,7 @@ Declarative BIG-IP playbooks organized for GitOps-style management.
 | AFM security | [docs/security.md](docs/security.md) |
 | WAF/ASM | [docs/waf.md](docs/waf.md) |
 | APM access | [docs/apm.md](docs/apm.md) |
-| LDAP auth | [docs/ldap-auth.md](docs/ldap-auth.md) |
+| Authentication | [docs/authentication.md](docs/authentication.md) |
 | Kerberos SSO | [docs/kerberos-sso.md](docs/kerberos-sso.md) |
 | AWX bootstrap | [docs/awx-ha-bootstrap.md](docs/awx-ha-bootstrap.md) |
 | Drift and import | [docs/drift-import.md](docs/drift-import.md) |

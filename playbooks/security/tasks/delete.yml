@@ -1,6 +1,6 @@
 - name: Delete AFM firewall policies
   bigip_firewall_rule_list:
-    provider: "{{ f5_provider }}"
+    provider: "{{ provider }}"
     name: "{{ item.name }}"
     partition: "{{ item.partition | default('Common') }}"
     state: absent
@@ -9,7 +9,7 @@
 
 - name: Delete AFM firewall rules
   bigip_firewall_rule:
-    provider: "{{ f5_provider }}"
+    provider: "{{ provider }}"
     name: "{{ item.name }}"
     partition: "{{ item.partition | default('Common') }}"
     state: absent
@@ -18,7 +18,7 @@
 
 - name: Delete AFM port lists
   bigip_firewall_port_list:
-    provider: "{{ f5_provider }}"
+    provider: "{{ provider }}"
     name: "{{ item.name }}"
     partition: "{{ item.partition | default('Common') }}"
     state: absent
@@ -27,7 +27,7 @@
 
 - name: Delete AFM address lists
   bigip_firewall_address_list:
-    provider: "{{ f5_provider }}"
+    provider: "{{ provider }}"
     name: "{{ item.name }}"
     partition: "{{ item.partition | default('Common') }}"
     state: absent
@@ -36,7 +36,7 @@
 
 - name: Delete WAF server technologies from policies
   bigip_asm_policy_server_technology:
-    provider: "{{ f5_provider }}"
+    provider: "{{ provider }}"
     name: "{{ item.name }}"
     policy_name: "{{ item.policy_name }}"
     state: absent
@@ -45,7 +45,7 @@
 
 - name: Delete WAF/ASM policies
   bigip_asm_policy_manage:
-    provider: "{{ f5_provider }}"
+    provider: "{{ provider }}"
     name: "{{ item.name }}"
     state: absent
   loop: "{{ waf_policies_delete | default([]) }}"
@@ -53,25 +53,52 @@
 
 - name: Delete APM ACLs
   bigip_apm_acl:
-    provider: "{{ f5_provider }}"
+    provider: "{{ provider }}"
     name: "{{ item.name }}"
     partition: "{{ item.partition | default('Common') }}"
     state: absent
   loop: "{{ apm_acls_delete | default([]) }}"
   when: apm_acls_delete | default([]) | length > 0
 
+- name: Delete APM access profiles
+  bigip_command:
+    provider: "{{ provider }}"
+    commands:
+      - tmsh delete apm profile access /{{ item.partition | default('Common') }}/{{ item.name }}
+  loop: "{{ apm_access_profiles_delete | default([]) }}"
+  when: apm_access_profiles_delete | default([]) | length > 0
+  failed_when: false
+
 - name: Delete APM policy nodes
   bigip_command:
-    provider: "{{ f5_provider }}"
+    provider: "{{ provider }}"
     commands:
       - tmsh modify apm policy access /{{ item.partition | default('Common') }}/{{ item.policy }} items delete { {{ item.name }} }
   loop: "{{ apm_policy_nodes_delete | default([]) }}"
   when: apm_policy_nodes_delete | default([]) | length > 0
   failed_when: false
 
+- name: Delete APM per-session policies
+  bigip_command:
+    provider: "{{ provider }}"
+    commands:
+      - tmsh delete apm policy per-session-policy /{{ item.partition | default('Common') }}/{{ item.name }}
+  loop: "{{ apm_per_session_policies_delete | default([]) }}"
+  when: apm_per_session_policies_delete | default([]) | length > 0
+  failed_when: false
+
+- name: Delete APM macros
+  bigip_command:
+    provider: "{{ provider }}"
+    commands:
+      - tmsh delete apm policy macro /{{ item.partition | default('Common') }}/{{ item.name }}
+  loop: "{{ apm_macros_delete | default([]) }}"
+  when: apm_macros_delete | default([]) | length > 0
+  failed_when: false
+
 - name: Delete APM webtop resources
   bigip_command:
-    provider: "{{ f5_provider }}"
+    provider: "{{ provider }}"
     commands:
       - tmsh delete apm resource webtop /{{ item.partition | default('Common') }}/{{ item.name }}
   loop: "{{ apm_resources_delete | default([]) | selectattr('type', 'equalto', 'webtop') | list }}"
@@ -80,16 +107,34 @@
 
 - name: Delete APM network access resources
   bigip_command:
-    provider: "{{ f5_provider }}"
+    provider: "{{ provider }}"
     commands:
       - tmsh delete apm resource network-access /{{ item.partition | default('Common') }}/{{ item.name }}
   loop: "{{ apm_resources_delete | default([]) | selectattr('type', 'equalto', 'network_access') | list }}"
   when: apm_resources_delete | default([]) | length > 0
   failed_when: false
 
+- name: Delete APM remote desktop resources
+  bigip_command:
+    provider: "{{ provider }}"
+    commands:
+      - tmsh delete apm resource rdp /{{ item.partition | default('Common') }}/{{ item.name }}
+  loop: "{{ apm_resources_delete | default([]) | selectattr('type', 'equalto', 'remote_desktop') | list }}"
+  when: apm_resources_delete | default([]) | length > 0
+  failed_when: false
+
+- name: Delete APM portal access resources
+  bigip_command:
+    provider: "{{ provider }}"
+    commands:
+      - tmsh delete apm resource portal-access /{{ item.partition | default('Common') }}/{{ item.name }}
+  loop: "{{ apm_resources_delete | default([]) | selectattr('type', 'equalto', 'portal_access') | list }}"
+  when: apm_resources_delete | default([]) | length > 0
+  failed_when: false
+
 - name: Delete APM Kerberos SSO configs
   bigip_command:
-    provider: "{{ f5_provider }}"
+    provider: "{{ provider }}"
     commands:
       - tmsh delete apm sso kerberos /{{ item.partition | default('Common') }}/{{ item.name }}
   loop: "{{ apm_sso_configs_delete | default([]) | selectattr('type', 'equalto', 'kerberos') | list }}"
@@ -98,7 +143,7 @@
 
 - name: Delete APM Form-Based SSO configs
   bigip_command:
-    provider: "{{ f5_provider }}"
+    provider: "{{ provider }}"
     commands:
       - tmsh delete apm sso form-based /{{ item.partition | default('Common') }}/{{ item.name }}
   loop: "{{ apm_sso_configs_delete | default([]) | selectattr('type', 'equalto', 'form_based') | list }}"
@@ -107,7 +152,7 @@
 
 - name: Delete APM HTTP Basic SSO configs
   bigip_command:
-    provider: "{{ f5_provider }}"
+    provider: "{{ provider }}"
     commands:
       - tmsh delete apm sso http-basic /{{ item.partition | default('Common') }}/{{ item.name }}
   loop: "{{ apm_sso_configs_delete | default([]) | selectattr('type', 'equalto', 'http_basic') | list }}"
@@ -116,16 +161,52 @@
 
 - name: Delete APM NTLM SSO configs
   bigip_command:
-    provider: "{{ f5_provider }}"
+    provider: "{{ provider }}"
     commands:
       - tmsh delete apm sso ntlm /{{ item.partition | default('Common') }}/{{ item.name }}
   loop: "{{ apm_sso_configs_delete | default([]) | selectattr('type', 'equalto', 'ntlm') | list }}"
   when: apm_sso_configs_delete | default([]) | length > 0
   failed_when: false
 
+- name: Delete APM SAML SSO configs
+  bigip_command:
+    provider: "{{ provider }}"
+    commands:
+      - tmsh delete apm sso saml /{{ item.partition | default('Common') }}/{{ item.name }}
+  loop: "{{ apm_sso_configs_delete | default([]) | selectattr('type', 'equalto', 'saml') | list }}"
+  when: apm_sso_configs_delete | default([]) | length > 0
+  failed_when: false
+
+- name: Delete APM OAuth SSO configs
+  bigip_command:
+    provider: "{{ provider }}"
+    commands:
+      - tmsh delete apm sso oauth /{{ item.partition | default('Common') }}/{{ item.name }}
+  loop: "{{ apm_sso_configs_delete | default([]) | selectattr('type', 'equalto', 'oauth') | list }}"
+  when: apm_sso_configs_delete | default([]) | length > 0
+  failed_when: false
+
+- name: Delete APM Citrix SSO configs
+  bigip_command:
+    provider: "{{ provider }}"
+    commands:
+      - tmsh delete apm sso citrix /{{ item.partition | default('Common') }}/{{ item.name }}
+  loop: "{{ apm_sso_configs_delete | default([]) | selectattr('type', 'equalto', 'citrix') | list }}"
+  when: apm_sso_configs_delete | default([]) | length > 0
+  failed_when: false
+
+- name: Delete APM domain-join SSO configs
+  bigip_command:
+    provider: "{{ provider }}"
+    commands:
+      - tmsh delete apm sso domain-join /{{ item.partition | default('Common') }}/{{ item.name }}
+  loop: "{{ apm_sso_configs_delete | default([]) | selectattr('type', 'equalto', 'domain_join') | list }}"
+  when: apm_sso_configs_delete | default([]) | length > 0
+  failed_when: false
+
 - name: Delete APM AD/LDAP auth servers
   bigip_command:
-    provider: "{{ f5_provider }}"
+    provider: "{{ provider }}"
     commands:
       - tmsh delete auth remote-server /{{ item.partition | default('Common') }}/{{ item.name }}
   loop: "{{ apm_auth_servers_delete | default([]) | selectattr('type', 'in', ['active_directory', 'ldap']) | list }}"
@@ -134,7 +215,7 @@
 
 - name: Delete APM RADIUS auth servers
   bigip_command:
-    provider: "{{ f5_provider }}"
+    provider: "{{ provider }}"
     commands:
       - tmsh delete auth radius-server /{{ item.partition | default('Common') }}/{{ item.name }}
   loop: "{{ apm_auth_servers_delete | default([]) | selectattr('type', 'equalto', 'radius') | list }}"
@@ -143,7 +224,7 @@
 
 - name: Delete APM TACACS+ auth servers
   bigip_command:
-    provider: "{{ f5_provider }}"
+    provider: "{{ provider }}"
     commands:
       - tmsh delete auth tacacs-server /{{ item.partition | default('Common') }}/{{ item.name }}
   loop: "{{ apm_auth_servers_delete | default([]) | selectattr('type', 'equalto', 'tacacs') | list }}"
@@ -152,9 +233,45 @@
 
 - name: Delete APM RSA SecurID auth servers
   bigip_command:
-    provider: "{{ f5_provider }}"
+    provider: "{{ provider }}"
     commands:
       - tmsh delete auth rsa-auth-server /{{ item.partition | default('Common') }}/{{ item.name }}
   loop: "{{ apm_auth_servers_delete | default([]) | selectattr('type', 'equalto', 'rsa_securid') | list }}"
+  when: apm_auth_servers_delete | default([]) | length > 0
+  failed_when: false
+
+- name: Delete APM certificate auth servers
+  bigip_command:
+    provider: "{{ provider }}"
+    commands:
+      - tmsh delete apm resource certificate-auth /{{ item.partition | default('Common') }}/{{ item.name }}
+  loop: "{{ apm_auth_servers_delete | default([]) | selectattr('type', 'equalto', 'cert') | list }}"
+  when: apm_auth_servers_delete | default([]) | length > 0
+  failed_when: false
+
+- name: Delete APM localdb auth servers
+  bigip_command:
+    provider: "{{ provider }}"
+    commands:
+      - tmsh delete apm user-db users /{{ item.partition | default('Common') }}/{{ item.name }}
+  loop: "{{ apm_auth_servers_delete | default([]) | selectattr('type', 'equalto', 'localdb') | list }}"
+  when: apm_auth_servers_delete | default([]) | length > 0
+  failed_when: false
+
+- name: Delete APM SAML auth servers
+  bigip_command:
+    provider: "{{ provider }}"
+    commands:
+      - tmsh delete apm sso saml /{{ item.partition | default('Common') }}/{{ item.name }}
+  loop: "{{ apm_auth_servers_delete | default([]) | selectattr('type', 'equalto', 'saml') | list }}"
+  when: apm_auth_servers_delete | default([]) | length > 0
+  failed_when: false
+
+- name: Delete APM OAuth auth servers
+  bigip_command:
+    provider: "{{ provider }}"
+    commands:
+      - tmsh delete apm sso oauth /{{ item.partition | default('Common') }}/{{ item.name }}
+  loop: "{{ apm_auth_servers_delete | default([]) | selectattr('type', 'equalto', 'oauth') | list }}"
   when: apm_auth_servers_delete | default([]) | length > 0
   failed_when: false

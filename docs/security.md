@@ -2,7 +2,7 @@
 
 ## Overview
 
-`security.yml` manages BIG-IP Advanced Firewall Manager (AFM), Web Application Firewall (WAF/ASM), and Access Policy Manager (APM) objects through a declarative, split-var-tree model. AFM coverage includes address lists, port lists, firewall rules, and firewall policies. WAF coverage includes ASM policies and server technologies. APM coverage includes ACLs, network access resources, and policy imports. See [docs/waf.md](waf.md) for WAF-specific details and [docs/apm.md](apm.md) for APM-specific details.
+`security.yml` manages BIG-IP Advanced Firewall Manager (AFM), Web Application Firewall (WAF/ASM), and Access Policy Manager (APM) objects through a declarative, split-var-tree model. AFM coverage includes address lists, port lists, firewall rules, and firewall policies. WAF coverage includes ASM policies and server technologies. APM coverage includes ACLs, auth servers, SSO configs, resources, policy nodes, access profiles, per-session policies, and macros. APM objects remain tmsh-driven and are modeled as first-class YAML objects rather than tarball policy imports. See [docs/waf.md](waf.md) for WAF-specific details and [docs/apm.md](apm.md) for APM-specific details.
 
 ## Playbook Structure
 
@@ -52,16 +52,22 @@ vars/security/
     ├── acls/                           # APM ACL objects (L4/L7)
     │   ├── settings.yml
     │   └── vpn-acls.yml                # Example ACLs
-    ├── network_access/                 # Network Access resource objects
-    │   ├── settings.yml
-    │   └── remote-access.yml           # Example VPN configurations
-    ├── policies/                       # APM policy import objects
-    │   ├── settings.yml
-    │   └── access-policies.yml         # Example policy imports
+    ├── auth_servers/                   # Authentication server objects
+    ├── sso_configs/                    # SSO method objects
+    ├── resources/                      # Network access, webtop, portal, and RDP resources
+    ├── policy_nodes/                   # Access-policy VPE nodes
+    ├── access_profiles/                # APM profile access objects
+    ├── per_session_policies/           # Per-session policy containers
+    ├── macros/                         # Reusable policy macro containers
     └── deletions/                      # Explicit deletion trees
         ├── acls/
-        ├── network_access/
-        └── policies/
+        ├── auth_servers/
+        ├── sso_configs/
+        ├── resources/
+        ├── policy_nodes/
+        ├── access_profiles/
+        ├── per_session_policies/
+        └── macros/
 ```
 
 ## Object Types
@@ -171,8 +177,11 @@ Objects are applied and deleted in this order:
 5. **WAF policies** (standalone policy definitions)
 6. **WAF server technologies** (reference policies)
 7. **APM ACLs** (standalone access control entries)
-8. **APM network access** (VPN resource configuration)
-9. **APM policy imports** (depend on ACLs and network access being available)
+8. **APM auth servers and SSO configs** (foundation for access-policy nodes)
+9. **APM resources** (network access, webtop, portal access, remote desktop)
+10. **APM access-policy nodes** (reference auth/SSO/resource objects)
+11. **APM access profiles**
+12. **APM per-session policies and macros**
 
 Deletion runs in reverse order to respect dependencies.
 

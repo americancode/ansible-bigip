@@ -1,12 +1,12 @@
-- name: Apply security objects
-  ansible.builtin.import_tasks: apply.yml
-
 - name: Delete security objects
   ansible.builtin.import_tasks: delete.yml
 
+- name: Apply security objects
+  ansible.builtin.import_tasks: apply.yml
+
 - name: Save BIG-IP configuration
   bigip_config:
-    provider: "{{ f5_provider }}"
+    provider: "{{ provider }}"
     save: true
   when: >-
     (afm_address_lists_present | default([]) | length > 0) or

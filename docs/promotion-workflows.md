@@ -14,7 +14,7 @@ Each environment maps to a Git branch with its own inventory and optional var tr
 
 The shared `vars/` tree lives on all branches. Environment-specific overrides (e.g., different IP addresses, partition assignments) can be handled through:
 
-- **Inventory host vars**: AWX inventory per environment defines `f5_host`, `f5_provider` credentials, and environment-specific addresses
+- **Inventory host vars**: AWX inventory per environment defines `f5_host` and any environment-specific addresses or metadata
 - **Branch-specific var files**: override files only present on certain branches (e.g., `vars/ltm/virtual_servers/prod-specific.yml` on `main`)
 - **Conditional playbook logic**: use `when` clauses keyed off inventory variables
 

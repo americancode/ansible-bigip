@@ -1173,3 +1173,43 @@
           | list
         )
       }}
+
+- name: Initialize flattened APM per-session policy nodes
+  ansible.builtin.set_fact:
+    apm_per_session_nodes_present: []
+
+- name: Flatten APM per-session policy nodes for tmsh tasks
+  ansible.builtin.set_fact:
+    apm_per_session_nodes_present: >-
+      {{
+        (apm_per_session_nodes_present | default([])) + [
+          {
+            'partition': item.0.partition | default('Common'),
+            'policy': item.0.name,
+            'name': item.1.name,
+            'type': item.1.type,
+            'properties': item.1.properties | default(item.1.config | default({}))
+          }
+        ]
+      }}
+  loop: "{{ query('subelements', apm_per_session_policies_present | default([]), 'nodes', {'skip_missing': True}) }}"
+
+- name: Initialize flattened APM macro nodes
+  ansible.builtin.set_fact:
+    apm_macro_nodes_present: []
+
+- name: Flatten APM macro nodes for tmsh tasks
+  ansible.builtin.set_fact:
+    apm_macro_nodes_present: >-
+      {{
+        (apm_macro_nodes_present | default([])) + [
+          {
+            'partition': item.0.partition | default('Common'),
+            'macro': item.0.name,
+            'name': item.1.name,
+            'type': item.1.type,
+            'properties': item.1.properties | default(item.1.config | default({}))
+          }
+        ]
+      }}
+  loop: "{{ query('subelements', apm_macros_present | default([]), 'nodes', {'skip_missing': True}) }}"

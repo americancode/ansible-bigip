@@ -1,6 +1,6 @@
 - name: Create AFM address lists
   bigip_firewall_address_list:
-    provider: "{{ f5_provider }}"
+    provider: "{{ provider }}"
     name: "{{ item.name }}"
     partition: "{{ item.partition | default('Common') }}"
     description: "{{ item.description | default(omit) }}"
@@ -15,7 +15,7 @@
 
 - name: Create AFM port lists
   bigip_firewall_port_list:
-    provider: "{{ f5_provider }}"
+    provider: "{{ provider }}"
     name: "{{ item.name }}"
     partition: "{{ item.partition | default('Common') }}"
     description: "{{ item.description | default(omit) }}"
@@ -28,7 +28,7 @@
 
 - name: Create AFM firewall rules
   bigip_firewall_rule:
-    provider: "{{ f5_provider }}"
+    provider: "{{ provider }}"
     name: "{{ item.name }}"
     partition: "{{ item.partition | default('Common') }}"
     description: "{{ item.description | default(omit) }}"
@@ -44,7 +44,7 @@
 
 - name: Create AFM firewall policies
   bigip_firewall_rule_list:
-    provider: "{{ f5_provider }}"
+    provider: "{{ provider }}"
     name: "{{ item.name }}"
     partition: "{{ item.partition | default('Common') }}"
     description: "{{ item.description | default(omit) }}"
@@ -55,7 +55,7 @@
 
 - name: Create WAF/ASM policies
   bigip_asm_policy_manage:
-    provider: "{{ f5_provider }}"
+    provider: "{{ provider }}"
     name: "{{ item.name }}"
     template: "{{ item.template | default(omit) }}"
     active: "{{ item.active | default(omit) }}"
@@ -66,7 +66,7 @@
 
 - name: Add WAF server technologies to policies
   bigip_asm_policy_server_technology:
-    provider: "{{ f5_provider }}"
+    provider: "{{ provider }}"
     name: "{{ item.name }}"
     policy_name: "{{ item.policy_name }}"
     state: present
@@ -75,7 +75,7 @@
 
 - name: Create APM ACLs
   bigip_apm_acl:
-    provider: "{{ f5_provider }}"
+    provider: "{{ provider }}"
     name: "{{ item.name }}"
     partition: "{{ item.partition | default('Common') }}"
     acl_order: "{{ item.acl_order | default(omit) }}"
@@ -89,7 +89,7 @@
 
 - name: Create APM AD/LDAP auth servers
   bigip_command:
-    provider: "{{ f5_provider }}"
+    provider: "{{ provider }}"
     commands:
       - >-
         tmsh create auth remote-server /{{ item.partition | default('Common') }}/{{ item.name }}
@@ -107,7 +107,7 @@
 
 - name: Modify APM AD/LDAP auth servers
   bigip_command:
-    provider: "{{ f5_provider }}"
+    provider: "{{ provider }}"
     commands:
       - >-
         tmsh modify auth remote-server /{{ item.partition | default('Common') }}/{{ item.name }}
@@ -123,7 +123,7 @@
 
 - name: Create APM RADIUS auth servers
   bigip_command:
-    provider: "{{ f5_provider }}"
+    provider: "{{ provider }}"
     commands:
       - >-
         tmsh create auth radius-server /{{ item.partition | default('Common') }}/{{ item.name }}
@@ -138,7 +138,7 @@
 
 - name: Modify APM RADIUS auth servers
   bigip_command:
-    provider: "{{ f5_provider }}"
+    provider: "{{ provider }}"
     commands:
       - >-
         tmsh modify auth radius-server /{{ item.partition | default('Common') }}/{{ item.name }}
@@ -152,7 +152,7 @@
 
 - name: Create APM TACACS+ auth servers
   bigip_command:
-    provider: "{{ f5_provider }}"
+    provider: "{{ provider }}"
     commands:
       - >-
         tmsh create auth tacacs-server /{{ item.partition | default('Common') }}/{{ item.name }}
@@ -166,7 +166,7 @@
 
 - name: Modify APM TACACS+ auth servers
   bigip_command:
-    provider: "{{ f5_provider }}"
+    provider: "{{ provider }}"
     commands:
       - >-
         tmsh modify auth tacacs-server /{{ item.partition | default('Common') }}/{{ item.name }}
@@ -179,7 +179,7 @@
 
 - name: Create APM RSA SecurID auth servers
   bigip_command:
-    provider: "{{ f5_provider }}"
+    provider: "{{ provider }}"
     commands:
       - >-
         tmsh create auth rsa-auth-server /{{ item.partition | default('Common') }}/{{ item.name }}
@@ -191,7 +191,7 @@
 
 - name: Modify APM RSA SecurID auth servers
   bigip_command:
-    provider: "{{ f5_provider }}"
+    provider: "{{ provider }}"
     commands:
       - >-
         tmsh modify auth rsa-auth-server /{{ item.partition | default('Common') }}/{{ item.name }}
@@ -202,7 +202,7 @@
 
 - name: Create APM certificate auth servers
   bigip_command:
-    provider: "{{ f5_provider }}"
+    provider: "{{ provider }}"
     commands:
       - >-
         tmsh create apm resource certificate-auth /{{ item.partition | default('Common') }}/{{ item.name }}
@@ -218,7 +218,7 @@
 
 - name: Modify APM certificate auth servers
   bigip_command:
-    provider: "{{ f5_provider }}"
+    provider: "{{ provider }}"
     commands:
       - >-
         tmsh modify apm resource certificate-auth /{{ item.partition | default('Common') }}/{{ item.name }}
@@ -233,7 +233,7 @@
 
 - name: Create APM localdb auth servers
   bigip_command:
-    provider: "{{ f5_provider }}"
+    provider: "{{ provider }}"
     commands:
       - >-
         tmsh create apm user-db users /{{ item.partition | default('Common') }}/{{ item.name }}
@@ -244,7 +244,7 @@
 
 - name: Modify APM localdb auth servers
   bigip_command:
-    provider: "{{ f5_provider }}"
+    provider: "{{ provider }}"
     commands:
       - >-
         tmsh modify apm user-db users /{{ item.partition | default('Common') }}/{{ item.name }}
@@ -254,7 +254,7 @@
 
 - name: Create APM SAML auth servers
   bigip_command:
-    provider: "{{ f5_provider }}"
+    provider: "{{ provider }}"
     commands:
       - >-
         tmsh create apm sso saml /{{ item.partition | default('Common') }}/{{ item.name }}
@@ -274,7 +274,7 @@
 
 - name: Modify APM SAML auth servers
   bigip_command:
-    provider: "{{ f5_provider }}"
+    provider: "{{ provider }}"
     commands:
       - >-
         tmsh modify apm sso saml /{{ item.partition | default('Common') }}/{{ item.name }}
@@ -293,7 +293,7 @@
 
 - name: Create APM OAuth/OIDC auth servers
   bigip_command:
-    provider: "{{ f5_provider }}"
+    provider: "{{ provider }}"
     commands:
       - >-
         tmsh create apm sso oauth /{{ item.partition | default('Common') }}/{{ item.name }}
@@ -312,7 +312,7 @@
 
 - name: Modify APM OAuth/OIDC auth servers
   bigip_command:
-    provider: "{{ f5_provider }}"
+    provider: "{{ provider }}"
     commands:
       - >-
         tmsh modify apm sso oauth /{{ item.partition | default('Common') }}/{{ item.name }}
@@ -332,7 +332,7 @@
 
 - name: Create APM Kerberos SSO configs
   bigip_command:
-    provider: "{{ f5_provider }}"
+    provider: "{{ provider }}"
     commands:
       - >-
         tmsh create apm sso kerberos /{{ item.partition | default('Common') }}/{{ item.name }}
@@ -348,7 +348,7 @@
 
 - name: Modify APM Kerberos SSO configs
   bigip_command:
-    provider: "{{ f5_provider }}"
+    provider: "{{ provider }}"
     commands:
       - >-
         tmsh modify apm sso kerberos /{{ item.partition | default('Common') }}/{{ item.name }}
@@ -363,7 +363,7 @@
 
 - name: Create APM Form-Based SSO configs
   bigip_command:
-    provider: "{{ f5_provider }}"
+    provider: "{{ provider }}"
     commands:
       - >-
         tmsh create apm sso form-based /{{ item.partition | default('Common') }}/{{ item.name }}
@@ -379,7 +379,7 @@
 
 - name: Modify APM Form-Based SSO configs
   bigip_command:
-    provider: "{{ f5_provider }}"
+    provider: "{{ provider }}"
     commands:
       - >-
         tmsh modify apm sso form-based /{{ item.partition | default('Common') }}/{{ item.name }}
@@ -394,7 +394,7 @@
 
 - name: Create APM HTTP Basic SSO configs
   bigip_command:
-    provider: "{{ f5_provider }}"
+    provider: "{{ provider }}"
     commands:
       - >-
         tmsh create apm sso http-basic /{{ item.partition | default('Common') }}/{{ item.name }}
@@ -406,7 +406,7 @@
 
 - name: Modify APM HTTP Basic SSO configs
   bigip_command:
-    provider: "{{ f5_provider }}"
+    provider: "{{ provider }}"
     commands:
       - >-
         tmsh modify apm sso http-basic /{{ item.partition | default('Common') }}/{{ item.name }}
@@ -417,7 +417,7 @@
 
 - name: Create APM NTLM SSO configs
   bigip_command:
-    provider: "{{ f5_provider }}"
+    provider: "{{ provider }}"
     commands:
       - >-
         tmsh create apm sso ntlm /{{ item.partition | default('Common') }}/{{ item.name }}
@@ -430,7 +430,7 @@
 
 - name: Modify APM NTLM SSO configs
   bigip_command:
-    provider: "{{ f5_provider }}"
+    provider: "{{ provider }}"
     commands:
       - >-
         tmsh modify apm sso ntlm /{{ item.partition | default('Common') }}/{{ item.name }}
@@ -442,7 +442,7 @@
 
 - name: Create APM SAML SSO configs
   bigip_command:
-    provider: "{{ f5_provider }}"
+    provider: "{{ provider }}"
     commands:
       - >-
         tmsh create apm sso saml /{{ item.partition | default('Common') }}/{{ item.name }}
@@ -460,7 +460,7 @@
 
 - name: Modify APM SAML SSO configs
   bigip_command:
-    provider: "{{ f5_provider }}"
+    provider: "{{ provider }}"
     commands:
       - >-
         tmsh modify apm sso saml /{{ item.partition | default('Common') }}/{{ item.name }}
@@ -477,7 +477,7 @@
 
 - name: Create APM OAuth SSO configs
   bigip_command:
-    provider: "{{ f5_provider }}"
+    provider: "{{ provider }}"
     commands:
       - >-
         tmsh create apm sso oauth /{{ item.partition | default('Common') }}/{{ item.name }}
@@ -493,7 +493,7 @@
 
 - name: Modify APM OAuth SSO configs
   bigip_command:
-    provider: "{{ f5_provider }}"
+    provider: "{{ provider }}"
     commands:
       - >-
         tmsh modify apm sso oauth /{{ item.partition | default('Common') }}/{{ item.name }}
@@ -508,7 +508,7 @@
 
 - name: Create APM Citrix SSO configs
   bigip_command:
-    provider: "{{ f5_provider }}"
+    provider: "{{ provider }}"
     commands:
       - >-
         tmsh create apm sso citrix /{{ item.partition | default('Common') }}/{{ item.name }}
@@ -523,7 +523,7 @@
 
 - name: Modify APM Citrix SSO configs
   bigip_command:
-    provider: "{{ f5_provider }}"
+    provider: "{{ provider }}"
     commands:
       - >-
         tmsh modify apm sso citrix /{{ item.partition | default('Common') }}/{{ item.name }}
@@ -537,7 +537,7 @@
 
 - name: Create APM domain-join SSO configs
   bigip_command:
-    provider: "{{ f5_provider }}"
+    provider: "{{ provider }}"
     commands:
       - >-
         tmsh create apm sso domain-join /{{ item.partition | default('Common') }}/{{ item.name }}
@@ -549,7 +549,7 @@
 
 - name: Modify APM domain-join SSO configs
   bigip_command:
-    provider: "{{ f5_provider }}"
+    provider: "{{ provider }}"
     commands:
       - >-
         tmsh modify apm sso domain-join /{{ item.partition | default('Common') }}/{{ item.name }}
@@ -562,7 +562,7 @@
 
 - name: Create APM network access resources
   bigip_command:
-    provider: "{{ f5_provider }}"
+    provider: "{{ provider }}"
     commands:
       - >-
         tmsh create apm resource network-access /{{ item.partition | default('Common') }}/{{ item.name }}
@@ -582,7 +582,7 @@
 
 - name: Modify APM network access resources
   bigip_command:
-    provider: "{{ f5_provider }}"
+    provider: "{{ provider }}"
     commands:
       - >-
         tmsh modify apm resource network-access /{{ item.partition | default('Common') }}/{{ item.name }}
@@ -601,7 +601,7 @@
 
 - name: Create APM webtop resources
   bigip_command:
-    provider: "{{ f5_provider }}"
+    provider: "{{ provider }}"
     commands:
       - >-
         tmsh create apm resource webtop /{{ item.partition | default('Common') }}/{{ item.name }}
@@ -615,7 +615,7 @@
 
 - name: Modify APM webtop resources
   bigip_command:
-    provider: "{{ f5_provider }}"
+    provider: "{{ provider }}"
     commands:
       - >-
         tmsh modify apm resource webtop /{{ item.partition | default('Common') }}/{{ item.name }}
@@ -628,7 +628,7 @@
 
 - name: Create APM remote desktop resources
   bigip_command:
-    provider: "{{ f5_provider }}"
+    provider: "{{ provider }}"
     commands:
       - >-
         tmsh create apm resource rdp /{{ item.partition | default('Common') }}/{{ item.name }}
@@ -645,7 +645,7 @@
 
 - name: Modify APM remote desktop resources
   bigip_command:
-    provider: "{{ f5_provider }}"
+    provider: "{{ provider }}"
     commands:
       - >-
         tmsh modify apm resource rdp /{{ item.partition | default('Common') }}/{{ item.name }}
@@ -661,7 +661,7 @@
 
 - name: Create APM portal access resources
   bigip_command:
-    provider: "{{ f5_provider }}"
+    provider: "{{ provider }}"
     commands:
       - >-
         tmsh create apm resource portal-access /{{ item.partition | default('Common') }}/{{ item.name }}
@@ -676,7 +676,7 @@
 
 - name: Modify APM portal access resources
   bigip_command:
-    provider: "{{ f5_provider }}"
+    provider: "{{ provider }}"
     commands:
       - >-
         tmsh modify apm resource portal-access /{{ item.partition | default('Common') }}/{{ item.name }}
@@ -692,7 +692,7 @@
 
 - name: Create APM access profiles
   bigip_command:
-    provider: "{{ f5_provider }}"
+    provider: "{{ provider }}"
     commands:
       - >-
         tmsh create apm profile access /{{ item.partition | default('Common') }}/{{ item.name }}
@@ -711,7 +711,7 @@
 
 - name: Modify APM access profiles
   bigip_command:
-    provider: "{{ f5_provider }}"
+    provider: "{{ provider }}"
     commands:
       - >-
         tmsh modify apm profile access /{{ item.partition | default('Common') }}/{{ item.name }}
@@ -731,7 +731,7 @@
 
 - name: Create APM per-session policies
   bigip_command:
-    provider: "{{ f5_provider }}"
+    provider: "{{ provider }}"
     commands:
       - >-
         tmsh create apm policy per-session-policy /{{ item.partition | default('Common') }}/{{ item.name }}
@@ -742,7 +742,7 @@
 
 - name: Modify APM per-session policies
   bigip_command:
-    provider: "{{ f5_provider }}"
+    provider: "{{ provider }}"
     commands:
       - >-
         tmsh modify apm policy per-session-policy /{{ item.partition | default('Common') }}/{{ item.name }}
@@ -752,7 +752,7 @@
 
 - name: Create APM per-session policy nodes
   bigip_command:
-    provider: "{{ f5_provider }}"
+    provider: "{{ provider }}"
     commands:
       - >-
         tmsh modify apm policy per-session-policy /{{ item.partition | default('Common') }}/{{ item.policy }}
@@ -782,7 +782,7 @@
 
 - name: Modify APM per-session policy nodes
   bigip_command:
-    provider: "{{ f5_provider }}"
+    provider: "{{ provider }}"
     commands:
       - >-
         tmsh modify apm policy per-session-policy /{{ item.partition | default('Common') }}/{{ item.policy }}
@@ -813,7 +813,7 @@
 
 - name: Create APM macros
   bigip_command:
-    provider: "{{ f5_provider }}"
+    provider: "{{ provider }}"
     commands:
       - >-
         tmsh create apm policy macro /{{ item.partition | default('Common') }}/{{ item.name }}
@@ -824,7 +824,7 @@
 
 - name: Modify APM macros
   bigip_command:
-    provider: "{{ f5_provider }}"
+    provider: "{{ provider }}"
     commands:
       - >-
         tmsh modify apm policy macro /{{ item.partition | default('Common') }}/{{ item.name }}
@@ -834,7 +834,7 @@
 
 - name: Create APM macro nodes
   bigip_command:
-    provider: "{{ f5_provider }}"
+    provider: "{{ provider }}"
     commands:
       - >-
         tmsh modify apm policy macro /{{ item.partition | default('Common') }}/{{ item.macro }}
@@ -864,7 +864,7 @@
 
 - name: Modify APM macro nodes
   bigip_command:
-    provider: "{{ f5_provider }}"
+    provider: "{{ provider }}"
     commands:
       - >-
         tmsh modify apm policy macro /{{ item.partition | default('Common') }}/{{ item.macro }}
@@ -895,7 +895,7 @@
 
 - name: Create APM policy nodes
   bigip_command:
-    provider: "{{ f5_provider }}"
+    provider: "{{ provider }}"
     commands:
       - >-
         tmsh modify apm policy access /{{ item.partition | default('Common') }}/{{ item.policy }}
@@ -925,7 +925,7 @@
 
 - name: Modify APM policy nodes
   bigip_command:
-    provider: "{{ f5_provider }}"
+    provider: "{{ provider }}"
     commands:
       - >-
         tmsh modify apm policy access /{{ item.partition | default('Common') }}/{{ item.policy }}

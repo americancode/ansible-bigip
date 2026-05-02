@@ -6,10 +6,10 @@ compares it against objects declared in the repository's var trees, and
 produces a report of drift.
 
 Environment variables:
-    F5_HOST     — BIG-IP hostname or IP (required)
-    F5_USER     — BIG-IP username (default: admin)
-    F5_PASSWORD — BIG-IP password (required)
-    F5_PORT     — BIG-IP port (default: 443)
+    F5_HOST         — BIG-IP hostname or IP (required)
+    F5_USERNAME     — BIG-IP username (default: admin)
+    F5_PASSWORD     — BIG-IP password (required)
+    F5_SERVER_PORT  — BIG-IP port (default: 443)
 """
 
 from __future__ import annotations
@@ -76,9 +76,9 @@ class BigIPConnection:
             sys.exit(1)
         return cls(
             host=host,
-            username=os.environ.get("F5_USER", "admin"),
+            username=os.environ.get("F5_USERNAME") or os.environ.get("F5_USER", "admin"),
             password=password,
-            port=int(os.environ.get("F5_PORT", "443")),
+            port=int(os.environ.get("F5_SERVER_PORT") or os.environ.get("F5_PORT", "443")),
         )
 
     def get(self, uri: str, params: dict | None = None) -> Any:

@@ -8,9 +8,9 @@ Canonical playbooks live under `playbooks/`. Root-level `*.yml` files are compat
 - `playbooks/system.yml`: base system settings like hostname, DNS, NTP, provisioning, users
 - `playbooks/ha.yml`: device trust, device groups, traffic groups, config sync actions
 - `playbooks/ltm.yml`: LTM monitors, non-TLS profiles, nodes, pools, virtual servers
-- `playbooks/gtm.yml`: GTM monitors, datacenters, servers, pools, Wide IPs
+- `playbooks/gtm.yml`: GTM monitors, datacenters, servers, pools, Wide IPs, regions, and topology records
 - `playbooks/tls.yml`: SSL keys, certificates, CA bundles, client SSL profiles, server SSL profiles
-- `playbooks/security.yml`: AFM address lists, port lists, firewall rules, firewall policies
+- `playbooks/security.yml`: AFM address lists, port lists, firewall rules, firewall policies; WAF policies and server technologies; APM ACLs, auth servers, SSO configs, resources, policy nodes, access profiles, per-session policies, and macros
 
 ## Split Layout
 
