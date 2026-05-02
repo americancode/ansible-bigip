@@ -30,7 +30,9 @@ Canonical playbooks use a consistent split so the entrypoint stays small and the
 
 - `playbooks/<domain>.yml` is the canonical entrypoint
 - `playbooks/<domain>/prep.yml` contains fragment discovery, `include_vars`, defaults loading, and aggregation logic
-- `playbooks/<domain>/tasks/manage.yml` contains the actual create/delete/apply tasks
+- `playbooks/<domain>/tasks/manage.yml` orchestrates task execution order
+- `playbooks/<domain>/tasks/delete.yml` contains destructive tasks
+- `playbooks/<domain>/tasks/apply.yml` contains present-state create/update tasks
 
 This pattern is the default for `network`, `system`, `ha`, `tls`, `ltm`, and `gtm`. If a future playbook stays small enough that splitting it adds no value, document that choice in the roadmap before keeping it monolithic.
 

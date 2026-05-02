@@ -1,0 +1,81 @@
+- name: Delete NATs
+  f5networks.f5_modules.bigip_command:
+    provider: "{{ provider }}"
+    commands:
+      - "{{ item | build_nat_tmsh_command('delete') }}"
+    warn: false
+  loop: "{{ bigip_nats_delete | default([]) }}"
+  loop_control:
+    label: "{{ item.partition | default('Common') }}/{{ item.name }}"
+  when:
+    - (bigip_nat_exists_by_name | default({})).get((item.partition | default('Common')) ~ '/' ~ item.name, false)
+
+- name: Delete static routes
+  f5networks.f5_modules.bigip_static_route:
+    provider: "{{ provider }}"
+    partition: "{{ item.partition | default('Common') }}"
+    name: "{{ item.name }}"
+    state: absent
+  loop: "{{ bigip_static_routes_delete | default([]) }}"
+  loop_control:
+    label: "{{ item.partition | default('Common') }}/{{ item.name }}"
+
+- name: Delete SNAT pools
+  f5networks.f5_modules.bigip_snat_pool:
+    provider: "{{ provider }}"
+    partition: "{{ item.partition | default('Common') }}"
+    name: "{{ item.name }}"
+    state: absent
+  loop: "{{ bigip_snat_pools_delete | default([]) }}"
+  loop_control:
+    label: "{{ item.partition | default('Common') }}/{{ item.name }}"
+
+- name: Delete SNAT translations
+  f5networks.f5_modules.bigip_snat_translation:
+    provider: "{{ provider }}"
+    partition: "{{ item.partition | default('Common') }}"
+    name: "{{ item.name }}"
+    state: absent
+  loop: "{{ bigip_snat_translations_delete | default([]) }}"
+  loop_control:
+    label: "{{ item.partition | default('Common') }}/{{ item.name }}"
+
+- name: Delete self IPs
+  f5networks.f5_modules.bigip_selfip:
+    provider: "{{ provider }}"
+    partition: "{{ item.partition | default('Common') }}"
+    name: "{{ item.name }}"
+    state: absent
+  loop: "{{ bigip_self_ips_delete | default([]) }}"
+  loop_control:
+    label: "{{ item.partition | default('Common') }}/{{ item.name }}"
+
+- name: Delete route domains
+  f5networks.f5_modules.bigip_routedomain:
+    provider: "{{ provider }}"
+    partition: "{{ item.partition | default('Common') }}"
+    name: "{{ item.name }}"
+    state: absent
+  loop: "{{ bigip_route_domains_delete | default([]) }}"
+  loop_control:
+    label: "{{ item.partition | default('Common') }}/{{ item.name }}"
+
+- name: Delete VLANs
+  f5networks.f5_modules.bigip_vlan:
+    provider: "{{ provider }}"
+    partition: "{{ item.partition | default('Common') }}"
+    name: "{{ item.name }}"
+    state: absent
+  loop: "{{ bigip_vlans_delete | default([]) }}"
+  loop_control:
+    label: "{{ item.partition | default('Common') }}/{{ item.name }}"
+
+- name: Delete trunks
+  f5networks.f5_modules.bigip_trunk:
+    provider: "{{ provider }}"
+    name: "{{ item.name }}"
+    state: absent
+  loop: "{{ bigip_trunks_delete | default([]) }}"
+  loop_control:
+    label: "{{ item.name }}"
+

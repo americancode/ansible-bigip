@@ -1,0 +1,64 @@
+- name: Configure hostname
+  f5networks.f5_modules.bigip_hostname:
+    provider: "{{ provider }}"
+    hostname: "{{ item.hostname }}"
+  loop: "{{ system_hostnames | default([]) }}"
+  loop_control:
+    label: "{{ item.hostname }}"
+
+- name: Configure DNS settings
+  f5networks.f5_modules.bigip_device_dns:
+    provider: "{{ provider }}"
+    name_servers: "{{ item.name_servers | default(omit) }}"
+    search: "{{ item.search | default(omit) }}"
+    cache: "{{ item.cache | default(omit) }}"
+    ip_version: "{{ item.ip_version | default(omit) }}"
+    state: "{{ item.state | default('present') }}"
+  loop: "{{ system_dns_present | default([]) }}"
+  loop_control:
+    label: "{{ item.name_servers | default(item.search | default(['dns'])) | join(',') }}"
+
+- name: Configure NTP settings
+  f5networks.f5_modules.bigip_device_ntp:
+    provider: "{{ provider }}"
+    ntp_servers: "{{ item.ntp_servers | default(omit) }}"
+    timezone: "{{ item.timezone | default(omit) }}"
+    state: "{{ item.state | default('present') }}"
+  loop: "{{ system_ntp_present | default([]) }}"
+  loop_control:
+    label: "{{ item.timezone | default(item.ntp_servers | default(['ntp']) | join(',')) }}"
+
+- name: Provision BIG-IP modules
+  f5networks.f5_modules.bigip_provision:
+    provider: "{{ provider }}"
+    module: "{{ item.module }}"
+    level: "{{ item.level | default(omit) }}"
+    memory: "{{ item.memory | default(omit) }}"
+    state: "{{ item.state | default('present') }}"
+  loop: "{{ system_provisioning_present | default([]) }}"
+  loop_control:
+    label: "{{ item.module }}"
+
+- name: Configure local users
+  f5networks.f5_modules.bigip_user:
+    provider: "{{ provider }}"
+    username_credential: "{{ item.name }}"
+    partition: "{{ item.partition | default('Common') }}"
+    full_name: "{{ item.full_name | default(omit) }}"
+    partition_access: "{{ item.partition_access | default(omit) }}"
+    password_credential: "{{ item.password_credential | default(omit) }}"
+    shell: "{{ item.shell | default(omit) }}"
+    update_password: "{{ item.update_password | default(omit) }}"
+    state: "{{ item.state | default('present') }}"
+  loop: "{{ system_users_present | default([]) }}"
+  loop_control:
+    label: "{{ item.name }}"
+
+- name: Save BIG-IP running config
+  f5networks.f5_modules.bigip_config:
+    provider: "{{ provider }}"
+    save: "{{ item.save | default(true) }}"
+  loop: "{{ system_config | default([]) }}"
+  loop_control:
+    label: "save={{ item.save | default(true) }}"
+  when: item.save | default(true)

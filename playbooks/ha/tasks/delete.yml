@@ -1,0 +1,42 @@
+- name: Remove HA device group members
+  f5networks.f5_modules.bigip_device_group_member:
+    provider: "{{ provider }}"
+    device_group: "{{ item.device_group }}"
+    name: "{{ item.name }}"
+    state: absent
+  loop: "{{ ha_device_group_members_delete | default([]) }}"
+  loop_control:
+    label: "{{ item.device_group }}/{{ item.name }}"
+
+- name: Remove device groups
+  f5networks.f5_modules.bigip_device_group:
+    provider: "{{ provider }}"
+    name: "{{ item.name }}"
+    state: absent
+  loop: "{{ ha_device_groups_delete | default([]) }}"
+  loop_control:
+    label: "{{ item.name }}"
+
+- name: Remove traffic groups
+  f5networks.f5_modules.bigip_device_traffic_group:
+    provider: "{{ provider }}"
+    partition: "{{ item.partition | default('Common') }}"
+    name: "{{ item.name }}"
+    state: absent
+  loop: "{{ ha_traffic_groups_delete | default([]) }}"
+  loop_control:
+    label: "{{ item.partition | default('Common') }}/{{ item.name }}"
+
+- name: Remove device trusts
+  f5networks.f5_modules.bigip_device_trust:
+    provider: "{{ provider }}"
+    peer_server: "{{ item.peer_server }}"
+    peer_hostname: "{{ item.peer_hostname | default(omit) }}"
+    peer_user: "{{ item.peer_user | default(omit) }}"
+    peer_password: "{{ item.peer_password | default(omit) }}"
+    type: "{{ item.type | default(omit) }}"
+    state: absent
+  loop: "{{ ha_device_trusts_delete | default([]) }}"
+  loop_control:
+    label: "{{ item.peer_hostname | default(item.peer_server) }}"
+

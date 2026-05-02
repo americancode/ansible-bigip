@@ -1,0 +1,74 @@
+- name: Delete virtual servers
+  f5networks.f5_modules.bigip_virtual_server:
+    provider: "{{ provider }}"
+    partition: "{{ item.partition | default('Common') }}"
+    name: "{{ item.name }}"
+    state: absent
+  loop: "{{ ltm_virtual_servers_delete | default([]) }}"
+  loop_control:
+    label: "{{ item.partition | default('Common') }}/{{ item.name }}"
+
+- name: Delete pools
+  f5networks.f5_modules.bigip_pool:
+    provider: "{{ provider }}"
+    partition: "{{ item.partition | default('Common') }}"
+    name: "{{ item.name }}"
+    state: absent
+  loop: "{{ ltm_all_pools_delete | default([]) }}"
+  loop_control:
+    label: "{{ item.partition | default('Common') }}/{{ item.name }}"
+
+- name: Delete nodes
+  f5networks.f5_modules.bigip_node:
+    provider: "{{ provider }}"
+    partition: "{{ item.partition | default('Common') }}"
+    name: "{{ item.name }}"
+    state: absent
+  loop: "{{ ltm_nodes_delete | default([]) }}"
+  loop_control:
+    label: "{{ item.partition | default('Common') }}/{{ item.name }}"
+
+- name: Delete LTM TCP monitors
+  f5networks.f5_modules.bigip_monitor_tcp:
+    provider: "{{ provider }}"
+    partition: "{{ item.partition | default('Common') }}"
+    name: "{{ item.name }}"
+    state: absent
+  loop: "{{ ltm_monitors_delete | default([]) }}"
+  loop_control:
+    label: "{{ item.partition | default('Common') }}/{{ item.name }}"
+  when: item.type == 'tcp'
+
+- name: Delete LTM HTTP monitors
+  f5networks.f5_modules.bigip_monitor_http:
+    provider: "{{ provider }}"
+    partition: "{{ item.partition | default('Common') }}"
+    name: "{{ item.name }}"
+    state: absent
+  loop: "{{ ltm_monitors_delete | default([]) }}"
+  loop_control:
+    label: "{{ item.partition | default('Common') }}/{{ item.name }}"
+  when: item.type == 'http'
+
+- name: Delete LTM HTTPS monitors
+  f5networks.f5_modules.bigip_monitor_https:
+    provider: "{{ provider }}"
+    partition: "{{ item.partition | default('Common') }}"
+    name: "{{ item.name }}"
+    state: absent
+  loop: "{{ ltm_monitors_delete | default([]) }}"
+  loop_control:
+    label: "{{ item.partition | default('Common') }}/{{ item.name }}"
+  when: item.type == 'https'
+
+- name: Delete LTM gateway ICMP monitors
+  f5networks.f5_modules.bigip_monitor_gateway_icmp:
+    provider: "{{ provider }}"
+    partition: "{{ item.partition | default('Common') }}"
+    name: "{{ item.name }}"
+    state: absent
+  loop: "{{ ltm_monitors_delete | default([]) }}"
+  loop_control:
+    label: "{{ item.partition | default('Common') }}/{{ item.name }}"
+  when: item.type == 'gateway_icmp'
+

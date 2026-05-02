@@ -1,0 +1,103 @@
+- name: Create TLS keys
+  f5networks.f5_modules.bigip_ssl_key:
+    provider: "{{ provider }}"
+    partition: "{{ item.partition | default('Common') }}"
+    name: "{{ item.name }}"
+    content: "{{ item.content }}"
+    passphrase: "{{ item.passphrase | default(omit) }}"
+    true_names: "{{ item.true_names | default(omit) }}"
+    state: present
+  loop: "{{ tls_keys_present | default([]) }}"
+  loop_control:
+    label: "{{ item.partition | default('Common') }}/{{ item.name }}"
+
+- name: Create TLS certificates
+  f5networks.f5_modules.bigip_ssl_certificate:
+    provider: "{{ provider }}"
+    partition: "{{ item.partition | default('Common') }}"
+    name: "{{ item.name }}"
+    content: "{{ item.content }}"
+    issuer_cert: "{{ item.issuer_cert | default(omit) }}"
+    true_names: "{{ item.true_names | default(omit) }}"
+    state: present
+  loop: "{{ tls_certificates_present | default([]) }}"
+  loop_control:
+    label: "{{ item.partition | default('Common') }}/{{ item.name }}"
+
+- name: Create TLS CA bundles
+  f5networks.f5_modules.bigip_ssl_certificate:
+    provider: "{{ provider }}"
+    partition: "{{ item.partition | default('Common') }}"
+    name: "{{ item.name }}"
+    content: "{{ item.content }}"
+    issuer_cert: "{{ item.issuer_cert | default(omit) }}"
+    true_names: "{{ item.true_names | default(omit) }}"
+    state: present
+  loop: "{{ tls_ca_bundles_present | default([]) }}"
+  loop_control:
+    label: "{{ item.partition | default('Common') }}/{{ item.name }}"
+
+- name: Create client SSL profiles
+  f5networks.f5_modules.bigip_profile_client_ssl:
+    provider: "{{ provider }}"
+    partition: "{{ item.partition | default('Common') }}"
+    name: "{{ item.name }}"
+    parent: "{{ item.parent | default(omit) }}"
+    cert_key_chain: "{{ item.cert_key_chain | default(omit) }}"
+    ciphers: "{{ item.ciphers | default(omit) }}"
+    cipher_group: "{{ item.cipher_group | default(omit) }}"
+    options: "{{ item.options | default(omit) }}"
+    secure_renegotiation: "{{ item.secure_renegotiation | default(omit) }}"
+    allow_non_ssl: "{{ item.allow_non_ssl | default(omit) }}"
+    cache_size: "{{ item.cache_size | default(omit) }}"
+    cache_timeout: "{{ item.cache_timeout | default(omit) }}"
+    client_certificate: "{{ item.client_certificate | default(omit) }}"
+    client_auth_frequency: "{{ item.client_auth_frequency | default(omit) }}"
+    cert_auth_depth: "{{ item.cert_auth_depth | default(omit) }}"
+    trusted_cert_authority: "{{ item.trusted_cert_authority | default(omit) }}"
+    advertised_cert_authority: "{{ item.advertised_cert_authority | default(omit) }}"
+    client_auth_crl: "{{ item.client_auth_crl | default(omit) }}"
+    allow_expired_crl: "{{ item.allow_expired_crl | default(omit) }}"
+    renegotiation: "{{ item.renegotiation | default(omit) }}"
+    retain_certificate: "{{ item.retain_certificate | default(omit) }}"
+    server_name: "{{ item.server_name | default(omit) }}"
+    sni_default: "{{ item.sni_default | default(omit) }}"
+    sni_require: "{{ item.sni_require | default(omit) }}"
+    strict_resume: "{{ item.strict_resume | default(omit) }}"
+    state: present
+  loop: "{{ tls_client_ssl_profiles_present | default([]) }}"
+  loop_control:
+    label: "{{ item.partition | default('Common') }}/{{ item.name }}"
+
+- name: Create server SSL profiles
+  f5networks.f5_modules.bigip_profile_server_ssl:
+    provider: "{{ provider }}"
+    partition: "{{ item.partition | default('Common') }}"
+    name: "{{ item.name }}"
+    parent: "{{ item.parent | default(omit) }}"
+    certificate: "{{ item.certificate | default(omit) }}"
+    key: "{{ item.key | default(omit) }}"
+    chain: "{{ item.chain | default(omit) }}"
+    passphrase: "{{ item.passphrase | default(omit) }}"
+    ciphers: "{{ item.ciphers | default(omit) }}"
+    cipher_group: "{{ item.cipher_group | default(omit) }}"
+    options: "{{ item.options | default(omit) }}"
+    secure_renegotiation: "{{ item.secure_renegotiation | default(omit) }}"
+    authenticate_name: "{{ item.authenticate_name | default(omit) }}"
+    ca_file: "{{ item.ca_file | default(omit) }}"
+    ocsp_profile: "{{ item.ocsp_profile | default(omit) }}"
+    renegotiation: "{{ item.renegotiation | default(omit) }}"
+    server_certificate: "{{ item.server_certificate | default(omit) }}"
+    server_name: "{{ item.server_name | default(omit) }}"
+    sni_default: "{{ item.sni_default | default(omit) }}"
+    sni_require: "{{ item.sni_require | default(omit) }}"
+    update_password: "{{ item.update_password | default(omit) }}"
+    state: present
+  loop: "{{ tls_server_ssl_profiles_present | default([]) }}"
+  loop_control:
+    label: "{{ item.partition | default('Common') }}/{{ item.name }}"
+
+- name: Save BIG-IP configuration after TLS changes
+  f5networks.f5_modules.bigip_config:
+    provider: "{{ provider }}"
+    save: true

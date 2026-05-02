@@ -19,6 +19,7 @@ The repository already supports:
 - declarative `network`, `ltm`, and `gtm` playbooks
 - canonical playbooks organized under `playbooks/` with root-level wrapper entrypoints
 - all current canonical playbooks use the split entrypoint model with `playbooks/<domain>/prep.yml` and `playbooks/<domain>/tasks/manage.yml`
+- all current task layers split destructive ordering into `tasks/delete.yml` and present-state application into `tasks/apply.yml`
 - split var trees for scale
 - per-directory `settings.yml` inheritance
 - object-level partition overrides with `Common` fallback
@@ -59,7 +60,7 @@ Implemented today:
   - deletion trees
   - per-directory `settings.yml`
   - canonical playbook entrypoint at `playbooks/network.yml`
-  - internal split between canonical playbook wrapper, `prep.yml`, and `tasks/manage.yml`
+  - internal split between canonical playbook wrapper, `prep.yml`, `tasks/manage.yml`, `tasks/delete.yml`, and `tasks/apply.yml`
 - `system.yml`
   - hostname
   - DNS
@@ -68,7 +69,7 @@ Implemented today:
   - users
   - config save
   - canonical playbook entrypoint at `playbooks/system.yml`
-  - internal split between canonical playbook wrapper, `prep.yml`, and `tasks/manage.yml`
+  - internal split between canonical playbook wrapper, `prep.yml`, `tasks/manage.yml`, `tasks/delete.yml`, and `tasks/apply.yml`
 - `ha.yml`
   - device trust
   - device groups
@@ -76,7 +77,7 @@ Implemented today:
   - traffic groups
   - config sync actions
   - canonical playbook entrypoint at `playbooks/ha.yml`
-  - internal split between canonical playbook wrapper, `prep.yml`, and `tasks/manage.yml`
+  - internal split between canonical playbook wrapper, `prep.yml`, `tasks/manage.yml`, `tasks/delete.yml`, and `tasks/apply.yml`
 - `tls.yml`
   - SSL keys
   - certificates
@@ -84,7 +85,7 @@ Implemented today:
   - client SSL profiles
   - server SSL profiles
   - canonical playbook entrypoint at `playbooks/tls.yml`
-  - internal split between canonical playbook wrapper, `prep.yml`, and `tasks/manage.yml`
+  - internal split between canonical playbook wrapper, `prep.yml`, `tasks/manage.yml`, `tasks/delete.yml`, and `tasks/apply.yml`
 - `ltm.yml`
   - custom LTM monitors
   - first-class nodes
@@ -94,7 +95,7 @@ Implemented today:
   - enabled/disabled semantics where supported
   - deletion trees
   - canonical playbook entrypoint at `playbooks/ltm.yml`
-  - internal split between canonical playbook wrapper, prep tasks, and management tasks
+  - internal split between canonical playbook wrapper, `prep.yml`, `tasks/manage.yml`, `tasks/delete.yml`, and `tasks/apply.yml`
 - `gtm.yml`
   - custom GTM monitors
   - first-class datacenters
@@ -107,7 +108,7 @@ Implemented today:
   - enabled/disabled semantics where supported
   - deletion trees
   - canonical playbook entrypoint at `playbooks/gtm.yml`
-  - internal split between canonical playbook wrapper, prep tasks, and management tasks
+  - internal split between canonical playbook wrapper, `prep.yml`, `tasks/manage.yml`, `tasks/delete.yml`, and `tasks/apply.yml`
 - validation/tooling
   - YAML/schema/reference validation
   - duplicate detection
@@ -143,12 +144,39 @@ This is the recommended end-state layout.
 │   ├── network/
 │   │   ├── prep.yml
 │   │   └── tasks/
+│   │       ├── manage.yml
+│   │       ├── delete.yml
+│   │       └── apply.yml
+│   ├── system/
+│   │   ├── prep.yml
+│   │   └── tasks/
+│   │       ├── manage.yml
+│   │       ├── delete.yml
+│   │       └── apply.yml
+│   ├── ha/
+│   │   ├── prep.yml
+│   │   └── tasks/
+│   │       ├── manage.yml
+│   │       ├── delete.yml
+│   │       └── apply.yml
+│   ├── tls/
+│   │   ├── prep.yml
+│   │   └── tasks/
+│   │       ├── manage.yml
+│   │       ├── delete.yml
+│   │       └── apply.yml
 │   ├── ltm/
 │   │   ├── prep.yml
 │   │   └── tasks/
+│   │       ├── manage.yml
+│   │       ├── delete.yml
+│   │       └── apply.yml
 │   └── gtm/
 │       ├── prep.yml
 │       └── tasks/
+│           ├── manage.yml
+│           ├── delete.yml
+│           └── apply.yml
 ├── tools/
 ├── docs/
 └── vars/
@@ -228,7 +256,7 @@ These are binding repo maintenance rules for every feature change, including fut
 
 - Update `ROADMAP.md` current state, backlog items, and milestone checklists when scope changes.
 - Keep canonical playbooks under `playbooks/` and keep root-level wrapper playbooks working during transitions.
-- Default to the split canonical playbook model: keep discovery/default aggregation in `playbooks/<domain>/prep.yml` and object operations in `playbooks/<domain>/tasks/`. If a future playbook is intentionally left monolithic, record the reason in this roadmap.
+- Default to the split canonical playbook model: keep discovery/default aggregation in `playbooks/<domain>/prep.yml`, keep `tasks/manage.yml` as the ordering wrapper, and separate destructive tasks into `tasks/delete.yml` from present-state tasks in `tasks/apply.yml`. If a future playbook is intentionally left monolithic, record the reason in this roadmap.
 - Update example var files when a feature adds or changes an authoring pattern.
 - Update docs alongside code so linkages and reference strings are explained where operators read them.
 - If an empty directory must be kept intentionally, include a `.gitkeep`.

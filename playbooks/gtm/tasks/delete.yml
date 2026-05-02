@@ -1,0 +1,137 @@
+- name: Delete Wide IPs
+  f5networks.f5_modules.bigip_gtm_wide_ip:
+    provider: "{{ provider }}"
+    partition: "{{ item.partition | default('Common') }}"
+    name: "{{ item.name }}"
+    type: "{{ item.record_type | default('a') }}"
+    state: absent
+  loop: "{{ gtm_wide_ips_delete | default([]) }}"
+  loop_control:
+    label: "{{ item.partition | default('Common') }}/{{ item.name }}"
+
+- name: Delete GTM pools
+  f5networks.f5_modules.bigip_gtm_pool:
+    provider: "{{ provider }}"
+    partition: "{{ item.partition | default('Common') }}"
+    name: "{{ item.name }}"
+    type: "{{ item.record_type | default('a') }}"
+    state: absent
+  loop: "{{ gtm_all_pools_delete | default([]) }}"
+  loop_control:
+    label: "{{ item.partition | default('Common') }}/{{ item.name }}"
+
+- name: Delete manual GTM virtual servers for deleted pools
+  f5networks.f5_modules.bigip_gtm_virtual_server:
+    provider: "{{ provider }}"
+    partition: "{{ item.1.partition | default(item.0.partition | default('Common')) }}"
+    server_name: "{{ item.1.server }}"
+    name: "{{ item.1.virtual_server }}"
+    state: absent
+  loop: "{{ query('subelements', gtm_all_pools_delete | default([]), 'members', {'skip_missing': True}) }}"
+  loop_control:
+    label: "{{ item.1.partition | default(item.0.partition | default('Common')) }}/{{ item.1.server }}/{{ item.1.virtual_server }}"
+
+- name: Delete GTM servers
+  f5networks.f5_modules.bigip_gtm_server:
+    provider: "{{ provider }}"
+    partition: "{{ item.partition | default('Common') }}"
+    name: "{{ item.name }}"
+    state: absent
+  loop: "{{ gtm_servers_delete | default([]) }}"
+  loop_control:
+    label: "{{ item.partition | default('Common') }}/{{ item.name }}"
+
+- name: Delete GTM datacenters
+  f5networks.f5_modules.bigip_gtm_datacenter:
+    provider: "{{ provider }}"
+    partition: "{{ item.partition | default('Common') }}"
+    name: "{{ item.name }}"
+    state: absent
+  loop: "{{ gtm_all_datacenters_delete | default([]) }}"
+  loop_control:
+    label: "{{ item.partition | default('Common') }}/{{ item.name }}"
+
+- name: Delete GTM BIG-IP monitors
+  f5networks.f5_modules.bigip_gtm_monitor_bigip:
+    provider: "{{ provider }}"
+    partition: "{{ item.partition | default('Common') }}"
+    name: "{{ item.name }}"
+    state: absent
+  loop: "{{ gtm_monitors_delete | default([]) }}"
+  loop_control:
+    label: "{{ item.partition | default('Common') }}/{{ item.name }}"
+  when:
+    - item.type == 'bigip'
+
+- name: Delete GTM external monitors
+  f5networks.f5_modules.bigip_gtm_monitor_external:
+    provider: "{{ provider }}"
+    partition: "{{ item.partition | default('Common') }}"
+    name: "{{ item.name }}"
+    state: absent
+  loop: "{{ gtm_monitors_delete | default([]) }}"
+  loop_control:
+    label: "{{ item.partition | default('Common') }}/{{ item.name }}"
+  when:
+    - item.type == 'external'
+
+- name: Delete GTM FirePass monitors
+  f5networks.f5_modules.bigip_gtm_monitor_firepass:
+    provider: "{{ provider }}"
+    partition: "{{ item.partition | default('Common') }}"
+    name: "{{ item.name }}"
+    state: absent
+  loop: "{{ gtm_monitors_delete | default([]) }}"
+  loop_control:
+    label: "{{ item.partition | default('Common') }}/{{ item.name }}"
+  when:
+    - item.type == 'firepass'
+
+- name: Delete GTM HTTP monitors
+  f5networks.f5_modules.bigip_gtm_monitor_http:
+    provider: "{{ provider }}"
+    partition: "{{ item.partition | default('Common') }}"
+    name: "{{ item.name }}"
+    state: absent
+  loop: "{{ gtm_monitors_delete | default([]) }}"
+  loop_control:
+    label: "{{ item.partition | default('Common') }}/{{ item.name }}"
+  when:
+    - item.type == 'http'
+
+- name: Delete GTM HTTPS monitors
+  f5networks.f5_modules.bigip_gtm_monitor_https:
+    provider: "{{ provider }}"
+    partition: "{{ item.partition | default('Common') }}"
+    name: "{{ item.name }}"
+    state: absent
+  loop: "{{ gtm_monitors_delete | default([]) }}"
+  loop_control:
+    label: "{{ item.partition | default('Common') }}/{{ item.name }}"
+  when:
+    - item.type == 'https'
+
+- name: Delete GTM TCP monitors
+  f5networks.f5_modules.bigip_gtm_monitor_tcp:
+    provider: "{{ provider }}"
+    partition: "{{ item.partition | default('Common') }}"
+    name: "{{ item.name }}"
+    state: absent
+  loop: "{{ gtm_monitors_delete | default([]) }}"
+  loop_control:
+    label: "{{ item.partition | default('Common') }}/{{ item.name }}"
+  when:
+    - item.type == 'tcp'
+
+- name: Delete GTM TCP half-open monitors
+  f5networks.f5_modules.bigip_gtm_monitor_tcp_half_open:
+    provider: "{{ provider }}"
+    partition: "{{ item.partition | default('Common') }}"
+    name: "{{ item.name }}"
+    state: absent
+  loop: "{{ gtm_monitors_delete | default([]) }}"
+  loop_control:
+    label: "{{ item.partition | default('Common') }}/{{ item.name }}"
+  when:
+    - item.type == 'tcp_half_open'
+

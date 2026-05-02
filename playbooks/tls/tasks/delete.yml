@@ -1,0 +1,40 @@
+- name: Delete client SSL profiles
+  f5networks.f5_modules.bigip_profile_client_ssl:
+    provider: "{{ provider }}"
+    partition: "{{ item.partition | default('Common') }}"
+    name: "{{ item.name }}"
+    state: absent
+  loop: "{{ tls_client_ssl_profiles_delete | default([]) }}"
+  loop_control:
+    label: "{{ item.partition | default('Common') }}/{{ item.name }}"
+
+- name: Delete server SSL profiles
+  f5networks.f5_modules.bigip_profile_server_ssl:
+    provider: "{{ provider }}"
+    partition: "{{ item.partition | default('Common') }}"
+    name: "{{ item.name }}"
+    state: absent
+  loop: "{{ tls_server_ssl_profiles_delete | default([]) }}"
+  loop_control:
+    label: "{{ item.partition | default('Common') }}/{{ item.name }}"
+
+- name: Delete TLS certificates
+  f5networks.f5_modules.bigip_ssl_certificate:
+    provider: "{{ provider }}"
+    partition: "{{ item.partition | default('Common') }}"
+    name: "{{ item.name }}"
+    state: absent
+  loop: "{{ (tls_certificates_delete | default([])) + (tls_ca_bundles_delete | default([])) }}"
+  loop_control:
+    label: "{{ item.partition | default('Common') }}/{{ item.name }}"
+
+- name: Delete TLS keys
+  f5networks.f5_modules.bigip_ssl_key:
+    provider: "{{ provider }}"
+    partition: "{{ item.partition | default('Common') }}"
+    name: "{{ item.name }}"
+    state: absent
+  loop: "{{ tls_keys_delete | default([]) }}"
+  loop_control:
+    label: "{{ item.partition | default('Common') }}/{{ item.name }}"
+
