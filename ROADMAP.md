@@ -775,7 +775,7 @@ This is the practical next sequence for the current repo.
  17. [x] Add APM auth servers, SSO configs, and policy nodes (tmsh-driven)
 18. [x] Add APM access profiles, per-session policies, and macros
 19. [x] Audit checked-off roadmap items against runtime, validation, drift/import tooling, docs, and examples
-20. [ ] Correct drift/import endpoint and var-key mappings for newly added object families
+20. [x] Correct drift/import endpoint and var-key mappings for newly added object families
 21. [ ] Align runtime, validator, docs, and example vars where field models drifted apart
 22. [x] Complete exhaustive drift/import parity for every newest object tree
 23. [ ] Deepen drift detection to compare meaningful fields for newly added object families
@@ -815,10 +815,14 @@ Completion-class summary for checked backlog items:
 
 Audit findings captured as remaining work:
 
-- item 20 remains open because the audit process still requires continued verification whenever new object families are added
 - item 21 remains open because future field-model drift must still be detected and corrected as implementations evolve
 - item 23 remains open because helper-tool object coverage is broader now, but field-level drift fidelity is still shallow for many newer object types
 - milestone 16 item on `system` and `ha` helper-tool support remains open because those domains are currently intentionally `runtime+validation`, not `full parity`
+
+Endpoint/var-key audit result:
+
+- helper-tool-supported object families no longer have known wrong BIG-IP endpoint mappings or wrong repo var-key mappings
+- remaining lifecycle gaps are now fidelity gaps or intentionally runtime-only domains, not endpoint/key mismatches
 
 ## Extended Backlog
 
@@ -980,6 +984,7 @@ These are the first concrete tickets I would open.
 - [x] Audit each checked-off roadmap item against runtime, validation, drift/import tooling, docs, and example vars
 - [x] Correct network helper-tool mappings for trunks and SNAT pools
 - [x] Correct newer helper-tool mappings for WAF server technologies and APM policy nodes
+- [x] Correct remaining drift/import endpoint and var-key mappings for helper-tool-supported object families
 - [ ] Align runtime, validator, docs, and examples for any feature where the declared field model drifted
 - [ ] Decide whether `system` and `ha` should gain drift/import support now or be explicitly documented as runtime-only for the current phase
 - [x] Align APM access-profile validation with the current runtime field model
