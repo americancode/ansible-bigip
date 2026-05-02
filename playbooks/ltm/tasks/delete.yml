@@ -127,6 +127,69 @@
     label: "{{ item.partition | default('Common') }}/{{ item.name }}"
   when: item.type == 'https'
 
+- name: Delete LTM policies
+  f5networks.f5_modules.bigip_policy:
+    provider: "{{ provider }}"
+    partition: "{{ item.partition | default('Common') }}"
+    name: "{{ item.name }}"
+    state: absent
+  loop: "{{ ltm_policies_delete | default([]) }}"
+  loop_control:
+    label: "{{ item.partition | default('Common') }}/{{ item.name }}"
+
+- name: Delete iRules
+  f5networks.f5_modules.bigip_irule:
+    provider: "{{ provider }}"
+    partition: "{{ item.partition | default('Common') }}"
+    name: "{{ item.name }}"
+    state: absent
+  loop: "{{ ltm_irules_delete | default([]) }}"
+  loop_control:
+    label: "{{ item.partition | default('Common') }}/{{ item.name }}"
+
+- name: Delete LTM cookie persistence profiles
+  f5networks.f5_modules.bigip_profile_persistence_cookie:
+    provider: "{{ provider }}"
+    partition: "{{ item.partition | default('Common') }}"
+    name: "{{ item.name }}"
+    state: absent
+  loop: "{{ ltm_persistence_profiles_delete | default([]) }}"
+  loop_control:
+    label: "{{ item.partition | default('Common') }}/{{ item.name }}"
+  when: item.type == 'cookie'
+
+- name: Delete LTM source address persistence profiles
+  f5networks.f5_modules.bigip_profile_persistence_src_addr:
+    provider: "{{ provider }}"
+    partition: "{{ item.partition | default('Common') }}"
+    name: "{{ item.name }}"
+    state: absent
+  loop: "{{ ltm_persistence_profiles_delete | default([]) }}"
+  loop_control:
+    label: "{{ item.partition | default('Common') }}/{{ item.name }}"
+  when: item.type == 'source_addr'
+
+- name: Delete LTM universal persistence profiles
+  f5networks.f5_modules.bigip_profile_persistence_universal:
+    provider: "{{ provider }}"
+    partition: "{{ item.partition | default('Common') }}"
+    name: "{{ item.name }}"
+    state: absent
+  loop: "{{ ltm_persistence_profiles_delete | default([]) }}"
+  loop_control:
+    label: "{{ item.partition | default('Common') }}/{{ item.name }}"
+  when: item.type == 'universal'
+
+- name: Delete data groups
+  f5networks.f5_modules.bigip_data_group:
+    provider: "{{ provider }}"
+    partition: "{{ item.partition | default('Common') }}"
+    name: "{{ item.name }}"
+    state: absent
+  loop: "{{ ltm_data_groups_delete | default([]) }}"
+  loop_control:
+    label: "{{ item.partition | default('Common') }}/{{ item.name }}"
+
 - name: Delete LTM gateway ICMP monitors
   f5networks.f5_modules.bigip_monitor_gateway_icmp:
     provider: "{{ provider }}"

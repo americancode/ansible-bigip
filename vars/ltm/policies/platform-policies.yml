@@ -1,0 +1,43 @@
+---
+# First-class LTM policies for reuse across virtual servers.
+# These are referenced by name from `ltm_virtual_servers[*].policies`.
+ltm_policies:
+  - name: "policy_http_to_https_redirect"
+    description: "Redirect HTTP requests to HTTPS"
+    strategy: "/Common/first-match"
+    rules:
+      - name: "redirect_http"
+        description: "Match HTTP requests and redirect"
+        conditions:
+          - name: "is_http"
+            type: "tcp"
+            tcp:
+              field: "request"
+              present: true
+        actions:
+          - name: "redirect"
+            type: "http"
+            http:
+              location: "https://[HTTP::host][HTTP::uri]"
+              redirect: true
+
+  - name: "policy_waf_attach"
+    description: "Attach WAF policy to matching virtual servers"
+    strategy: "/Common/first-match"
+    rules:
+      - name: "apply_waf"
+        description: "Apply WAF policy"
+        conditions:
+          - name: "always"
+            type: "http"
+            http:
+              host:
+                values:
+                  - "app.example.com"
+                operand: "equals"
+        actions:
+          - name: "enable_asm"
+            type: "asm"
+            asm:
+              enabled: true
+              policy: "/Common/waf_base_policy"

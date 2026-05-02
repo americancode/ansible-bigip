@@ -1,0 +1,18 @@
+---
+# First-class iRules for reuse across virtual servers.
+# These are referenced by name from `ltm_virtual_servers[*].irules`.
+ltm_irules:
+  - name: "irule_redirect_http_to_https"
+    description: "Redirect all HTTP traffic to HTTPS"
+    rule: |
+      when HTTP_REQUEST {
+          HTTP::redirect "https://[HTTP::host][HTTP::uri]"
+      }
+
+  - name: "irule_xff_strip"
+    description: "Strip existing X-Forwarded-For and inject client IP"
+    rule: |
+      when HTTP_REQUEST {
+          HTTP::header remove "X-Forwarded-For"
+          HTTP::header insert "X-Forwarded-For" [IP::client_addr]
+      }

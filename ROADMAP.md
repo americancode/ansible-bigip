@@ -27,6 +27,7 @@ The repository already supports:
   - embedded pools under LTM virtual servers
   - embedded pools under GTM Wide IPs
   - first-class shared trees for reusable objects
+  - first-class persistence profiles, iRules, data groups, and LTM policies
   - hybrid readability shortcuts (`pool_defaults`, `member_defaults`, `monitor_sets`)
 - explicit deletion trees under `vars/*/deletions` and `state: absent` inline pattern
 - reusable monitor definitions
@@ -37,8 +38,8 @@ The repository already supports:
 The main remaining gaps are:
 
 - deeper HA lifecycle beyond trust, groups, traffic groups, and config sync
-- deeper LTM object coverage (persistence, policies, iRules, data groups)
-- deeper GTM object coverage (topology records, regions)
+- LTM virtual server VLAN filtering, metadata, log profiles
+- GTM topology records and regions
 - security module coverage (AFM, WAF/ASM, APM)
 - drift detection and promotion workflows
 
@@ -92,6 +93,11 @@ Implemented today:
   - first-class nodes
   - first-class pools
   - virtual-server-centric embedded pools
+  - first-class persistence profiles (`cookie`, `source_addr`, `universal`)
+  - first-class iRules
+  - first-class data groups (`string`, `ip`, `integer`)
+  - first-class LTM policies with rules, conditions, and actions
+  - virtual server attachments for persistence, iRules, and policies
   - per-object and per-directory partition handling
   - enabled/disabled semantics where supported
   - deletion trees
@@ -117,8 +123,8 @@ Implemented today:
 
 Not implemented yet:
 
-- LTM persistence, policies, iRules, data groups
-- GTM topology and regions
+- LTM virtual server VLAN filtering, metadata, log profiles
+- GTM topology records and regions
 - security modules
 - live drift/import/promotion tooling
 
@@ -625,6 +631,7 @@ This is the practical next sequence for the current repo.
 9. [x] Add optional LTM virtual resolution
 10. [x] Define TLS secret handling approach
  11. [x] Complete missing documentation
+ 12. [x] Add LTM persistence, iRules, data groups, and policies
 
 ## Issue-Sized Execution Plan
 
@@ -671,48 +678,15 @@ These are the first concrete tickets I would open.
 - [x] Add certificate, key, and SSL profile trees
 - [x] Define secret handling approach
 
-### Milestone 6: Documentation
+### Milestone 7: LTM Expansion
 
-- [x] Add network objects guide
-  - VLANs, trunks, route domains, self IPs (floating/local), static routes
-  - SNAT pools, SNAT translations, NATs (tmsh workflow)
-  - Cross-references between network objects (e.g., NAT to VLAN)
-- [x] Add system management guide
-  - hostname, DNS, NTP, provisioning, users, config save workflow
-  - Partition and naming conventions for system objects
-- [x] Add deletion workflows guide
-  - How to use `vars/*/deletions/` trees
-  - `state: absent` pattern on objects in normal trees
-  - Review and approval process for destructive changes
-- [x] Add validation tooling guide
-  - How `tools/validate-vars` works and what it checks
-  - CI integration and gate behavior
-  - How to add validation rules for new object types
-  - Handling of `!vault` tags in offline validation
-- [x] Add variable precedence and settings guide
-  - object-level → `settings.yml` → playbook fallback resolution
-  - Per-directory `settings.yml` patterns
-  - `pool_defaults`, `member_defaults`, `monitor_sets` inheritance
-  - Partition override behavior with `Common` fallback
-- [x] Add LTM advanced fields guide
-  - Priority groups, service down action, min active members
-  - Slow ramp, queueing, connection limits
-  - Persistence, fallback persistence, source CIDR
-  - VLAN restrictions, metadata, iRules, policy attachments
-- [x] Add GTM advanced fields guide
-  - Aliases, persistence, last resort pool
-  - Load-balancing policy combinations
-  - LTM virtual resolution for pool members (`address`/`port` auto-resolution)
-- [x] Add hybrid authoring guide
-  - When to embed vs promote shared objects
-  - Concise vs verbose models with decision criteria
-  - Cross-file linkage patterns and reference resolution
-  - Built-in vs custom health check aliases
-- [x] Add playbook structure guide
-  - Split layout rationale: `prep.yml`, `manage.yml`, `apply.yml`, `delete.yml`
-  - How discovery, defaults loading, and aggregation work in `prep.yml`
-  - Task ordering semantics in `manage.yml`
-  - When to keep a playbook monolithic vs split
+- [x] Add `vars/ltm/persistence` for first-class persistence profiles
+- [x] Add `vars/ltm/irules` for first-class iRules
+- [x] Add `vars/ltm/data_groups` for first-class data groups
+- [x] Add `vars/ltm/policies` for first-class LTM policies
+- [x] Update `ltm.yml` apply/delete tasks for new object types
+- [x] Add virtual server fields: `default_persistence_profile`, `fallback_persistence_profile`, `irules`, `policies`
+- [x] Add deletion trees for all new object types
 
 ## Network Expansion Status
 

@@ -1,6 +1,6 @@
 # LTM Advanced Fields
 
-The `playbooks/ltm.yml` playbook supports advanced pool, member, and virtual server fields beyond the basic name/address/port model.
+The `playbooks/ltm.yml` playbook supports advanced pool, member, virtual server, iRule, data group, persistence profile, and policy objects.
 
 ## Pool Advanced Fields
 
@@ -180,9 +180,7 @@ ltm_pools:
         enabled: false
 ```
 
-## Virtual Server Advanced Fields
-
-The current implementation covers the core virtual server fields:
+## Virtual Server Fields
 
 ```yaml
 ltm_virtual_servers:
@@ -194,6 +192,11 @@ ltm_virtual_servers:
     profiles:
       - "/Common/tcp"
       - "http_platform_standard"
+    default_persistence_profile: "source_addr_standard"
+    irules:
+      - "irule_redirect_http_to_https"
+    policies:
+      - "policy_http_to_https_redirect"
     description: "Application VIP"
     enabled: true
 ```
@@ -208,6 +211,10 @@ ltm_virtual_servers:
 | `pool` | string or mapping | required | Pool name or embedded pool |
 | `snat` | string | `Automap` | SNAT configuration |
 | `profiles` | list | `["tcp"]` | Profile list (mix built-in and custom) |
+| `default_persistence_profile` | string | - | Default persistence profile name |
+| `fallback_persistence_profile` | string | - | Fallback persistence profile name |
+| `irules` | list | - | iRule names to attach |
+| `policies` | list | - | LTM policy names to attach |
 | `description` | string | - | Description |
 | `enabled` | bool | `true` | Admin state |
 
@@ -215,20 +222,132 @@ ltm_virtual_servers:
 
 The following virtual server fields are roadmap items:
 
-- persistence profiles
-- fallback persistence
 - source address translation (custom CIDR)
 - VLAN filtering/allow list
-- iRule attachments
-- LTM policy attachments
 - metadata
 - log profile references
 
-These will be added as the LTM coverage expands per Phase 4 of the roadmap.
+## Persistence Profiles
+
+Location: `vars/ltm/persistence/`
+
+First-class persistence profiles that can be referenced by virtual servers via `default_persistence_profile` and `fallback_persistence_profile`.
+
+### Cookie Persistence
+
+```yaml
+ltm_persistence_profiles:
+  - name: "cookie_app_session"
+    type: "cookie"
+    description: "Cookie-based session affinity"
+    cookie_name: "BIGipServer"
+    cookie_encryption: true
+    cookie_fallback: true
+```
+
+### Source Address Persistence
+
+```yaml
+ltm_persistence_profiles:
+  - name: "source_addr_standard"
+    type: "source_addr"
+    description: "Source IP persistence"
+    match_across_services: true
+    match_across_virtuals: false
+    override_connection_limit: false
+```
+
+### Universal Persistence
+
+```yaml
+ltm_persistence_profiles:
+  - name: "universal_custom"
+    type: "universal"
+    description: "Universal persistence for custom key extraction"
+    match_across_services: true
+```
+
+Supported types: `cookie`, `source_addr`, `universal`.
+
+## iRules
+
+Location: `vars/ltm/irules/`
+
+First-class iRules referenced by name from `ltm_virtual_servers[*].irules`:
+
+```yaml
+ltm_irules:
+  - name: "irule_redirect_http_to_https"
+    description: "Redirect HTTP to HTTPS"
+    rule: |
+      when HTTP_REQUEST {
+          HTTP::redirect "https://[HTTP::host][HTTP::uri]"
+      }
+```
+
+## Data Groups
+
+Location: `vars/ltm/data_groups/`
+
+Reusable data groups for iRules and policies:
+
+```yaml
+ltm_data_groups:
+  - name: "dg_internal_subnets"
+    type: "ip"
+    description: "Trusted internal subnets"
+    records:
+      - "10.0.0.0/8"
+      - "172.16.0.0/12"
+
+  - name: "dg_blocked_uris"
+    type: "string"
+    description: "Blocked URI paths"
+    records:
+      - "/admin"
+      - "/debug"
+
+  - name: "dg_redirect_map"
+    type: "string"
+    description: "Old-to-new URL mapping"
+    records:
+      - name: "/old-app"
+        value: "/new-app"
+```
+
+Supported types: `string`, `ip`, `integer`. String type supports key/value pairs via the `name`/`value` record format.
+
+## LTM Policies
+
+Location: `vars/ltm/policies/`
+
+First-class policies referenced by name from `ltm_virtual_servers[*].policies`:
+
+```yaml
+ltm_policies:
+  - name: "policy_http_to_https_redirect"
+    description: "Redirect HTTP to HTTPS"
+    strategy: "/Common/first-match"
+    rules:
+      - name: "redirect_http"
+        description: "Match and redirect"
+        conditions:
+          - name: "is_http"
+            type: "tcp"
+            tcp:
+              field: "request"
+              present: true
+        actions:
+          - name: "redirect"
+            type: "http"
+            http:
+              location: "https://[HTTP::host][HTTP::uri]"
+              redirect: true
+```
 
 ### Profiles
 
-The `profiles` list accepts both built-in BIG-IP profiles (fully-qualified names like `/Common/tcp`) and repo-managed custom profiles (by name, resolving to `vars/ltm/profiles/`):
+The `profiles` list on virtual servers accepts both built-in BIG-IP profiles (fully-qualified names like `/Common/tcp`) and repo-managed custom profiles (by name, resolving to `vars/ltm/profiles/`):
 
 ```yaml
 profiles:

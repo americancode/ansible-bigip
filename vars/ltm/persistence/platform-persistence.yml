@@ -1,0 +1,18 @@
+---
+# First-class persistence profiles for reuse across virtual servers.
+# These are referenced by name from `ltm_virtual_servers[*].default_persistence_profile`
+# and `ltm_virtual_servers[*].fallback_persistence_profile`.
+ltm_persistence_profiles:
+  - name: "source_addr_standard"
+    type: "source_addr"
+    description: "Standard source address persistence for internal apps"
+    match_across_services: true
+    match_across_virtuals: false
+    override_connection_limit: false
+
+  - name: "cookie_app_session"
+    type: "cookie"
+    description: "Cookie-based persistence for session affinity"
+    cookie_name: "BIGipServer"
+    cookie_encryption: true
+    cookie_fallback: true

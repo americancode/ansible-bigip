@@ -319,8 +319,110 @@
     pool: "{{ item.pool.name if item.pool is mapping else item.pool }}"
     snat: "{{ item.snat | default('Automap') }}"
     all_profiles: "{{ item.profiles | default(['tcp']) }}"
+    default_persistence_profile: "{{ item.default_persistence_profile | default(omit) }}"
+    fallback_persistence_profile: "{{ item.fallback_persistence_profile | default(omit) }}"
+    irules: "{{ item.irules | default(omit) }}"
+    policies: "{{ item.policies | default(omit) }}"
     description: "{{ item.description | default(omit) }}"
     state: "{{ item.state | default((item.enabled | default(true)) | ternary('enabled', 'disabled')) }}"
   loop: "{{ ltm_virtual_servers_present | default([]) }}"
+  loop_control:
+    label: "{{ item.partition | default('Common') }}/{{ item.name }}"
+
+- name: Create data groups
+  f5networks.f5_modules.bigip_data_group:
+    provider: "{{ provider }}"
+    partition: "{{ item.partition | default('Common') }}"
+    name: "{{ item.name }}"
+    type: "{{ item.type | default('string') }}"
+    description: "{{ item.description | default(omit) }}"
+    records: "{{ item.records | default(omit) }}"
+    internal: "{{ item.internal | default(omit) }}"
+    state: "{{ item.state | default('present') }}"
+  loop: "{{ ltm_data_groups_present | default([]) }}"
+  loop_control:
+    label: "{{ item.partition | default('Common') }}/{{ item.name }}"
+
+- name: Create iRules
+  f5networks.f5_modules.bigip_irule:
+    provider: "{{ provider }}"
+    partition: "{{ item.partition | default('Common') }}"
+    name: "{{ item.name }}"
+    rule: "{{ item.rule }}"
+    description: "{{ item.description | default(omit) }}"
+    state: "{{ item.state | default('present') }}"
+  loop: "{{ ltm_irules_present | default([]) }}"
+  loop_control:
+    label: "{{ item.partition | default('Common') }}/{{ item.name }}"
+
+- name: Create persistence profiles
+  f5networks.f5_modules.bigip_profile_persistence_cookie:
+    provider: "{{ provider }}"
+    partition: "{{ item.partition | default('Common') }}"
+    name: "{{ item.name }}"
+    parent: "{{ item.parent | default(omit) }}"
+    description: "{{ item.description | default(omit) }}"
+    cookie_name: "{{ item.cookie_name | default(omit) }}"
+    cookie_encryption: "{{ item.cookie_encryption | default(omit) }}"
+    cookie_fallback: "{{ item.cookie_fallback | default(omit) }}"
+    cookie_passive: "{{ item.cookie_passive | default(omit) }}"
+    cookie_method: "{{ item.cookie_method | default(omit) }}"
+    httponly_cookie: "{{ item.httponly_cookie | default(omit) }}"
+    secure_cookie: "{{ item.secure_cookie | default(omit) }}"
+    match_across_virtuals: "{{ item.match_across_virtuals | default(omit) }}"
+    match_across_services: "{{ item.match_across_services | default(omit) }}"
+    match_across_pools: "{{ item.match_across_pools | default(omit) }}"
+    override_connection_limit: "{{ item.override_connection_limit | default(omit) }}"
+    state: "{{ item.state | default('present') }}"
+  loop: "{{ ltm_persistence_profiles_present | default([]) }}"
+  loop_control:
+    label: "{{ item.partition | default('Common') }}/{{ item.name }}"
+  when: item.type == 'cookie'
+
+- name: Create source address persistence profiles
+  f5networks.f5_modules.bigip_profile_persistence_src_addr:
+    provider: "{{ provider }}"
+    partition: "{{ item.partition | default('Common') }}"
+    name: "{{ item.name }}"
+    parent: "{{ item.parent | default(omit) }}"
+    description: "{{ item.description | default(omit) }}"
+    hash_algorithm: "{{ item.hash_algorithm | default(omit) }}"
+    match_across_virtuals: "{{ item.match_across_virtuals | default(omit) }}"
+    match_across_services: "{{ item.match_across_services | default(omit) }}"
+    match_across_pools: "{{ item.match_across_pools | default(omit) }}"
+    override_connection_limit: "{{ item.override_connection_limit | default(omit) }}"
+    state: "{{ item.state | default('present') }}"
+  loop: "{{ ltm_persistence_profiles_present | default([]) }}"
+  loop_control:
+    label: "{{ item.partition | default('Common') }}/{{ item.name }}"
+  when: item.type == 'source_addr'
+
+- name: Create universal persistence profiles
+  f5networks.f5_modules.bigip_profile_persistence_universal:
+    provider: "{{ provider }}"
+    partition: "{{ item.partition | default('Common') }}"
+    name: "{{ item.name }}"
+    parent: "{{ item.parent | default(omit) }}"
+    description: "{{ item.description | default(omit) }}"
+    match_across_virtuals: "{{ item.match_across_virtuals | default(omit) }}"
+    match_across_services: "{{ item.match_across_services | default(omit) }}"
+    match_across_pools: "{{ item.match_across_pools | default(omit) }}"
+    override_connection_limit: "{{ item.override_connection_limit | default(omit) }}"
+    state: "{{ item.state | default('present') }}"
+  loop: "{{ ltm_persistence_profiles_present | default([]) }}"
+  loop_control:
+    label: "{{ item.partition | default('Common') }}/{{ item.name }}"
+  when: item.type == 'universal'
+
+- name: Create LTM policies
+  f5networks.f5_modules.bigip_policy:
+    provider: "{{ provider }}"
+    partition: "{{ item.partition | default('Common') }}"
+    name: "{{ item.name }}"
+    description: "{{ item.description | default(omit) }}"
+    strategy: "{{ item.strategy | default('/Common/first-match') }}"
+    rules: "{{ item.rules | default(omit) }}"
+    state: "{{ item.state | default('present') }}"
+  loop: "{{ ltm_policies_present | default([]) }}"
   loop_control:
     label: "{{ item.partition | default('Common') }}/{{ item.name }}"

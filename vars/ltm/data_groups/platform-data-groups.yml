@@ -1,0 +1,27 @@
+---
+# First-class data groups for reuse across iRules and policies.
+ltm_data_groups:
+  - name: "dg_internal_subnets"
+    type: "ip"
+    description: "Trusted internal subnet ranges"
+    records:
+      - "10.0.0.0/8"
+      - "172.16.0.0/12"
+      - "192.168.0.0/16"
+
+  - name: "dg_blocked_uris"
+    type: "string"
+    description: "URI paths that should be blocked"
+    records:
+      - "/admin"
+      - "/debug"
+      - "/.env"
+
+  - name: "dg_redirect_map"
+    type: "string"
+    description: "Old-to-new URL redirect mapping"
+    records:
+      - name: "/old-app"
+        value: "/new-app"
+      - name: "/legacy"
+        value: "/current"

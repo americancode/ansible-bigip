@@ -344,6 +344,250 @@
         ).ltm_virtual_server_defaults | default({})
       }}
 
+- name: Discover LTM persistence profile fragments
+  ansible.builtin.set_fact:
+    ltm_persistence_profile_files: >-
+      {{
+        lookup(
+          'ansible.builtin.pipe',
+          "find {{ repo_root }}/vars/ltm/persistence -type f -name '*.yml' ! -name 'settings.yml' 2>/dev/null | sort"
+        ).splitlines() | reject('equalto', '') | list
+      }}
+    ltm_persistence_profile_deletion_files: >-
+      {{
+        lookup(
+          'ansible.builtin.pipe',
+          "find {{ repo_root }}/vars/ltm/deletions/persistence -type f -name '*.yml' ! -name 'settings.yml' 2>/dev/null | sort"
+        ).splitlines() | reject('equalto', '') | list
+      }}
+
+- name: Load LTM persistence profile fragments
+  ansible.builtin.include_vars:
+    file: "{{ item }}"
+    name: ltm_persistence_profile_fragment
+  loop: "{{ ltm_persistence_profile_files }}"
+  register: ltm_persistence_profile_include_results
+
+- name: Load LTM persistence profile deletion fragments
+  ansible.builtin.include_vars:
+    file: "{{ item }}"
+    name: ltm_persistence_profile_deletion_fragment
+  loop: "{{ ltm_persistence_profile_deletion_files }}"
+  register: ltm_persistence_profile_deletion_include_results
+
+- name: Aggregate LTM persistence profiles with directory settings
+  ansible.builtin.set_fact:
+    ltm_persistence_profiles: "{{ ltm_persistence_profiles | default([]) + [ ltm_persistence_profile_directory_defaults | combine(item.1, recursive=True) ] }}"
+  loop: "{{ query('subelements', ltm_persistence_profile_include_results.results, 'ansible_facts.ltm_persistence_profile_fragment.ltm_persistence_profiles', {'skip_missing': True}) }}"
+  vars:
+    ltm_persistence_profile_settings_path: "{{ item.0.item | regex_replace('/[^/]+$', '/settings.yml') }}"
+    ltm_persistence_profile_directory_defaults: >-
+      {{
+        (
+          lookup('ansible.builtin.file', ltm_persistence_profile_settings_path, errors='ignore')
+          | default('{}', true)
+          | from_yaml
+        ).ltm_persistence_profile_defaults | default({})
+      }}
+
+- name: Aggregate LTM persistence profile deletions with directory settings
+  ansible.builtin.set_fact:
+    ltm_persistence_profile_deletions: "{{ ltm_persistence_profile_deletions | default([]) + [ (ltm_persistence_profile_deletion_directory_defaults | combine(item.1, recursive=True)) | combine({'state': 'absent'}, recursive=True) ] }}"
+  loop: "{{ query('subelements', ltm_persistence_profile_deletion_include_results.results, 'ansible_facts.ltm_persistence_profile_deletion_fragment.ltm_persistence_profiles', {'skip_missing': True}) }}"
+  vars:
+    ltm_persistence_profile_deletion_settings_path: "{{ item.0.item | regex_replace('/[^/]+$', '/settings.yml') }}"
+    ltm_persistence_profile_deletion_directory_defaults: >-
+      {{
+        (
+          lookup('ansible.builtin.file', ltm_persistence_profile_deletion_settings_path, errors='ignore')
+          | default('{}', true)
+          | from_yaml
+        ).ltm_persistence_profile_defaults | default({})
+      }}
+
+- name: Discover LTM iRule fragments
+  ansible.builtin.set_fact:
+    ltm_irule_files: >-
+      {{
+        lookup(
+          'ansible.builtin.pipe',
+          "find {{ repo_root }}/vars/ltm/irules -type f -name '*.yml' ! -name 'settings.yml' 2>/dev/null | sort"
+        ).splitlines() | reject('equalto', '') | list
+      }}
+    ltm_irule_deletion_files: >-
+      {{
+        lookup(
+          'ansible.builtin.pipe',
+          "find {{ repo_root }}/vars/ltm/deletions/irules -type f -name '*.yml' ! -name 'settings.yml' 2>/dev/null | sort"
+        ).splitlines() | reject('equalto', '') | list
+      }}
+
+- name: Load LTM iRule fragments
+  ansible.builtin.include_vars:
+    file: "{{ item }}"
+    name: ltm_irule_fragment
+  loop: "{{ ltm_irule_files }}"
+  register: ltm_irule_include_results
+
+- name: Load LTM iRule deletion fragments
+  ansible.builtin.include_vars:
+    file: "{{ item }}"
+    name: ltm_irule_deletion_fragment
+  loop: "{{ ltm_irule_deletion_files }}"
+  register: ltm_irule_deletion_include_results
+
+- name: Aggregate LTM iRules with directory settings
+  ansible.builtin.set_fact:
+    ltm_irules: "{{ ltm_irules | default([]) + [ ltm_irule_directory_defaults | combine(item.1, recursive=True) ] }}"
+  loop: "{{ query('subelements', ltm_irule_include_results.results, 'ansible_facts.ltm_irule_fragment.ltm_irules', {'skip_missing': True}) }}"
+  vars:
+    ltm_irule_settings_path: "{{ item.0.item | regex_replace('/[^/]+$', '/settings.yml') }}"
+    ltm_irule_directory_defaults: >-
+      {{
+        (
+          lookup('ansible.builtin.file', ltm_irule_settings_path, errors='ignore')
+          | default('{}', true)
+          | from_yaml
+        ).ltm_irule_defaults | default({})
+      }}
+
+- name: Aggregate LTM iRule deletions with directory settings
+  ansible.builtin.set_fact:
+    ltm_irule_deletions: "{{ ltm_irule_deletions | default([]) + [ (ltm_irule_deletion_directory_defaults | combine(item.1, recursive=True)) | combine({'state': 'absent'}, recursive=True) ] }}"
+  loop: "{{ query('subelements', ltm_irule_deletion_include_results.results, 'ansible_facts.ltm_irule_deletion_fragment.ltm_irules', {'skip_missing': True}) }}"
+  vars:
+    ltm_irule_deletion_settings_path: "{{ item.0.item | regex_replace('/[^/]+$', '/settings.yml') }}"
+    ltm_irule_deletion_directory_defaults: >-
+      {{
+        (
+          lookup('ansible.builtin.file', ltm_irule_deletion_settings_path, errors='ignore')
+          | default('{}', true)
+          | from_yaml
+        ).ltm_irule_defaults | default({})
+      }}
+
+- name: Discover LTM data group fragments
+  ansible.builtin.set_fact:
+    ltm_data_group_files: >-
+      {{
+        lookup(
+          'ansible.builtin.pipe',
+          "find {{ repo_root }}/vars/ltm/data_groups -type f -name '*.yml' ! -name 'settings.yml' 2>/dev/null | sort"
+        ).splitlines() | reject('equalto', '') | list
+      }}
+    ltm_data_group_deletion_files: >-
+      {{
+        lookup(
+          'ansible.builtin.pipe',
+          "find {{ repo_root }}/vars/ltm/deletions/data_groups -type f -name '*.yml' ! -name 'settings.yml' 2>/dev/null | sort"
+        ).splitlines() | reject('equalto', '') | list
+      }}
+
+- name: Load LTM data group fragments
+  ansible.builtin.include_vars:
+    file: "{{ item }}"
+    name: ltm_data_group_fragment
+  loop: "{{ ltm_data_group_files }}"
+  register: ltm_data_group_include_results
+
+- name: Load LTM data group deletion fragments
+  ansible.builtin.include_vars:
+    file: "{{ item }}"
+    name: ltm_data_group_deletion_fragment
+  loop: "{{ ltm_data_group_deletion_files }}"
+  register: ltm_data_group_deletion_include_results
+
+- name: Aggregate LTM data groups with directory settings
+  ansible.builtin.set_fact:
+    ltm_data_groups: "{{ ltm_data_groups | default([]) + [ ltm_data_group_directory_defaults | combine(item.1, recursive=True) ] }}"
+  loop: "{{ query('subelements', ltm_data_group_include_results.results, 'ansible_facts.ltm_data_group_fragment.ltm_data_groups', {'skip_missing': True}) }}"
+  vars:
+    ltm_data_group_settings_path: "{{ item.0.item | regex_replace('/[^/]+$', '/settings.yml') }}"
+    ltm_data_group_directory_defaults: >-
+      {{
+        (
+          lookup('ansible.builtin.file', ltm_data_group_settings_path, errors='ignore')
+          | default('{}', true)
+          | from_yaml
+        ).ltm_data_group_defaults | default({})
+      }}
+
+- name: Aggregate LTM data group deletions with directory settings
+  ansible.builtin.set_fact:
+    ltm_data_group_deletions: "{{ ltm_data_group_deletions | default([]) + [ (ltm_data_group_deletion_directory_defaults | combine(item.1, recursive=True)) | combine({'state': 'absent'}, recursive=True) ] }}"
+  loop: "{{ query('subelements', ltm_data_group_deletion_include_results.results, 'ansible_facts.ltm_data_group_deletion_fragment.ltm_data_groups', {'skip_missing': True}) }}"
+  vars:
+    ltm_data_group_deletion_settings_path: "{{ item.0.item | regex_replace('/[^/]+$', '/settings.yml') }}"
+    ltm_data_group_deletion_directory_defaults: >-
+      {{
+        (
+          lookup('ansible.builtin.file', ltm_data_group_deletion_settings_path, errors='ignore')
+          | default('{}', true)
+          | from_yaml
+        ).ltm_data_group_defaults | default({})
+      }}
+
+- name: Discover LTM policy fragments
+  ansible.builtin.set_fact:
+    ltm_policy_files: >-
+      {{
+        lookup(
+          'ansible.builtin.pipe',
+          "find {{ repo_root }}/vars/ltm/policies -type f -name '*.yml' ! -name 'settings.yml' 2>/dev/null | sort"
+        ).splitlines() | reject('equalto', '') | list
+      }}
+    ltm_policy_deletion_files: >-
+      {{
+        lookup(
+          'ansible.builtin.pipe',
+          "find {{ repo_root }}/vars/ltm/deletions/policies -type f -name '*.yml' ! -name 'settings.yml' 2>/dev/null | sort"
+        ).splitlines() | reject('equalto', '') | list
+      }}
+
+- name: Load LTM policy fragments
+  ansible.builtin.include_vars:
+    file: "{{ item }}"
+    name: ltm_policy_fragment
+  loop: "{{ ltm_policy_files }}"
+  register: ltm_policy_include_results
+
+- name: Load LTM policy deletion fragments
+  ansible.builtin.include_vars:
+    file: "{{ item }}"
+    name: ltm_policy_deletion_fragment
+  loop: "{{ ltm_policy_deletion_files }}"
+  register: ltm_policy_deletion_include_results
+
+- name: Aggregate LTM policies with directory settings
+  ansible.builtin.set_fact:
+    ltm_policies: "{{ ltm_policies | default([]) + [ ltm_policy_directory_defaults | combine(item.1, recursive=True) ] }}"
+  loop: "{{ query('subelements', ltm_policy_include_results.results, 'ansible_facts.ltm_policy_fragment.ltm_policies', {'skip_missing': True}) }}"
+  vars:
+    ltm_policy_settings_path: "{{ item.0.item | regex_replace('/[^/]+$', '/settings.yml') }}"
+    ltm_policy_directory_defaults: >-
+      {{
+        (
+          lookup('ansible.builtin.file', ltm_policy_settings_path, errors='ignore')
+          | default('{}', true)
+          | from_yaml
+        ).ltm_policy_defaults | default({})
+      }}
+
+- name: Aggregate LTM policy deletions with directory settings
+  ansible.builtin.set_fact:
+    ltm_policy_deletions: "{{ ltm_policy_deletions | default([]) + [ (ltm_policy_deletion_directory_defaults | combine(item.1, recursive=True)) | combine({'state': 'absent'}, recursive=True) ] }}"
+  loop: "{{ query('subelements', ltm_policy_deletion_include_results.results, 'ansible_facts.ltm_policy_deletion_fragment.ltm_policies', {'skip_missing': True}) }}"
+  vars:
+    ltm_policy_deletion_settings_path: "{{ item.0.item | regex_replace('/[^/]+$', '/settings.yml') }}"
+    ltm_policy_deletion_directory_defaults: >-
+      {{
+        (
+          lookup('ansible.builtin.file', ltm_policy_deletion_settings_path, errors='ignore')
+          | default('{}', true)
+          | from_yaml
+        ).ltm_policy_defaults | default({})
+      }}
+
 - name: Classify LTM monitor operations
   ansible.builtin.set_fact:
     ltm_monitors_delete: >-
@@ -453,6 +697,98 @@
         +
         (
           (ltm_virtual_servers | default([]))
+          | selectattr('state', 'defined')
+          | rejectattr('state', 'equalto', 'absent')
+          | list
+        )
+      }}
+
+- name: Classify LTM persistence profile operations
+  ansible.builtin.set_fact:
+    ltm_persistence_profiles_delete: >-
+      {{
+        ((ltm_persistence_profiles | default([])) + (ltm_persistence_profile_deletions | default([])))
+        | selectattr('state', 'defined')
+        | selectattr('state', 'equalto', 'absent')
+        | list
+      }}
+    ltm_persistence_profiles_present: >-
+      {{
+        (ltm_persistence_profiles | default([]))
+        | rejectattr('state', 'defined')
+        | list
+        +
+        (
+          (ltm_persistence_profiles | default([]))
+          | selectattr('state', 'defined')
+          | rejectattr('state', 'equalto', 'absent')
+          | list
+        )
+      }}
+
+- name: Classify LTM iRule operations
+  ansible.builtin.set_fact:
+    ltm_irules_delete: >-
+      {{
+        ((ltm_irules | default([])) + (ltm_irule_deletions | default([])))
+        | selectattr('state', 'defined')
+        | selectattr('state', 'equalto', 'absent')
+        | list
+      }}
+    ltm_irules_present: >-
+      {{
+        (ltm_irules | default([]))
+        | rejectattr('state', 'defined')
+        | list
+        +
+        (
+          (ltm_irules | default([]))
+          | selectattr('state', 'defined')
+          | rejectattr('state', 'equalto', 'absent')
+          | list
+        )
+      }}
+
+- name: Classify LTM data group operations
+  ansible.builtin.set_fact:
+    ltm_data_groups_delete: >-
+      {{
+        ((ltm_data_groups | default([])) + (ltm_data_group_deletions | default([])))
+        | selectattr('state', 'defined')
+        | selectattr('state', 'equalto', 'absent')
+        | list
+      }}
+    ltm_data_groups_present: >-
+      {{
+        (ltm_data_groups | default([]))
+        | rejectattr('state', 'defined')
+        | list
+        +
+        (
+          (ltm_data_groups | default([]))
+          | selectattr('state', 'defined')
+          | rejectattr('state', 'equalto', 'absent')
+          | list
+        )
+      }}
+
+- name: Classify LTM policy operations
+  ansible.builtin.set_fact:
+    ltm_policies_delete: >-
+      {{
+        ((ltm_policies | default([])) + (ltm_policy_deletions | default([])))
+        | selectattr('state', 'defined')
+        | selectattr('state', 'equalto', 'absent')
+        | list
+      }}
+    ltm_policies_present: >-
+      {{
+        (ltm_policies | default([]))
+        | rejectattr('state', 'defined')
+        | list
+        +
+        (
+          (ltm_policies | default([]))
           | selectattr('state', 'defined')
           | rejectattr('state', 'equalto', 'absent')
           | list
