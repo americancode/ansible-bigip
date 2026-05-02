@@ -9,6 +9,100 @@
     - vars/common.yml
 
   pre_tasks:
+    - name: Discover repo-known LTM virtual server fragments
+      ansible.builtin.set_fact:
+        ltm_virtual_server_files: >-
+          {{
+            lookup(
+              'ansible.builtin.pipe',
+              "find vars/ltm/virtual_servers -type f -name '*.yml' ! -name 'settings.yml' 2>/dev/null | sort"
+            ).splitlines() | reject('equalto', '') | list
+          }}
+        ltm_virtual_server_deletion_files: >-
+          {{
+            lookup(
+              'ansible.builtin.pipe',
+              "find vars/ltm/deletions/virtual_servers -type f -name '*.yml' ! -name 'settings.yml' 2>/dev/null | sort"
+            ).splitlines() | reject('equalto', '') | list
+          }}
+
+    - name: Load repo-known LTM virtual server fragments
+      ansible.builtin.include_vars:
+        file: "{{ item }}"
+        name: ltm_virtual_server_fragment
+      loop: "{{ ltm_virtual_server_files }}"
+      register: ltm_virtual_server_include_results
+
+    - name: Load repo-known LTM virtual server deletion fragments
+      ansible.builtin.include_vars:
+        file: "{{ item }}"
+        name: ltm_virtual_server_deletion_fragment
+      loop: "{{ ltm_virtual_server_deletion_files }}"
+      register: ltm_virtual_server_deletion_include_results
+
+    - name: Aggregate repo-known LTM virtual servers with directory settings
+      ansible.builtin.set_fact:
+        repo_ltm_virtual_servers: "{{ repo_ltm_virtual_servers | default([]) + [ ltm_virtual_server_directory_defaults | combine(item.1, recursive=True) ] }}"
+      loop: "{{ query('subelements', ltm_virtual_server_include_results.results, 'ansible_facts.ltm_virtual_server_fragment.ltm_virtual_servers', {'skip_missing': True}) }}"
+      vars:
+        ltm_virtual_server_settings_path: "{{ item.0.item | regex_replace('/[^/]+$', '/settings.yml') }}"
+        ltm_virtual_server_directory_defaults: >-
+          {{
+            (
+              lookup('ansible.builtin.file', ltm_virtual_server_settings_path, errors='ignore')
+              | default('{}', true)
+              | from_yaml
+            ).ltm_virtual_server_defaults | default({})
+          }}
+
+    - name: Aggregate repo-known LTM virtual server deletions with directory settings
+      ansible.builtin.set_fact:
+        repo_ltm_virtual_server_deletions: "{{ repo_ltm_virtual_server_deletions | default([]) + [ (ltm_virtual_server_deletion_directory_defaults | combine(item.1, recursive=True)) | combine({'state': 'absent'}, recursive=True) ] }}"
+      loop: "{{ query('subelements', ltm_virtual_server_deletion_include_results.results, 'ansible_facts.ltm_virtual_server_deletion_fragment.ltm_virtual_servers', {'skip_missing': True}) }}"
+      vars:
+        ltm_virtual_server_deletion_settings_path: "{{ item.0.item | regex_replace('/[^/]+$', '/settings.yml') }}"
+        ltm_virtual_server_deletion_directory_defaults: >-
+          {{
+            (
+              lookup('ansible.builtin.file', ltm_virtual_server_deletion_settings_path, errors='ignore')
+              | default('{}', true)
+              | from_yaml
+            ).ltm_virtual_server_defaults | default({})
+          }}
+
+    - name: Classify repo-known LTM virtual server operations
+      ansible.builtin.set_fact:
+        repo_ltm_virtual_servers_present: >-
+          {{
+            (repo_ltm_virtual_servers | default([]))
+            | rejectattr('state', 'defined')
+            | list
+            +
+            (
+              (repo_ltm_virtual_servers | default([]))
+              | selectattr('state', 'defined')
+              | rejectattr('state', 'equalto', 'absent')
+              | list
+            )
+          }}
+
+    - name: Build repo-known LTM virtual server lookup
+      ansible.builtin.set_fact:
+        repo_ltm_virtual_server_lookup: >-
+          {{
+            repo_ltm_virtual_server_lookup | default({}) | combine({
+              ('/' ~ (item.partition | default('Common')) ~ '/' ~ item.name): {
+                'destination': item.destination,
+                'destination_port': item.destination_port
+              }
+            })
+          }}
+      loop: "{{ repo_ltm_virtual_servers_present | default([]) }}"
+      when:
+        - item.name is defined
+        - item.destination is defined
+        - item.destination_port is defined
+
     - name: Discover GTM datacenter fragments
       ansible.builtin.set_fact:
         gtm_datacenter_files: >-
@@ -234,7 +328,8 @@
                 | normalize_gtm_pool(
                     gtm_pool_directory_defaults,
                     gtm_pool_member_defaults,
-                    gtm_pool_monitor_sets
+                    gtm_pool_monitor_sets,
+                    repo_ltm_virtual_server_lookup | default({})
                   )
               )
             ]
@@ -269,7 +364,8 @@
                   | normalize_gtm_pool(
                       gtm_pool_deletion_directory_defaults,
                       gtm_pool_deletion_member_defaults,
-                      gtm_pool_deletion_monitor_sets
+                      gtm_pool_deletion_monitor_sets,
+                      repo_ltm_virtual_server_lookup | default({})
                     )
                 )
                 | combine({'state': 'absent'}, recursive=True)
@@ -522,7 +618,8 @@
                       | normalize_gtm_pool(
                           gtm_wide_ip_pool_defaults,
                           gtm_wide_ip_member_defaults,
-                          gtm_wide_ip_monitor_sets
+                          gtm_wide_ip_monitor_sets,
+                          repo_ltm_virtual_server_lookup | default({})
                         )
                     ),
                     recursive=True
@@ -562,7 +659,8 @@
                       | normalize_gtm_pool(
                           gtm_wide_ip_pool_defaults,
                           gtm_wide_ip_member_defaults,
-                          gtm_wide_ip_monitor_sets
+                          gtm_wide_ip_monitor_sets,
+                          repo_ltm_virtual_server_lookup | default({})
                         )
                     ),
                     recursive=True

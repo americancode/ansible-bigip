@@ -50,6 +50,7 @@ Examples:
 - LTM virtual servers can embed their own pool definitions
 - GTM Wide IPs can embed their own GTM pools
 - shared nodes, pools, datacenters, and TLS objects can live in first-class trees
+- GTM pool members can resolve `address` and `port` from repo-known LTM virtual servers when `virtual_server` names already match
 
 ## Deletions
 

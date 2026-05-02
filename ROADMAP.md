@@ -89,6 +89,7 @@ Implemented today:
   - first-class pools
   - Wide-IP-centric embedded pools
   - static server model
+  - optional LTM virtual resolution for GTM pool members
   - per-object and per-directory partition handling
   - enabled/disabled semantics where supported
   - deletion trees
@@ -530,7 +531,7 @@ This is the practical next sequence for the current repo.
    - [x] `member_defaults`
    - [x] `monitor_sets`
    - [x] subdirectory maintenance defaults via `settings.yml` object defaults
-9. [ ] Add optional LTM virtual resolution
+9. [x] Add optional LTM virtual resolution
 10. [x] Define TLS secret handling approach
 
 ## Issue-Sized Execution Plan
@@ -563,7 +564,7 @@ These are the first concrete tickets I would open.
 - [x] Restore hybrid Wide IP embedded-pool support
 - [x] Add GTM `pool_defaults`, `member_defaults`, and `monitor_sets`
 - [x] Add subdirectory maintenance defaults
-- [ ] Add optional LTM virtual resolution
+- [x] Add optional LTM virtual resolution
 
 ### Milestone 4: Platform and HA
 

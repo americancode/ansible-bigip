@@ -898,6 +898,7 @@ class Validator:
         servers = self.objects.get("gtm_servers", [])
         pools = self.objects.get("gtm_pools", [])
         wide_ips = self.objects.get("gtm_wide_ips", [])
+        ltm_virtual_servers = self.objects.get("ltm_virtual_servers", [])
 
         active_datacenter_names = set()
         for obj in datacenters:
@@ -934,6 +935,7 @@ class Validator:
         self.check_duplicates(servers, lambda obj: ("gtm_server", obj.partition, obj.data.get("name")), "GTM server")
 
         active_pool_names = set()
+        active_ltm_virtual_servers = self.build_ltm_virtual_server_lookup(ltm_virtual_servers)
 
         for obj in pools:
             self.require_fields(obj, ["name"])
@@ -946,6 +948,7 @@ class Validator:
                 settings_payload.get("gtm_pool_defaults", {}),
                 settings_payload.get("gtm_member_defaults", {}),
                 settings_payload.get("gtm_monitor_sets", {}),
+                active_ltm_virtual_servers,
             )
 
             record_type = str(normalized_pool.get("record_type", "a"))
@@ -966,6 +969,7 @@ class Validator:
                 members=normalized_pool.get("members"),
                 active_server_names=active_server_names,
                 active_monitor_names=active_monitor_names,
+                active_ltm_virtual_servers=active_ltm_virtual_servers,
             )
 
         self.check_duplicates(
@@ -1007,6 +1011,7 @@ class Validator:
                         settings_payload.get("gtm_pool_defaults", {}),
                         settings_payload.get("gtm_member_defaults", {}),
                         settings_payload.get("gtm_monitor_sets", {}),
+                        active_ltm_virtual_servers,
                     )
                     pool_partition = str(normalized_pool.get("partition", obj.partition))
                     active_pool_names.add(self.fq_gtm_pool_name(pool_partition, record_type, str(normalized_pool["name"])))
@@ -1024,6 +1029,7 @@ class Validator:
                         members=normalized_pool.get("members"),
                         active_server_names=active_server_names,
                         active_monitor_names=active_monitor_names,
+                        active_ltm_virtual_servers=active_ltm_virtual_servers,
                     )
                     continue
 
@@ -1049,6 +1055,7 @@ class Validator:
         members: Any,
         active_server_names: set[str],
         active_monitor_names: set[str],
+        active_ltm_virtual_servers: dict[str, dict[str, Any]],
     ) -> None:
         if members is None:
             return
@@ -1064,6 +1071,14 @@ class Validator:
                 self.error(source, f"GTM pool `{pool_name}` member {member_index} must be a mapping")
                 continue
             self.require_fields(member, ["server", "virtual_server"], source, f"GTM member {member_index}")
+            self.validate_gtm_member_ltm_reference(
+                source=source,
+                pool_name=pool_name,
+                member_index=member_index,
+                pool_partition=pool_partition,
+                member=member,
+                active_ltm_virtual_servers=active_ltm_virtual_servers,
+            )
             if member.get("state") != "absent":
                 self.require_fields(member, ["address", "port"], source, f"GTM member {member_index}")
             server_partition = str(member.get("partition", pool_partition))
@@ -1079,6 +1094,47 @@ class Validator:
                     known_monitors=active_monitor_names,
                     kind="GTM member monitor",
                 )
+
+    def validate_gtm_member_ltm_reference(
+        self,
+        *,
+        source: str,
+        pool_name: Any,
+        member_index: int,
+        pool_partition: str,
+        member: dict[str, Any],
+        active_ltm_virtual_servers: dict[str, dict[str, Any]],
+    ) -> None:
+        if member.get("address") not in (None, "") and member.get("port") not in (None, ""):
+            return
+
+        ltm_name = member.get("ltm_virtual_server", member.get("virtual_server"))
+        if ltm_name in (None, ""):
+            return
+
+        ltm_partition = str(member.get("ltm_partition", member.get("partition", pool_partition)))
+        fq_ltm_virtual = ltm_name if isinstance(ltm_name, str) and ltm_name.startswith("/") else self.fq_name(ltm_partition, str(ltm_name))
+        if fq_ltm_virtual not in active_ltm_virtual_servers:
+            self.error(
+                source,
+                f"GTM pool `{pool_name}` member {member_index} cannot resolve repo-known LTM virtual `{fq_ltm_virtual}`",
+            )
+
+    def build_ltm_virtual_server_lookup(self, virtual_servers: list[LoadedObject]) -> dict[str, dict[str, Any]]:
+        lookup: dict[str, dict[str, Any]] = {}
+        for obj in virtual_servers:
+            if obj.effective_state == "absent":
+                continue
+            name = obj.data.get("name")
+            destination = obj.data.get("destination")
+            destination_port = obj.data.get("destination_port")
+            if name in (None, "") or destination in (None, "") or destination_port in (None, ""):
+                continue
+            lookup[self.fq_name(obj.partition, str(name))] = {
+                "destination": destination,
+                "destination_port": destination_port,
+            }
+        return lookup
 
     def validate_monitor_reference(
         self,

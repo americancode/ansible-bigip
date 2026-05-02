@@ -8,12 +8,9 @@ gtm_pools:
     members:
       - server: "bigip-east"
         virtual_server: "vs_inventory_east_443"
-        address: "10.201.0.80"
-        port: 443
       - server: "bigip-west"
         virtual_server: "vs_inventory_west_443"
-        address: "10.202.0.80"
-        port: 443
+        ltm_virtual_server: "vs_inventory_west_443"
 
   - name: "pool_reporting_global"
     record_type: "a"
@@ -23,9 +20,5 @@ gtm_pools:
     members:
       - server: "bigip-east"
         virtual_server: "vs_reporting_east_443"
-        address: "10.201.0.81"
-        port: 443
       - server: "bigip-west"
         virtual_server: "vs_reporting_west_443"
-        address: "10.202.0.81"
-        port: 443
