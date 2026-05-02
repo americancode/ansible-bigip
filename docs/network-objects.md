@@ -182,3 +182,20 @@ The apply order reflects dependencies:
 8. NATs
 
 The delete order is the reverse.
+
+## Drift and Import
+
+`tools/drift-check` and `tools/import-from-bigip` now cover:
+
+- VLANs
+- trunks
+- route domains
+- self IPs
+- static routes
+- SNAT translations
+- SNAT pools
+- NATs
+
+Current limitation:
+
+- helper-tool parity for these network objects is object-type complete, but field-level drift comparison is still shallower than runtime coverage for some advanced attributes

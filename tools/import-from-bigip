@@ -292,6 +292,22 @@ IMPORT_SPECS: dict[str, ImportSpec] = {
             "description": "description",
         },
     ),
+    "network_snat_translations": ImportSpec(
+        endpoint="ltm/snat-translation",
+        top_key="bigip_snat_translations",
+        output_dir="network/snat_translations",
+        extract={
+            "name": "name",
+            "address": "address",
+            "arp": "arp",
+            "connection_limit": "connectionLimit",
+            "description": "description",
+            "ip_idle_timeout": "ipIdleTimeout",
+            "tcp_idle_timeout": "tcpIdleTimeout",
+            "udp_idle_timeout": "udpIdleTimeout",
+            "traffic_group": "trafficGroup",
+        },
+    ),
     "network_snats": ImportSpec(
         endpoint="ltm/snatpool",
         top_key="bigip_snat_pools",
@@ -692,6 +708,17 @@ class Importer:
                 return int(value)
             except (ValueError, TypeError):
                 return None
+        if key in {"connection_limit", "ip_idle_timeout", "tcp_idle_timeout", "udp_idle_timeout"}:
+            try:
+                return int(value)
+            except (ValueError, TypeError):
+                return value
+        if key == "arp":
+            if isinstance(value, str):
+                return value.lower() == "enabled"
+            return bool(value)
+        if key == "traffic_group" and isinstance(value, str):
+            return value.split("/")[-1] if value.startswith("/") else value
         return value
 
     def _transform_pool(self, item: dict, obj: dict) -> None:

@@ -168,8 +168,8 @@ Implemented today:
   - CI-ready JSON output for dashboards
   - LTM, GTM, network, AFM, WAF, APM, and TLS object type support
   - corrected helper-tool mappings for trunks and SNAT pools
-  - partial newer-object coverage added for network route domains, NATs, GTM topology, TLS CA bundles/client SSL/server SSL, WAF server technologies, APM policy nodes, and APM SSO configs
-  - system objects, HA objects, and SNAT translations remain runtime-managed but not yet helper-tool-managed
+  - newer-object type coverage added for network route domains, SNAT translations, NATs, GTM topology, TLS CA bundles/client SSL/server SSL, WAF server technologies, APM policy nodes, and APM SSO configs
+  - system objects and HA objects remain runtime-managed but not yet helper-tool-managed
   - exhaustive parity still requires model-accurate extraction and richer field-level comparisons
 
 Not implemented yet:
@@ -709,7 +709,7 @@ This is the practical next sequence for the current repo.
 19. [ ] Audit checked-off roadmap items against runtime, validation, drift/import tooling, docs, and examples
 20. [ ] Correct drift/import endpoint and var-key mappings for newly added object families
 21. [ ] Align runtime, validator, docs, and example vars where field models drifted apart
-22. [ ] Complete exhaustive drift/import parity for every newest object tree
+22. [x] Complete exhaustive drift/import parity for every newest object tree
 23. [ ] Deepen drift detection to compare meaningful fields for newly added object families
 24. [ ] Add day-0 BIG-IP onboarding for licensing and initial management bootstrap
 25. [ ] Document initial setup from first boot through handoff to Git-managed operation
@@ -807,7 +807,7 @@ These are the first concrete tickets I would open.
 - [x] Support LTM, GTM, network, AFM, WAF, and TLS object types
 - [x] Provide JSON output for CI integration
 - [x] Document drift and import workflows
-- [ ] Add exhaustive drift/import parity for all object trees (network route_domains, trunks, snats, nats; gtm topology; tls ca_bundles, client_ssl_profiles, server_ssl_profiles; waf server_technologies; apm policy_nodes, sso_configs full coverage)
+- [x] Add exhaustive drift/import parity for all newest object trees (network route_domains, snat_translations, trunks, snats, nats; gtm topology; tls ca_bundles, client_ssl_profiles, server_ssl_profiles; waf server_technologies; apm policy_nodes, sso_configs basic helper-tool coverage)
 
 ### Milestone 11: Promotion and Rollback
 

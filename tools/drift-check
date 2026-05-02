@@ -184,6 +184,7 @@ class VarTreeLoader:
         self._load_simple_tree("network_routes", VARS_DIR / "network" / "routes", "bigip_routes")
         self._load_simple_tree("network_route_domains", VARS_DIR / "network" / "route_domains", "bigip_route_domains")
         self._load_simple_tree("network_trunks", VARS_DIR / "network" / "trunks", "bigip_trunks")
+        self._load_simple_tree("network_snat_translations", VARS_DIR / "network" / "snat_translations", "bigip_snat_translations")
         self._load_simple_tree("network_snats", VARS_DIR / "network" / "snats", "bigip_snat_pools")
         self._load_simple_tree("network_nats", VARS_DIR / "network" / "nats", "bigip_nats")
         self._load_simple_tree("afm_address_lists", VARS_DIR / "security" / "afm" / "address_lists", "afm_address_lists")
@@ -246,6 +247,7 @@ class DriftChecker:
         "network_routes": "net/route",
         "network_route_domains": "net/route-domain",
         "network_trunks": "net/trunk",
+        "network_snat_translations": "ltm/snat-translation",
         "network_snats": "ltm/snatpool",
         "network_nats": "ltm/nat",
         "afm_address_lists": "security/firewall/address-list",

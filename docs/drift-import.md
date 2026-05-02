@@ -71,6 +71,7 @@ The tool reports drift in three categories:
 | `network_self_ips` | `/mgmt/tm/net/self` |
 | `network_routes` | `/mgmt/tm/net/route` |
 | `network_route_domains` | `/mgmt/tm/net/route-domain` |
+| `network_snat_translations` | `/mgmt/tm/ltm/snat-translation` |
 | `network_snats` | `/mgmt/tm/ltm/snatpool` |
 | `network_nats` | `/mgmt/tm/ltm/nat` |
 | `afm_address_lists` | `/mgmt/tm/security/firewall/address-list` |
@@ -98,7 +99,6 @@ The tool reports drift in three categories:
 Runtime playbook coverage is broader than helper-tool coverage. The following object families are still runtime-managed only and are not yet handled accurately enough for drift/import:
 
 - `system` and `ha` domain objects
-- SNAT translations under `vars/network/snat_translations`
 
 For several newer supported families, drift/import is present but still not full-fidelity. Treat generated output as a starting point for review, not as an authoritative round-trip export of every field. This is especially true for:
 
