@@ -39,6 +39,8 @@ The repository already supports:
 The main remaining gaps are:
 
 - finish helper-tool parity for the newest object trees where runtime playbook support now exists but drift/import coverage is not yet exhaustive
+- deepen drift tooling from basic existence checks to field-level comparison for newer object families
+- add true day-0 onboarding for brand-new BIG-IPs so Git can drive licensing, initial management bootstrap, and first secure API handoff
 - deeper HA lifecycle (connection mirroring, failover metadata, automated testing)
 - UCS backup/export workflow
 - certificate rotation automation
@@ -675,16 +677,18 @@ This is the practical next sequence for the current repo.
  17. [x] Add APM auth servers, SSO configs, and policy nodes (tmsh-driven)
 18. [x] Add APM access profiles, per-session policies, and macros
 19. [ ] Complete exhaustive drift/import parity for every newest object tree
+20. [ ] Deepen drift detection to compare meaningful fields for newly added object families
+21. [ ] Add day-0 BIG-IP onboarding for licensing and initial management bootstrap
 
 ## Extended Backlog
 
 These are valuable enhancements identified during implementation:
 
-20. [ ] Deeper HA lifecycle management (connection mirroring, failover metadata, automated failover testing)
-21. [ ] UCS backup/export workflow for configuration snapshots
-22. [ ] Certificate rotation automation with renewal detection
-23. [ ] Auth provider integration for system users (LDAP/AD/RADIUS for BIG-IP admin auth)
-24. [ ] Login banner management for system compliance
+22. [ ] Deeper HA lifecycle management (connection mirroring, failover metadata, automated failover testing)
+23. [ ] UCS backup/export workflow for configuration snapshots
+24. [ ] Certificate rotation automation with renewal detection
+25. [ ] Auth provider integration for system users (LDAP/AD/RADIUS for BIG-IP admin auth)
+26. [ ] Login banner management for system compliance
 
 ## Issue-Sized Execution Plan
 
