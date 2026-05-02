@@ -32,14 +32,14 @@ The repository already supports:
 - reusable monitor definitions
 - universal `enabled: true` default where modules support admin state
 - offline validation through `tools/validate-vars` with `make validate` wrapper
-- modular documentation under `docs/` covering playbook structure, var layout, hybrid authoring, deletion workflows, AWX operation, validation, TLS secrets, and bootstrap paths
+- modular documentation under `docs/` covering playbook structure, var layout, hybrid authoring, deletion workflows, AWX operation, validation, TLS secrets, network objects, system management, LTM advanced fields, GTM advanced fields, and bootstrap paths
 
 The main remaining gaps are:
 
 - deeper HA lifecycle beyond trust, groups, traffic groups, and config sync
-- deeper LTM object coverage beyond pools/nodes/virtuals/monitors/profiles
-- deeper GTM object coverage beyond datacenters/servers/pools/Wide IPs/monitors
-- security module coverage
+- deeper LTM object coverage (persistence, policies, iRules, data groups)
+- deeper GTM object coverage (topology records, regions)
+- security module coverage (AFM, WAF/ASM, APM)
 - drift detection and promotion workflows
 
 ## Current Implementation Audit
@@ -624,7 +624,7 @@ This is the practical next sequence for the current repo.
    - [x] subdirectory maintenance defaults via `settings.yml` object defaults
 9. [x] Add optional LTM virtual resolution
 10. [x] Define TLS secret handling approach
-11. [ ] Complete missing documentation
+ 11. [x] Complete missing documentation
 
 ## Issue-Sized Execution Plan
 
@@ -673,42 +673,42 @@ These are the first concrete tickets I would open.
 
 ### Milestone 6: Documentation
 
-- [ ] Add network objects guide
+- [x] Add network objects guide
   - VLANs, trunks, route domains, self IPs (floating/local), static routes
   - SNAT pools, SNAT translations, NATs (tmsh workflow)
   - Cross-references between network objects (e.g., NAT to VLAN)
-- [ ] Add system management guide
+- [x] Add system management guide
   - hostname, DNS, NTP, provisioning, users, config save workflow
   - Partition and naming conventions for system objects
-- [ ] Add deletion workflows guide
+- [x] Add deletion workflows guide
   - How to use `vars/*/deletions/` trees
   - `state: absent` pattern on objects in normal trees
   - Review and approval process for destructive changes
-- [ ] Add validation tooling guide
+- [x] Add validation tooling guide
   - How `tools/validate-vars` works and what it checks
   - CI integration and gate behavior
   - How to add validation rules for new object types
   - Handling of `!vault` tags in offline validation
-- [ ] Add variable precedence and settings guide
+- [x] Add variable precedence and settings guide
   - object-level → `settings.yml` → playbook fallback resolution
   - Per-directory `settings.yml` patterns
   - `pool_defaults`, `member_defaults`, `monitor_sets` inheritance
   - Partition override behavior with `Common` fallback
-- [ ] Add LTM advanced fields guide
+- [x] Add LTM advanced fields guide
   - Priority groups, service down action, min active members
   - Slow ramp, queueing, connection limits
   - Persistence, fallback persistence, source CIDR
   - VLAN restrictions, metadata, iRules, policy attachments
-- [ ] Add GTM advanced fields guide
+- [x] Add GTM advanced fields guide
   - Aliases, persistence, last resort pool
   - Load-balancing policy combinations
   - LTM virtual resolution for pool members (`address`/`port` auto-resolution)
-- [ ] Add hybrid authoring guide
+- [x] Add hybrid authoring guide
   - When to embed vs promote shared objects
   - Concise vs verbose models with decision criteria
   - Cross-file linkage patterns and reference resolution
   - Built-in vs custom health check aliases
-- [ ] Add playbook structure guide
+- [x] Add playbook structure guide
   - Split layout rationale: `prep.yml`, `manage.yml`, `apply.yml`, `delete.yml`
   - How discovery, defaults loading, and aggregation work in `prep.yml`
   - Task ordering semantics in `manage.yml`
