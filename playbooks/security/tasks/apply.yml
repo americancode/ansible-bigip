@@ -52,3 +52,23 @@
     state: present
   loop: "{{ afm_policies_present | default([]) }}"
   when: afm_policies_present | default([]) | length > 0
+
+- name: Create WAF/ASM policies
+  bigip_asm_policy_manage:
+    provider: "{{ f5_provider }}"
+    name: "{{ item.name }}"
+    template: "{{ item.template | default(omit) }}"
+    active: "{{ item.active | default(omit) }}"
+    apply: "{{ item.apply | default(omit) }}"
+    state: present
+  loop: "{{ waf_policies_present | default([]) }}"
+  when: waf_policies_present | default([]) | length > 0
+
+- name: Add WAF server technologies to policies
+  bigip_asm_policy_server_technology:
+    provider: "{{ f5_provider }}"
+    name: "{{ item.name }}"
+    policy_name: "{{ item.policy_name }}"
+    state: present
+  loop: "{{ waf_server_technologies_present | default([]) }}"
+  when: waf_server_technologies_present | default([]) | length > 0

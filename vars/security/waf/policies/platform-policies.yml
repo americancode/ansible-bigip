@@ -1,0 +1,24 @@
+---
+# WAF/ASM policy examples for web application security enforcement.
+# Policies are created from built-in templates and activated on the BIG-IP.
+# Server technologies (application frameworks) are added via
+# `vars/security/waf/server_technologies/platform-technologies.yml`.
+# Policies are attached to virtual servers by adding the `websecurity` profile
+# to the VS profiles list in `vars/ltm/virtual_servers/`.
+# Supported fields: `name`, `template` (built-in template name), `active` (bool),
+# `apply` (bool, TMOS v14+), and `state`.
+waf_policies:
+  - name: platform-web-apps
+    description: Comprehensive WAF policy for platform web applications
+    template: "Comprehensive"
+    active: true
+
+  - name: api-protection
+    description: Baseline WAF policy for API virtual servers
+    template: "Vulnerability Assessment Baseline"
+    active: true
+
+  - name: cms-protection
+    description: CMS-specific WAF policy with WordPress template
+    template: "Wordpress"
+    active: true

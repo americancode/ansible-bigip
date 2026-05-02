@@ -33,3 +33,20 @@
     state: absent
   loop: "{{ afm_address_lists_delete | default([]) }}"
   when: afm_address_lists_delete | default([]) | length > 0
+
+- name: Delete WAF server technologies from policies
+  bigip_asm_policy_server_technology:
+    provider: "{{ f5_provider }}"
+    name: "{{ item.name }}"
+    policy_name: "{{ item.policy_name }}"
+    state: absent
+  loop: "{{ waf_server_technologies_delete | default([]) }}"
+  when: waf_server_technologies_delete | default([]) | length > 0
+
+- name: Delete WAF/ASM policies
+  bigip_asm_policy_manage:
+    provider: "{{ f5_provider }}"
+    name: "{{ item.name }}"
+    state: absent
+  loop: "{{ waf_policies_delete | default([]) }}"
+  when: waf_policies_delete | default([]) | length > 0

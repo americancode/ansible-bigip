@@ -1,7 +1,7 @@
-- name: Apply AFM objects
+- name: Apply security objects
   ansible.builtin.import_tasks: apply.yml
 
-- name: Delete AFM objects
+- name: Delete security objects
   ansible.builtin.import_tasks: delete.yml
 
 - name: Save BIG-IP configuration
@@ -13,7 +13,11 @@
     (afm_port_lists_present | default([]) | length > 0) or
     (afm_rules_present | default([]) | length > 0) or
     (afm_policies_present | default([]) | length > 0) or
+    (waf_policies_present | default([]) | length > 0) or
+    (waf_server_technologies_present | default([]) | length > 0) or
     (afm_address_lists_delete | default([]) | length > 0) or
     (afm_port_lists_delete | default([]) | length > 0) or
     (afm_rules_delete | default([]) | length > 0) or
-    (afm_policies_delete | default([]) | length > 0)
+    (afm_policies_delete | default([]) | length > 0) or
+    (waf_policies_delete | default([]) | length > 0) or
+    (waf_server_technologies_delete | default([]) | length > 0)

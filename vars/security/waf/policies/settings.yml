@@ -1,0 +1,2 @@
+waf_policy_defaults:
+  partition: Common

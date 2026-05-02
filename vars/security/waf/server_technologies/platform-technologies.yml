@@ -1,0 +1,22 @@
+---
+# WAF/ASM server technology examples for application framework detection.
+# Server technologies tell ASM which application-specific signatures to apply
+# to a given policy. Each entry references a policy defined in
+# `vars/security/waf/policies/platform-policies.yml`.
+# Supported fields: `name` (server technology name), `policy_name` (parent policy),
+# and `state`.
+waf_server_technologies:
+  - name: "Microsoft ASP.NET"
+    policy_name: platform-web-apps
+
+  - name: "Apache"
+    policy_name: platform-web-apps
+
+  - name: "NGINX"
+    policy_name: api-protection
+
+  - name: "PHP"
+    policy_name: cms-protection
+
+  - name: "MySQL"
+    policy_name: cms-protection

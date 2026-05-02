@@ -282,6 +282,15 @@ IMPORT_SPECS: dict[str, ImportSpec] = {
             "description": "description",
         },
     ),
+    "waf_policies": ImportSpec(
+        endpoint="asm/policies",
+        top_key="waf_policies",
+        output_dir="security/waf/policies",
+        extract={
+            "name": "name",
+            "description": "description",
+        },
+    ),
     "tls_keys": ImportSpec(
         endpoint="sys/crypto/key",
         top_key="tls_keys",

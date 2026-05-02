@@ -158,6 +158,7 @@ class VarTreeLoader:
         self._load_simple_tree("afm_port_lists", VARS_DIR / "security" / "afm" / "port_lists", "afm_port_lists")
         self._load_simple_tree("afm_rules", VARS_DIR / "security" / "afm" / "rules", "afm_rules")
         self._load_simple_tree("afm_policies", VARS_DIR / "security" / "afm" / "policies", "afm_policies")
+        self._load_simple_tree("waf_policies", VARS_DIR / "security" / "waf" / "policies", "waf_policies")
         self._load_simple_tree("tls_keys", VARS_DIR / "tls" / "keys", "tls_keys")
         self._load_simple_tree("tls_certificates", VARS_DIR / "tls" / "certificates", "tls_certificates")
 
@@ -201,6 +202,7 @@ class DriftChecker:
         "afm_port_lists": "security/firewall/port-list",
         "afm_rules": "security/firewall/rule",
         "afm_policies": "security/firewall/rule-list",
+        "waf_policies": "asm/policies",
         "tls_keys": "sys/crypto/key",
         "tls_certificates": "sys/crypto/cert",
     }

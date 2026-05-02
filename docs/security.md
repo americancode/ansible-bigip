@@ -1,8 +1,8 @@
-# AFM Security Playbook
+# Security Playbook (AFM + WAF)
 
 ## Overview
 
-`security.yml` manages BIG-IP Advanced Firewall Manager (AFM) objects through a declarative, split-var-tree model. It covers address lists, port lists, firewall rules, and firewall policies.
+`security.yml` manages BIG-IP Advanced Firewall Manager (AFM) and Web Application Firewall (WAF/ASM) objects through a declarative, split-var-tree model. AFM coverage includes address lists, port lists, firewall rules, and firewall policies. WAF coverage includes ASM policies and server technologies. See [docs/waf.md](waf.md) for WAF-specific details.
 
 ## Playbook Structure
 
@@ -19,24 +19,35 @@ playbooks/security/
 ## Var Tree
 
 ```
-vars/security/afm/
-├── address_lists/                  # AFM address list objects
-│   ├── settings.yml                # Directory defaults
-│   └── platform-addresses.yml      # Example address lists
-├── port_lists/                     # AFM port list objects
-│   ├── settings.yml
-│   └── platform-ports.yml          # Example port lists
-├── rules/                          # AFM firewall rule objects
-│   ├── settings.yml
-│   └── platform-rules.yml          # Example rules
-├── policies/                       # AFM firewall policy objects
-│   ├── settings.yml
-│   └── platform-policies.yml       # Example policies
-└── deletions/                      # Explicit deletion trees
-    ├── address_lists/
-    ├── port_lists/
-    ├── rules/
-    └── policies/
+vars/security/
+├── afm/
+│   ├── address_lists/                  # AFM address list objects
+│   │   ├── settings.yml                # Directory defaults
+│   │   └── platform-addresses.yml      # Example address lists
+│   ├── port_lists/                     # AFM port list objects
+│   │   ├── settings.yml
+│   │   └── platform-ports.yml          # Example port lists
+│   ├── rules/                          # AFM firewall rule objects
+│   │   ├── settings.yml
+│   │   └── platform-rules.yml          # Example rules
+│   ├── policies/                       # AFM firewall policy objects
+│   │   ├── settings.yml
+│   │   └── platform-policies.yml       # Example policies
+│   └── deletions/                      # Explicit deletion trees
+│       ├── address_lists/
+│       ├── port_lists/
+│       ├── rules/
+│       └── policies/
+└── waf/
+    ├── policies/                       # WAF/ASM policy objects
+    │   ├── settings.yml
+    │   └── vm-applications.yml         # Example policies
+    ├── server_technologies/            # Server technology objects
+    │   ├── settings.yml
+    │   └── vm-applications.yml         # Example server technologies
+    └── deletions/                      # Explicit deletion trees
+        ├── policies/
+        └── server_technologies/
 ```
 
 ## Object Types
@@ -139,13 +150,15 @@ afm_address_lists:
 
 Objects are applied and deleted in this order:
 
-1. **Address lists** (foundation, referenced by rules)
-2. **Port lists** (foundation, referenced by rules)
-3. **Firewall rules** (reference address/port lists)
-4. **Firewall policies** (reference rules)
+1. **AFM address lists** (foundation, referenced by rules)
+2. **AFM port lists** (foundation, referenced by rules)
+3. **AFM firewall rules** (reference address/port lists)
+4. **AFM firewall policies** (reference rules)
+5. **WAF policies** (standalone policy definitions)
+6. **WAF server technologies** (reference policies)
 
 Deletion runs in reverse order to respect dependencies.
 
 ## Config Save
 
-The playbook includes a `bigip_config` save step that runs when any AFM objects are created or deleted.
+The playbook includes a `bigip_config` save step that runs when any AFM or WAF objects are created or deleted.

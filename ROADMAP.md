@@ -39,7 +39,7 @@ The repository already supports:
 The main remaining gaps are:
 
 - deeper HA lifecycle beyond trust, groups, traffic groups, and config sync
-- WAF/ASM and APM module coverage
+- APM module coverage
 - drift detection and promotion workflows
 
 ## Current Implementation Audit
@@ -123,6 +123,8 @@ Implemented today:
   - AFM port lists (ports, ranges, nested lists)
   - AFM firewall rules (actions, protocol, source/destination endpoints)
   - AFM firewall policies (ordered rule lists)
+  - WAF/ASM policies (built-in templates, active/apply flags)
+  - WAF server technologies (parent policy references)
   - per-directory `settings.yml` inheritance
   - deletion trees for all object types
   - canonical playbook entrypoint at `playbooks/security.yml`
@@ -135,10 +137,10 @@ Implemented today:
   - `tools/drift-check` for live-vs-Git comparison
   - `tools/import-from-bigip` for brownfield import
   - CI-ready JSON output for dashboards
+  - LTM, GTM, network, AFM, WAF, and TLS object type support
 
 Not implemented yet:
 
-- WAF/ASM policy management
 - APM access object management
 
 ## Target Repo Shape
@@ -647,6 +649,7 @@ This is the practical next sequence for the current repo.
  12. [x] Add LTM persistence, iRules, data groups, and policies
  13. [x] Add virtual server VLAN filtering, metadata, and log profiles
  14. [x] Add GTM topology regions and topology records
+ 15. [x] Add WAF/ASM policies and server technologies to security playbook
 
 ## Issue-Sized Execution Plan
 
@@ -728,7 +731,7 @@ These are the first concrete tickets I would open.
 
 - [x] Create `tools/drift-check` for live-vs-Git comparison
 - [x] Create `tools/import-from-bigip` for brownfield import
-- [x] Support LTM, GTM, network, security, and TLS object types
+- [x] Support LTM, GTM, network, AFM, WAF, and TLS object types
 - [x] Provide JSON output for CI integration
 - [x] Document drift and import workflows
 
@@ -740,6 +743,18 @@ These are the first concrete tickets I would open.
 - [x] Document rollback checklist for production incidents
 - [x] Document drift detection integration at promotion gates
 - [x] Document AWX job template pattern per environment
+
+### Milestone 12: WAF/ASM Policies
+
+- [x] Add `vars/security/waf/policies` for WAF/ASM policies
+- [x] Add `vars/security/waf/server_technologies` for server technologies
+- [x] Extend `security.yml` playbook with WAF apply/delete tasks
+- [x] Add deletion trees for WAF object types
+- [x] Add validation for WAF policies and server technologies
+- [x] Add cross-validation: server technologies reference declared policies
+- [x] Add WAF endpoint to drift detection (`asm/policies`)
+- [x] Add WAF import spec for brownfield import
+- [x] Add `docs/waf.md` with object reference and authoring patterns
 
 ## Network Expansion Status
 

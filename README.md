@@ -18,6 +18,7 @@ Declarative BIG-IP playbooks organized for GitOps-style management.
 | LTM advanced fields | [docs/ltm-advanced.md](docs/ltm-advanced.md) |
 | GTM advanced fields | [docs/gtm-advanced.md](docs/gtm-advanced.md) |
 | AFM security | [docs/security.md](docs/security.md) |
+| WAF/ASM | [docs/waf.md](docs/waf.md) |
 | AWX bootstrap | [docs/awx-ha-bootstrap.md](docs/awx-ha-bootstrap.md) |
 | Drift and import | [docs/drift-import.md](docs/drift-import.md) |
 | Promotion workflows | [docs/promotion-workflows.md](docs/promotion-workflows.md) |
@@ -38,7 +39,7 @@ Canonical playbooks live under `playbooks/`. Root-level `*.yml` files are compat
 | `playbooks/ltm.yml` | monitors, profiles, nodes, pools, virtual servers |
 | `playbooks/gtm.yml` | monitors, datacenters, servers, pools, Wide IPs, topology |
 | `playbooks/tls.yml` | keys, certificates, CA bundles, SSL profiles |
-| `playbooks/security.yml` | AFM address lists, port lists, firewall rules, policies |
+| `playbooks/security.yml` | AFM address lists, port lists, firewall rules, policies; WAF policies, server technologies |
 
 ## Validation
 
