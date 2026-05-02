@@ -14,7 +14,7 @@ RUN apt-get update \
     && rm -rf /var/lib/apt/lists/*
 
 RUN python -m pip install --upgrade pip \
-    && python -m pip install ansible-core PyYAML \
+    && python -m pip install ansible-core PyYAML requests \
     && mkdir -p /opt/ansible/collections \
     && ansible-galaxy collection install f5networks.f5_modules -p /opt/ansible/collections
 

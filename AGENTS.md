@@ -97,6 +97,18 @@ If an empty directory must exist intentionally (e.g., a deletions tree with no e
 - never introduce a new var tree without corresponding validation coverage
 - update `Makefile` validate-ansible target to include new playbooks
 
+## Drift Detection
+
+- when adding a new object type to any playbook, also add it to `tools/drift-check`:
+  - add a `load` entry in `VarTreeLoader.load()` mapping the new type to its var tree directory and top-level YAML key
+  - add an entry in `DriftChecker.BIGIP_ENDPOINTS` mapping the type to its BIG-IP REST API endpoint
+  - if the new type uses a non-standard name field (not `name`), add it to `DriftChecker.NAME_FIELDS`
+  - add value drift comparisons in `_find_value_drift` for the new type's meaningful fields
+- when adding a new object type, also add it to `tools/import-from-bigip`:
+  - add an `ImportSpec` entry in `IMPORT_SPECS` with the REST endpoint, output directory, top-level key, and field extraction map
+  - add any type-specific transformation logic in `_transform_item` (pool members, virtual server references, etc.)
+- ensure `requests` is listed as a dependency in `Dockerfile.validation` if not already present
+
 ## Commit Messages
 
 - at the end of every implementation prompt, after changes are made and validated, print a suggested commit message

@@ -1,0 +1,152 @@
+# Drift Detection and Import
+
+This repository provides two offline tooling scripts for comparing live BIG-IP state against Git-declared configuration and for importing existing BIG-IP estates into the repository's var tree format.
+
+## Prerequisites
+
+Both tools use the same environment variables for authentication:
+
+| Variable | Default | Description |
+|---|---|---|
+| `F5_HOST` | — | BIG-IP hostname or IP address (required) |
+| `F5_USER` | `admin` | BIG-IP username |
+| `F5_PASSWORD` | — | BIG-IP password (required) |
+| `F5_PORT` | `443` | BIG-IP REST API port |
+
+Python 3.10+ and the `requests` package are required. Install with:
+
+```sh
+pip install requests
+```
+
+## Drift Detection
+
+`tools/drift-check` queries the live BIG-IP running configuration, compares it against objects declared in the repository's var trees, and reports differences.
+
+### Usage
+
+```sh
+# Check all object types
+F5_HOST=10.0.0.1 F5_PASSWORD=secret python3 tools/drift-check
+
+# Check specific object types only
+F5_HOST=10.0.0.1 F5_PASSWORD=secret python3 tools/drift-check --types ltm_nodes ltm_pools ltm_virtual_servers
+
+# Output as JSON for CI integration
+F5_HOST=10.0.0.1 F5_PASSWORD=secret python3 tools/drift-check --json
+```
+
+### Report Categories
+
+The tool reports drift in three categories:
+
+- **ON DEVICE BUT NOT IN GIT** — objects that exist on the BIG-IP but have no corresponding declaration in `vars/`. These may be manually configured objects that should be imported or removed.
+
+- **IN GIT BUT NOT ON DEVICE** — objects declared in `vars/` but not found on the BIG-IP. These may need to be applied via playbook execution.
+
+- **VALUE DRIFT** — objects that exist in both places but have differing values for tracked fields (description, load balancing method, monitor assignments, etc.).
+
+### Supported Object Types
+
+| Type | API Endpoint |
+|---|---|
+| `ltm_nodes` | `/mgmt/tm/ltm/node` |
+| `ltm_pools` | `/mgmt/tm/ltm/pool` |
+| `ltm_virtual_servers` | `/mgmt/tm/ltm/virtual` |
+| `ltm_monitors` | `/mgmt/tm/ltm/monitor` |
+| `ltm_profiles` | `/mgmt/tm/ltm/profile` |
+| `ltm_irules` | `/mgmt/tm/ltm/rule` |
+| `ltm_data_groups` | `/mgmt/tm/ltm/data-group` |
+| `ltm_policies` | `/mgmt/tm/ltm/policy` |
+| `gtm_datacenters` | `/mgmt/tm/gtm/datacenter` |
+| `gtm_servers` | `/mgmt/tm/gtm/server` |
+| `gtm_pools` | `/mgmt/tm/gtm/pool` |
+| `gtm_wide_ips` | `/mgmt/tm/gtm/wideip` |
+| `gtm_monitors` | `/mgmt/tm/gtm/monitor` |
+| `network_vlans` | `/mgmt/tm/net/vlan` |
+| `network_self_ips` | `/mgmt/tm/net/self` |
+| `network_routes` | `/mgmt/tm/net/route` |
+| `afm_address_lists` | `/mgmt/tm/security/firewall/address-list` |
+| `afm_port_lists` | `/mgmt/tm/security/firewall/port-list` |
+| `afm_rules` | `/mgmt/tm/security/firewall/rule` |
+| `afm_policies` | `/mgmt/tm/security/firewall/rule-list` |
+| `tls_keys` | `/mgmt/tm/sys/crypto/key` |
+| `tls_certificates` | `/mgmt/tm/sys/crypto/cert` |
+
+## Import from BIG-IP
+
+`tools/import-from-bigip` queries a live BIG-IP device and generates YAML files matching the repository's var tree structure. Output is written to a target directory for review before committing.
+
+### Usage
+
+```sh
+# Import all supported object types
+F5_HOST=10.0.0.1 F5_PASSWORD=secret python3 tools/import-from-bigip --out imported/
+
+# Import specific object types only
+F5_HOST=10.0.0.1 F5_PASSWORD=secret python3 tools/import-from-bigip --out imported/ --types ltm_nodes ltm_pools ltm_virtual_servers
+```
+
+### Output Structure
+
+Generated files are written under the target directory following the repository's var tree layout:
+
+```
+imported/
+├── ltm/
+│   ├── nodes/
+│   │   └── imported-ltm-nodes.yml
+│   ├── pools/
+│   │   └── imported-ltm-pools.yml
+│   └── virtual_servers/
+│       └── imported-ltm-virtual-servers.yml
+├── gtm/
+│   ├── datacenters/
+│   │   └── imported-gtm-datacenters.yml
+│   └── servers/
+│       └── imported-gtm-servers.yml
+├── network/
+│   └── vlans/
+│       └── imported-network-vlans.yml
+└── security/
+    └── afm/
+        └── address_lists/
+            └── imported-afm-address-lists.yml
+```
+
+### Import Behavior
+
+- Only objects that exist on the device are exported; the tool does not generate placeholders.
+- Built-in monitor and profile references are preserved as-is (`/Common/tcp`, `/Common/https`).
+- Custom objects retain their fully qualified names.
+- Partitions other than `Common` are preserved with an explicit `partition` field.
+- Pool members and virtual server profiles/policies/iRules are fetched via sub-queries and included in the generated YAML.
+- TLS private key content is not exported (metadata only); keys must be re-encrypted with Ansible Vault.
+
+### Post-Import Workflow
+
+After running the import:
+
+1. Review the generated files for correctness.
+2. Merge them into the appropriate locations under `vars/` (replacing the `imported/` prefix with the real var tree paths).
+3. Run `make validate` to check for reference integrity.
+4. Commit and apply via playbook execution.
+
+## CI Integration
+
+Drift detection can be run as a CI job to surface unauthorized changes:
+
+```yaml
+# Example GitLab CI job
+drift-check:
+  stage: test
+  script:
+    - pip install requests
+    - python3 tools/drift-check --json > drift-report.json
+  artifacts:
+    reports:
+      drift: drift-report.json
+  allow_failure: true
+```
+
+The `--json` flag produces machine-readable output suitable for dashboards and alerting.

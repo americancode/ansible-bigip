@@ -1,0 +1,596 @@
+#!/usr/bin/env python3
+"""Import live BIG-IP configuration into repository var tree format.
+
+Queries a BIG-IP device via its REST API and generates YAML files that match
+the repository's var tree structure under `vars/`. Output is written to a
+target directory for review before committing.
+
+Environment variables:
+    F5_HOST     — BIG-IP hostname or IP (required)
+    F5_USER     — BIG-IP username (default: admin)
+    F5_PASSWORD — BIG-IP password (required)
+    F5_PORT     — BIG-IP port (default: 443)
+
+Usage:
+    F5_HOST=10.0.0.1 F5_PASSWORD=secret python3 tools/import-from-bigip --out imported/
+    F5_HOST=10.0.0.1 F5_PASSWORD=secret python3 tools/import-from-bigip --out imported/ --types ltm_nodes ltm_pools
+"""
+
+from __future__ import annotations
+
+import os
+import re
+import sys
+import warnings
+from dataclasses import dataclass, field
+from pathlib import Path
+from typing import Any
+
+import yaml
+
+warnings.filterwarnings("ignore", category=DeprecationWarning)
+
+try:
+    import requests
+except ImportError:
+    print("ERROR: 'requests' package is required. Install with: pip install requests", file=sys.stderr)
+    sys.exit(1)
+
+
+class VarTreeDumper(yaml.Dumper):
+    def increase_indent(self, flow=False, *args, **kwargs):
+        return super().increase_indent(flow=flow, indentless=False)
+
+
+def str_representer(dumper: yaml.Dumper, data: str) -> yaml.Node:
+    if "\n" in data:
+        return dumper.represent_scalar("tag:yaml.org,2002:str", data, style="|")
+    return dumper.represent_scalar("tag:yaml.org,2002:str", data)
+
+
+VarTreeDumper.add_representer(str, str_representer)
+
+
+@dataclass
+class BigIPConnection:
+    host: str
+    username: str
+    password: str
+    port: int = 443
+
+    @property
+    def base_url(self) -> str:
+        return f"https://{self.host}:{self.port}/mgmt/tm"
+
+    @classmethod
+    def from_env(cls) -> "BigIPConnection":
+        host = os.environ.get("F5_HOST")
+        if not host:
+            print("ERROR: F5_HOST environment variable is required.", file=sys.stderr)
+            sys.exit(1)
+        password = os.environ.get("F5_PASSWORD")
+        if not password:
+            print("ERROR: F5_PASSWORD environment variable is required.", file=sys.stderr)
+            sys.exit(1)
+        return cls(
+            host=host,
+            username=os.environ.get("F5_USER", "admin"),
+            password=password,
+            port=int(os.environ.get("F5_PORT", "443")),
+        )
+
+    def get_all(self, uri: str) -> list[dict[str, Any]]:
+        url = f"{self.base_url}/{uri}"
+        params = {"$top": 1000}
+        items: list[dict[str, Any]] = []
+        while url:
+            resp = requests.get(url, auth=(self.username, self.password), params=params, verify=False, timeout=30)
+            resp.raise_for_status()
+            data = resp.json()
+            items.extend(data.get("items", []))
+            url = data.get("nextSelfLink")
+            params = {}
+        return items
+
+
+@dataclass
+class ImportSpec:
+    endpoint: str
+    top_key: str
+    output_dir: str
+    extract: dict[str, str] = field(default_factory=dict)
+
+
+IMPORT_SPECS: dict[str, ImportSpec] = {
+    "ltm_nodes": ImportSpec(
+        endpoint="ltm/node",
+        top_key="ltm_nodes",
+        output_dir="ltm/nodes",
+        extract={
+            "name": "name",
+            "address": "address",
+            "description": "description",
+            "connection_limit": "connectionLimit",
+            "rate_limit": "rateLimit",
+        },
+    ),
+    "ltm_pools": ImportSpec(
+        endpoint="ltm/pool",
+        top_key="ltm_pools",
+        output_dir="ltm/pools",
+        extract={
+            "name": "name",
+            "description": "description",
+            "lb_method": "loadBalancingMode",
+            "min_active_members": "minActiveMembers",
+        },
+    ),
+    "ltm_virtual_servers": ImportSpec(
+        endpoint="ltm/virtual",
+        top_key="ltm_virtual_servers",
+        output_dir="ltm/virtual_servers",
+        extract={
+            "name": "name",
+            "description": "description",
+            "destination": "destination",
+            "protocol": "ipProtocol",
+            "enabled": "enabled",
+        },
+    ),
+    "ltm_monitors": ImportSpec(
+        endpoint="ltm/monitor",
+        top_key="ltm_monitors",
+        output_dir="ltm/monitors",
+        extract={
+            "name": "name",
+            "description": "description",
+        },
+    ),
+    "ltm_profiles": ImportSpec(
+        endpoint="ltm/profile",
+        top_key="ltm_profiles",
+        output_dir="ltm/profiles",
+        extract={
+            "name": "name",
+            "description": "description",
+            "type": "kind",
+        },
+    ),
+    "ltm_irules": ImportSpec(
+        endpoint="ltm/rule",
+        top_key="ltm_irules",
+        output_dir="ltm/irules",
+        extract={
+            "name": "name",
+            "rule": "apiAnonymous",
+        },
+    ),
+    "ltm_data_groups": ImportSpec(
+        endpoint="ltm/data-group",
+        top_key="ltm_data_groups",
+        output_dir="ltm/data_groups",
+        extract={
+            "name": "name",
+            "type": "type",
+        },
+    ),
+    "ltm_policies": ImportSpec(
+        endpoint="ltm/policy",
+        top_key="ltm_policies",
+        output_dir="ltm/policies",
+        extract={
+            "name": "name",
+            "description": "description",
+        },
+    ),
+    "gtm_datacenters": ImportSpec(
+        endpoint="gtm/datacenter",
+        top_key="gtm_datacenters",
+        output_dir="gtm/datacenters",
+        extract={
+            "name": "name",
+            "location": "location",
+            "contact": "contact",
+        },
+    ),
+    "gtm_servers": ImportSpec(
+        endpoint="gtm/server",
+        top_key="gtm_servers",
+        output_dir="gtm/servers",
+        extract={
+            "name": "name",
+            "datacenter": "dataCenter",
+            "description": "description",
+        },
+    ),
+    "gtm_pools": ImportSpec(
+        endpoint="gtm/pool",
+        top_key="gtm_pools",
+        output_dir="gtm/pools",
+        extract={
+            "name": "name",
+            "description": "description",
+            "lb_method": "loadBalancingMode",
+        },
+    ),
+    "gtm_wide_ips": ImportSpec(
+        endpoint="gtm/wideip",
+        top_key="gtm_wide_ips",
+        output_dir="gtm/wide_ips",
+        extract={
+            "name": "name",
+            "description": "description",
+        },
+    ),
+    "gtm_monitors": ImportSpec(
+        endpoint="gtm/monitor",
+        top_key="gtm_monitors",
+        output_dir="gtm/monitors",
+        extract={
+            "name": "name",
+            "description": "description",
+        },
+    ),
+    "network_vlans": ImportSpec(
+        endpoint="net/vlan",
+        top_key="bigip_vlans",
+        output_dir="network/vlans",
+        extract={
+            "name": "name",
+            "tag": "tag",
+            "mtu": "mtu",
+            "description": "description",
+        },
+    ),
+    "network_self_ips": ImportSpec(
+        endpoint="net/self",
+        top_key="bigip_self_ips",
+        output_dir="network/self_ips",
+        extract={
+            "name": "name",
+            "address": "address",
+            "vlan": "vlan",
+            "description": "description",
+        },
+    ),
+    "network_routes": ImportSpec(
+        endpoint="net/route",
+        top_key="bigip_routes",
+        output_dir="network/routes",
+        extract={
+            "name": "name",
+            "destination": "network",
+            "netmask": "netmask",
+            "gateway_address": "gw",
+        },
+    ),
+    "afm_address_lists": ImportSpec(
+        endpoint="security/firewall/address-list",
+        top_key="afm_address_lists",
+        output_dir="security/afm/address_lists",
+        extract={
+            "name": "name",
+            "description": "description",
+        },
+    ),
+    "afm_port_lists": ImportSpec(
+        endpoint="security/firewall/port-list",
+        top_key="afm_port_lists",
+        output_dir="security/afm/port_lists",
+        extract={
+            "name": "name",
+            "description": "description",
+        },
+    ),
+    "tls_keys": ImportSpec(
+        endpoint="sys/crypto/key",
+        top_key="tls_keys",
+        output_dir="tls/keys",
+        extract={
+            "name": "name",
+        },
+    ),
+    "tls_certificates": ImportSpec(
+        endpoint="sys/crypto/cert",
+        top_key="tls_certificates",
+        output_dir="tls/certificates",
+        extract={
+            "name": "name",
+            "description": "description",
+        },
+    ),
+}
+
+SUPPORTED_TYPES = set(IMPORT_SPECS.keys())
+
+BUILTIN_MONITORS = {
+    "gateway_icmp", "http", "https", "https_443", "tcp", "tcp_half_open",
+    "tcp_echo", "udp", "icmp", "ftp", "smtp", "imap", "pop3", "ldap",
+    "sip", "mysql", "postgresql", "oracle", "radius", "snmp_dca",
+    "snmp_dca_base", "real_server", "wap_gateway", "dns",
+}
+
+BUILTIN_PROFILES = {
+    "tcp", "udp", "fastL4", "fasthttp", "http", "http2", "oneconnect",
+    "clientssl", "serverssl", "dns", "ftp", "smtp",
+}
+
+
+class Importer:
+    def __init__(self, conn: BigIPConnection, out_dir: Path) -> None:
+        self.conn = conn
+        self.out_dir = out_dir
+
+    def run(self, types: list[str] | None = None) -> dict[str, int]:
+        specs = {k: v for k, v in IMPORT_SPECS.items() if k in (types or list(IMPORT_SPECS))}
+        results: dict[str, int] = {}
+
+        for obj_type, spec in specs.items():
+            try:
+                count = self._import_type(obj_type, spec)
+                results[obj_type] = count
+            except Exception as exc:
+                print(f"ERROR: {obj_type}: {exc}", file=sys.stderr)
+                results[obj_type] = -1
+
+        return results
+
+    def _import_type(self, obj_type: str, spec: ImportSpec) -> int:
+        items = self.conn.get_all(spec.endpoint)
+        if not items:
+            return 0
+
+        dir_path = self.out_dir / spec.output_dir
+        dir_path.mkdir(parents=True, exist_ok=True)
+
+        objects = []
+        for item in items:
+            obj = self._transform_item(item, spec)
+            if obj:
+                objects.append(obj)
+
+        if not objects:
+            return 0
+
+        filename = f"imported-{obj_type.replace('_', '-')}.yml"
+        output_path = dir_path / filename
+
+        payload = {spec.top_key: objects}
+        with output_path.open("w") as f:
+            yaml.dump(payload, f, Dumper=VarTreeDumper, default_flow_style=False, allow_unicode=True)
+
+        print(f"  {obj_type}: {len(objects)} objects -> {output_path.relative_to(self.out_dir)}")
+        return len(objects)
+
+    def _transform_item(self, item: dict, spec: ImportSpec) -> dict | None:
+        obj: dict[str, Any] = {}
+
+        for decl_key, api_key in spec.extract.items():
+            if api_key in item:
+                value = item[api_key]
+                if value is not None and value != "" and value != "none":
+                    obj[decl_key] = self._normalize_value(decl_key, value, spec)
+
+        if "name" not in obj:
+            return None
+
+        partition = item.get("partition", "Common")
+        if partition != "Common":
+            obj["partition"] = partition
+
+        if "name" in obj and "/" in str(obj["name"]):
+            obj["name"] = obj["name"].split("/")[-1]
+
+        if spec.top_key == "ltm_pools":
+            self._transform_pool(item, obj)
+        elif spec.top_key == "ltm_virtual_servers":
+            self._transform_virtual(item, obj)
+        elif spec.top_key in ("ltm_monitors", "gtm_monitors"):
+            self._transform_monitor(item, obj, spec)
+        elif spec.top_key == "network_vlans":
+            self._transform_vlan(item, obj)
+
+        return obj if obj.get("name") else None
+
+    def _normalize_value(self, key: str, value: Any, spec: ImportSpec) -> Any:
+        if key == "lb_method":
+            return str(value)
+        if key == "type" and spec.top_key == "ltm_profiles":
+            kind = str(value)
+            match = re.search(r"ltm:profile:([a-z0-9-]+)", kind)
+            if match:
+                return match.group(1)
+            return kind
+        if key == "destination":
+            if isinstance(value, str):
+                parts = value.rsplit(":", 1)
+                return parts[0].lstrip("/")
+        if key == "enabled":
+            return value == "yes"
+        if key == "min_active_members":
+            try:
+                v = int(value)
+                return v if v > 1 else None
+            except (ValueError, TypeError):
+                return None
+        if key == "tag":
+            try:
+                v = int(value)
+                return v if v > 0 else None
+            except (ValueError, TypeError):
+                return None
+        if key == "mtu":
+            try:
+                return int(value)
+            except (ValueError, TypeError):
+                return None
+        return value
+
+    def _transform_pool(self, item: dict, obj: dict) -> None:
+        monitors = item.get("monitors", "")
+        if monitors:
+            monitor_list = re.split(r"\s+(?:and|or)\s+", monitors)
+            cleaned = []
+            for m in monitor_list:
+                m = m.strip()
+                if m.startswith("/Common/") and m.split("/")[-1] in BUILTIN_MONITORS:
+                    cleaned.append(m)
+                elif not m.startswith("/"):
+                    cleaned.append(m)
+                else:
+                    cleaned.append(m)
+            if cleaned:
+                obj["monitors"] = cleaned
+
+        if "membersReference" in item:
+            members_link = item["membersReference"].get("link", "")
+            if members_link:
+                try:
+                    member_data = self.conn.get_all(members_link.split("/mgmt/tm/")[-1])
+                    members = []
+                    for member in member_data:
+                        m = {}
+                        if "name" in member:
+                            m["name"] = member["name"].split("/")[-1] if "/" in member["name"] else member["name"]
+                        if "address" in member:
+                            m["address"] = member["address"]
+                        m["port"] = int(member.get("port", 0))
+                        if m.get("name"):
+                            members.append(m)
+                    if members:
+                        obj["members"] = members
+                except Exception:
+                    pass
+
+    def _transform_virtual(self, item: dict, obj: dict) -> None:
+        if "destination" in obj:
+            dest = str(obj["destination"])
+            if ":" in dest:
+                parts = dest.rsplit(":", 1)
+                obj["destination"] = parts[0]
+                try:
+                    obj["destination_port"] = int(parts[1])
+                except ValueError:
+                    obj["destination_port"] = parts[1]
+            if obj["destination"].startswith("/"):
+                obj["destination"] = obj["destination"][1:]
+
+        if "pool" in item and item["pool"]:
+            pool = item["pool"]
+            if pool.startswith("/Common/"):
+                obj["pool"] = pool.split("/")[-1]
+            elif pool.startswith("/"):
+                obj["pool"] = pool
+            else:
+                obj["pool"] = pool
+
+        profiles_link = item.get("profilesReference", {}).get("link", "")
+        if profiles_link:
+            try:
+                prof_data = self.conn.get_all(profiles_link.split("/mgmt/tm/")[-1])
+                profiles = []
+                for p in prof_data:
+                    pname = p.get("name", "")
+                    pcontext = p.get("context", "all")
+                    fq = f"/Common/{pname}"
+                    if pname not in BUILTIN_PROFILES:
+                        fq = pname
+                    if pcontext != "all":
+                        profiles.append(f"{fq}:{pcontext}")
+                    else:
+                        profiles.append(fq)
+                if profiles:
+                    obj["profiles"] = profiles
+            except Exception:
+                pass
+
+        policies_link = item.get("policiesReference", {}).get("link", "")
+        if policies_link:
+            try:
+                pol_data = self.conn.get_all(policies_link.split("/mgmt/tm/")[-1])
+                policies = [p.get("name", "") for p in pol_data if p.get("name")]
+                if policies:
+                    obj["policies"] = policies
+            except Exception:
+                pass
+
+        irules_link = item.get("rulesReference", {}).get("link", "")
+        if irules_link:
+            try:
+                irule_data = self.conn.get_all(irules_link.split("/mgmt/tm/")[-1])
+                irules = [r.get("name", "") for r in irule_data if r.get("name")]
+                if irules:
+                    obj["irules"] = irules
+            except Exception:
+                pass
+
+    def _transform_monitor(self, item: dict, obj: dict, spec: ImportSpec) -> None:
+        kind = item.get("kind", "")
+        if "ltm:monitor:" in kind:
+            mtype = kind.split("ltm:monitor:")[-1].replace("-", "_")
+            obj["type"] = mtype
+        elif "gtm:monitor:" in kind:
+            mtype = kind.split("gtm:monitor:")[-1].replace("-", "_")
+            obj["type"] = mtype
+
+        if "interval" in item:
+            try:
+                interval = int(item["interval"])
+                if interval != 5:
+                    obj["interval"] = interval
+            except (ValueError, TypeError):
+                pass
+
+        if "timeout" in item:
+            try:
+                timeout = int(item["timeout"])
+                if timeout != 16:
+                    obj["timeout"] = timeout
+            except (ValueError, TypeError):
+                pass
+
+    def _transform_vlan(self, item: dict, obj: dict) -> None:
+        interfaces = item.get("interfacesReference", {}).get("link", "")
+        if interfaces:
+            try:
+                iface_data = self.conn.get_all(interfaces.split("/mgmt/tm/")[-1])
+                iface_list = []
+                for iface in iface_data:
+                    entry = {"interface": iface.get("name", "")}
+                    if iface.get("tagging"):
+                        entry["tagging"] = iface["tagging"]
+                    if entry["interface"]:
+                        iface_list.append(entry)
+                if iface_list:
+                    obj["interfaces"] = iface_list
+            except Exception:
+                pass
+
+
+def main() -> int:
+    import argparse
+
+    parser = argparse.ArgumentParser(
+        description="Import live BIG-IP configuration into repository var tree format.",
+    )
+    parser.add_argument("--out", required=True, help="Output directory for generated var files")
+    parser.add_argument("--types", nargs="+", choices=sorted(SUPPORTED_TYPES), help="Object types to import (default: all)")
+    args = parser.parse_args()
+
+    conn = BigIPConnection.from_env()
+    out_dir = Path(args.out)
+    out_dir.mkdir(parents=True, exist_ok=True)
+
+    importer = Importer(conn, out_dir)
+    results = importer.run(types=args.types)
+
+    total = sum(c for c in results.values() if c > 0)
+    errors = sum(1 for c in results.values() if c < 0)
+    skipped = sum(1 for c in results.values() if c == 0)
+
+    print(f"\nImport complete: {total} objects written, {skipped} types empty, {errors} errors.")
+    return 1 if errors else 0
+
+
+if __name__ == "__main__":
+    raise SystemExit(main())

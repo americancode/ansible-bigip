@@ -2,6 +2,7 @@ image: $VALIDATION_IMAGE
 
 stages:
   - validate
+  - drift
 
 variables:
   VALIDATION_IMAGE: "python:3.12"
@@ -31,3 +32,21 @@ validate:
       fi
   script:
     - make validate
+
+drift-check:
+  stage: drift
+  rules:
+    - if: '$CI_COMMIT_BRANCH == "main"'
+    - if: '$DRIFT_CHECK_ENABLED == "true"'
+  before_script:
+    - python -m pip install --upgrade pip
+    - python -m pip install requests PyYAML
+  script:
+    - python3 tools/drift-check --json > drift-report.json || true
+  artifacts:
+    when: always
+    reports:
+      drift: drift-report.json
+    paths:
+      - drift-report.json
+    expire_in: 30 days

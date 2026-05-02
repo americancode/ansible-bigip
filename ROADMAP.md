@@ -131,12 +131,15 @@ Implemented today:
   - YAML/schema/reference validation
   - duplicate detection
   - Ansible syntax-check wrapper
+- drift detection and import tooling
+  - `tools/drift-check` for live-vs-Git comparison
+  - `tools/import-from-bigip` for brownfield import
+  - CI-ready JSON output for dashboards
 
 Not implemented yet:
 
 - WAF/ASM policy management
 - APM access object management
-- live drift/import/promotion tooling
 
 ## Target Repo Shape
 
@@ -720,6 +723,14 @@ These are the first concrete tickets I would open.
 - [x] Add validation for address/port lists, rules, and policies
 - [x] Add cross-validation: policy rules reference declared rules
 - [x] Add cross-validation: rule endpoints reference declared address lists
+
+### Milestone 10: Drift Detection and Import
+
+- [x] Create `tools/drift-check` for live-vs-Git comparison
+- [x] Create `tools/import-from-bigip` for brownfield import
+- [x] Support LTM, GTM, network, security, and TLS object types
+- [x] Provide JSON output for CI integration
+- [x] Document drift and import workflows
 
 ## Network Expansion Status
 
