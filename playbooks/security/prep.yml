@@ -563,126 +563,248 @@
         ).apm_acl_defaults | default({})
       }}
 
-- name: Discover APM network access fragments
+- name: Discover APM auth server fragments
   ansible.builtin.set_fact:
-    apm_network_access_files: >-
+    apm_auth_server_files: >-
       {{
         lookup(
           'ansible.builtin.pipe',
-          "find {{ repo_root }}/vars/security/apm/network_access -type f -name '*.yml' ! -name 'settings.yml' 2>/dev/null | sort"
+          "find {{ repo_root }}/vars/security/apm/auth_servers -type f -name '*.yml' ! -name 'settings.yml' 2>/dev/null | sort"
         ).splitlines() | reject('equalto', '') | list
       }}
-    apm_network_access_deletion_files: >-
+    apm_auth_server_deletion_files: >-
       {{
         lookup(
           'ansible.builtin.pipe',
-          "find {{ repo_root }}/vars/security/apm/deletions/network_access -type f -name '*.yml' ! -name 'settings.yml' 2>/dev/null | sort"
+          "find {{ repo_root }}/vars/security/apm/deletions/auth_servers -type f -name '*.yml' ! -name 'settings.yml' 2>/dev/null | sort"
         ).splitlines() | reject('equalto', '') | list
       }}
 
-- name: Load APM network access fragments
+- name: Load APM auth server fragments
   ansible.builtin.include_vars:
     file: "{{ item }}"
-    name: apm_network_access_fragment
-  loop: "{{ apm_network_access_files }}"
-  register: apm_network_access_include_results
+    name: apm_auth_server_fragment
+  loop: "{{ apm_auth_server_files }}"
+  register: apm_auth_server_include_results
 
-- name: Load APM network access deletion fragments
+- name: Load APM auth server deletion fragments
   ansible.builtin.include_vars:
     file: "{{ item }}"
-    name: apm_network_access_deletion_fragment
-  loop: "{{ apm_network_access_deletion_files }}"
-  register: apm_network_access_deletion_include_results
+    name: apm_auth_server_deletion_fragment
+  loop: "{{ apm_auth_server_deletion_files }}"
+  register: apm_auth_server_deletion_include_results
 
-- name: Aggregate APM network access with directory settings
+- name: Aggregate APM auth servers with directory settings
   ansible.builtin.set_fact:
-    apm_network_access: "{{ apm_network_access | default([]) + [ apm_network_access_directory_defaults | combine(item.1, recursive=True) ] }}"
-  loop: "{{ query('subelements', apm_network_access_include_results.results, 'ansible_facts.apm_network_access_fragment.apm_network_access', {'skip_missing': True}) }}"
+    apm_auth_servers: "{{ apm_auth_servers | default([]) + [ apm_auth_server_directory_defaults | combine(item.1, recursive=True) ] }}"
+  loop: "{{ query('subelements', apm_auth_server_include_results.results, 'ansible_facts.apm_auth_server_fragment.apm_auth_servers', {'skip_missing': True}) }}"
   vars:
-    apm_network_access_settings_path: "{{ item.0.item | regex_replace('/[^/]+$', '/settings.yml') }}"
-    apm_network_access_directory_defaults: >-
+    apm_auth_server_settings_path: "{{ item.0.item | regex_replace('/[^/]+$', '/settings.yml') }}"
+    apm_auth_server_directory_defaults: >-
       {{
         (
-          lookup('ansible.builtin.file', apm_network_access_settings_path, errors='ignore')
+          lookup('ansible.builtin.file', apm_auth_server_settings_path, errors='ignore')
           | default('{}', true)
           | from_yaml
-        ).apm_network_access_defaults | default({})
+        ).apm_auth_server_defaults | default({})
       }}
 
-- name: Aggregate APM network access deletions with directory settings
+- name: Aggregate APM auth server deletions with directory settings
   ansible.builtin.set_fact:
-    apm_network_access_deletions: "{{ apm_network_access_deletions | default([]) + [ (apm_network_access_deletion_directory_defaults | combine(item.1, recursive=True)) | combine({'state': 'absent'}, recursive=True) ] }}"
-  loop: "{{ query('subelements', apm_network_access_deletion_include_results.results, 'ansible_facts.apm_network_access_deletion_fragment.apm_network_access', {'skip_missing': True}) }}"
+    apm_auth_server_deletions: "{{ apm_auth_server_deletions | default([]) + [ (apm_auth_server_deletion_directory_defaults | combine(item.1, recursive=True)) | combine({'state': 'absent'}, recursive=True) ] }}"
+  loop: "{{ query('subelements', apm_auth_server_deletion_include_results.results, 'ansible_facts.apm_auth_server_deletion_fragment.apm_auth_servers', {'skip_missing': True}) }}"
   vars:
-    apm_network_access_deletion_settings_path: "{{ item.0.item | regex_replace('/[^/]+$', '/settings.yml') }}"
-    apm_network_access_deletion_directory_defaults: >-
+    apm_auth_server_deletion_settings_path: "{{ item.0.item | regex_replace('/[^/]+$', '/settings.yml') }}"
+    apm_auth_server_deletion_directory_defaults: >-
       {{
         (
-          lookup('ansible.builtin.file', apm_network_access_deletion_settings_path, errors='ignore')
+          lookup('ansible.builtin.file', apm_auth_server_deletion_settings_path, errors='ignore')
           | default('{}', true)
           | from_yaml
-        ).apm_network_access_defaults | default({})
+        ).apm_auth_server_defaults | default({})
       }}
 
-- name: Discover APM policy import fragments
+- name: Discover APM SSO config fragments
   ansible.builtin.set_fact:
-    apm_policy_files: >-
+    apm_sso_config_files: >-
       {{
         lookup(
           'ansible.builtin.pipe',
-          "find {{ repo_root }}/vars/security/apm/policies -type f -name '*.yml' ! -name 'settings.yml' 2>/dev/null | sort"
+          "find {{ repo_root }}/vars/security/apm/sso_configs -type f -name '*.yml' ! -name 'settings.yml' 2>/dev/null | sort"
         ).splitlines() | reject('equalto', '') | list
       }}
-    apm_policy_deletion_files: >-
+    apm_sso_config_deletion_files: >-
       {{
         lookup(
           'ansible.builtin.pipe',
-          "find {{ repo_root }}/vars/security/apm/deletions/policies -type f -name '*.yml' ! -name 'settings.yml' 2>/dev/null | sort"
+          "find {{ repo_root }}/vars/security/apm/deletions/sso_configs -type f -name '*.yml' ! -name 'settings.yml' 2>/dev/null | sort"
         ).splitlines() | reject('equalto', '') | list
       }}
 
-- name: Load APM policy import fragments
+- name: Load APM SSO config fragments
   ansible.builtin.include_vars:
     file: "{{ item }}"
-    name: apm_policy_fragment
-  loop: "{{ apm_policy_files }}"
-  register: apm_policy_include_results
+    name: apm_sso_config_fragment
+  loop: "{{ apm_sso_config_files }}"
+  register: apm_sso_config_include_results
 
-- name: Load APM policy import deletion fragments
+- name: Load APM SSO config deletion fragments
   ansible.builtin.include_vars:
     file: "{{ item }}"
-    name: apm_policy_deletion_fragment
-  loop: "{{ apm_policy_deletion_files }}"
-  register: apm_policy_deletion_include_results
+    name: apm_sso_config_deletion_fragment
+  loop: "{{ apm_sso_config_deletion_files }}"
+  register: apm_sso_config_deletion_include_results
 
-- name: Aggregate APM policy imports with directory settings
+- name: Aggregate APM SSO configs with directory settings
   ansible.builtin.set_fact:
-    apm_policies: "{{ apm_policies | default([]) + [ apm_policy_directory_defaults | combine(item.1, recursive=True) ] }}"
-  loop: "{{ query('subelements', apm_policy_include_results.results, 'ansible_facts.apm_policy_fragment.apm_policies', {'skip_missing': True}) }}"
+    apm_sso_configs: "{{ apm_sso_configs | default([]) + [ apm_sso_config_directory_defaults | combine(item.1, recursive=True) ] }}"
+  loop: "{{ query('subelements', apm_sso_config_include_results.results, 'ansible_facts.apm_sso_config_fragment.apm_sso_configs', {'skip_missing': True}) }}"
   vars:
-    apm_policy_settings_path: "{{ item.0.item | regex_replace('/[^/]+$', '/settings.yml') }}"
-    apm_policy_directory_defaults: >-
+    apm_sso_config_settings_path: "{{ item.0.item | regex_replace('/[^/]+$', '/settings.yml') }}"
+    apm_sso_config_directory_defaults: >-
       {{
         (
-          lookup('ansible.builtin.file', apm_policy_settings_path, errors='ignore')
+          lookup('ansible.builtin.file', apm_sso_config_settings_path, errors='ignore')
           | default('{}', true)
           | from_yaml
-        ).apm_policy_defaults | default({})
+        ).apm_sso_config_defaults | default({})
       }}
 
-- name: Aggregate APM policy import deletions with directory settings
+- name: Aggregate APM SSO config deletions with directory settings
   ansible.builtin.set_fact:
-    apm_policy_deletions: "{{ apm_policy_deletions | default([]) + [ (apm_policy_deletion_directory_defaults | combine(item.1, recursive=True)) | combine({'state': 'absent'}, recursive=True) ] }}"
-  loop: "{{ query('subelements', apm_policy_deletion_include_results.results, 'ansible_facts.apm_policy_deletion_fragment.apm_policies', {'skip_missing': True}) }}"
+    apm_sso_config_deletions: "{{ apm_sso_config_deletions | default([]) + [ (apm_sso_config_deletion_directory_defaults | combine(item.1, recursive=True)) | combine({'state': 'absent'}, recursive=True) ] }}"
+  loop: "{{ query('subelements', apm_sso_config_deletion_include_results.results, 'ansible_facts.apm_sso_config_deletion_fragment.apm_sso_configs', {'skip_missing': True}) }}"
   vars:
-    apm_policy_deletion_settings_path: "{{ item.0.item | regex_replace('/[^/]+$', '/settings.yml') }}"
-    apm_policy_deletion_directory_defaults: >-
+    apm_sso_config_deletion_settings_path: "{{ item.0.item | regex_replace('/[^/]+$', '/settings.yml') }}"
+    apm_sso_config_deletion_directory_defaults: >-
       {{
         (
-          lookup('ansible.builtin.file', apm_policy_deletion_settings_path, errors='ignore')
+          lookup('ansible.builtin.file', apm_sso_config_deletion_settings_path, errors='ignore')
           | default('{}', true)
           | from_yaml
-        ).apm_policy_defaults | default({})
+        ).apm_sso_config_defaults | default({})
+      }}
+
+- name: Discover APM resource fragments
+  ansible.builtin.set_fact:
+    apm_resource_files: >-
+      {{
+        lookup(
+          'ansible.builtin.pipe',
+          "find {{ repo_root }}/vars/security/apm/resources -type f -name '*.yml' ! -name 'settings.yml' 2>/dev/null | sort"
+        ).splitlines() | reject('equalto', '') | list
+      }}
+    apm_resource_deletion_files: >-
+      {{
+        lookup(
+          'ansible.builtin.pipe',
+          "find {{ repo_root }}/vars/security/apm/deletions/resources -type f -name '*.yml' ! -name 'settings.yml' 2>/dev/null | sort"
+        ).splitlines() | reject('equalto', '') | list
+      }}
+
+- name: Load APM resource fragments
+  ansible.builtin.include_vars:
+    file: "{{ item }}"
+    name: apm_resource_fragment
+  loop: "{{ apm_resource_files }}"
+  register: apm_resource_include_results
+
+- name: Load APM resource deletion fragments
+  ansible.builtin.include_vars:
+    file: "{{ item }}"
+    name: apm_resource_deletion_fragment
+  loop: "{{ apm_resource_deletion_files }}"
+  register: apm_resource_deletion_include_results
+
+- name: Aggregate APM resources with directory settings
+  ansible.builtin.set_fact:
+    apm_resources: "{{ apm_resources | default([]) + [ apm_resource_directory_defaults | combine(item.1, recursive=True) ] }}"
+  loop: "{{ query('subelements', apm_resource_include_results.results, 'ansible_facts.apm_resource_fragment.apm_resources', {'skip_missing': True}) }}"
+  vars:
+    apm_resource_settings_path: "{{ item.0.item | regex_replace('/[^/]+$', '/settings.yml') }}"
+    apm_resource_directory_defaults: >-
+      {{
+        (
+          lookup('ansible.builtin.file', apm_resource_settings_path, errors='ignore')
+          | default('{}', true)
+          | from_yaml
+        ).apm_resource_defaults | default({})
+      }}
+
+- name: Aggregate APM resource deletions with directory settings
+  ansible.builtin.set_fact:
+    apm_resource_deletions: "{{ apm_resource_deletions | default([]) + [ (apm_resource_deletion_directory_defaults | combine(item.1, recursive=True)) | combine({'state': 'absent'}, recursive=True) ] }}"
+  loop: "{{ query('subelements', apm_resource_deletion_include_results.results, 'ansible_facts.apm_resource_deletion_fragment.apm_resources', {'skip_missing': True}) }}"
+  vars:
+    apm_resource_deletion_settings_path: "{{ item.0.item | regex_replace('/[^/]+$', '/settings.yml') }}"
+    apm_resource_deletion_directory_defaults: >-
+      {{
+        (
+          lookup('ansible.builtin.file', apm_resource_deletion_settings_path, errors='ignore')
+          | default('{}', true)
+          | from_yaml
+        ).apm_resource_defaults | default({})
+      }}
+
+- name: Discover APM policy node fragments
+  ansible.builtin.set_fact:
+    apm_policy_node_files: >-
+      {{
+        lookup(
+          'ansible.builtin.pipe',
+          "find {{ repo_root }}/vars/security/apm/policy_nodes -type f -name '*.yml' ! -name 'settings.yml' 2>/dev/null | sort"
+        ).splitlines() | reject('equalto', '') | list
+      }}
+    apm_policy_node_deletion_files: >-
+      {{
+        lookup(
+          'ansible.builtin.pipe',
+          "find {{ repo_root }}/vars/security/apm/deletions/policy_nodes -type f -name '*.yml' ! -name 'settings.yml' 2>/dev/null | sort"
+        ).splitlines() | reject('equalto', '') | list
+      }}
+
+- name: Load APM policy node fragments
+  ansible.builtin.include_vars:
+    file: "{{ item }}"
+    name: apm_policy_node_fragment
+  loop: "{{ apm_policy_node_files }}"
+  register: apm_policy_node_include_results
+
+- name: Load APM policy node deletion fragments
+  ansible.builtin.include_vars:
+    file: "{{ item }}"
+    name: apm_policy_node_deletion_fragment
+  loop: "{{ apm_policy_node_deletion_files }}"
+  register: apm_policy_node_deletion_include_results
+
+- name: Aggregate APM policy nodes with directory settings
+  ansible.builtin.set_fact:
+    apm_policy_nodes: "{{ apm_policy_nodes | default([]) + [ apm_policy_node_directory_defaults | combine(item.1, recursive=True) ] }}"
+  loop: "{{ query('subelements', apm_policy_node_include_results.results, 'ansible_facts.apm_policy_node_fragment.apm_policy_nodes', {'skip_missing': True}) }}"
+  vars:
+    apm_policy_node_settings_path: "{{ item.0.item | regex_replace('/[^/]+$', '/settings.yml') }}"
+    apm_policy_node_directory_defaults: >-
+      {{
+        (
+          lookup('ansible.builtin.file', apm_policy_node_settings_path, errors='ignore')
+          | default('{}', true)
+          | from_yaml
+        ).apm_policy_node_defaults | default({})
+      }}
+
+- name: Aggregate APM policy node deletions with directory settings
+  ansible.builtin.set_fact:
+    apm_policy_node_deletions: "{{ apm_policy_node_deletions | default([]) + [ (apm_policy_node_deletion_directory_defaults | combine(item.1, recursive=True)) | combine({'state': 'absent'}, recursive=True) ] }}"
+  loop: "{{ query('subelements', apm_policy_node_deletion_include_results.results, 'ansible_facts.apm_policy_node_deletion_fragment.apm_policy_nodes', {'skip_missing': True}) }}"
+  vars:
+    apm_policy_node_deletion_settings_path: "{{ item.0.item | regex_replace('/[^/]+$', '/settings.yml') }}"
+    apm_policy_node_deletion_directory_defaults: >-
+      {{
+        (
+          lookup('ansible.builtin.file', apm_policy_node_deletion_settings_path, errors='ignore')
+          | default('{}', true)
+          | from_yaml
+        ).apm_policy_node_defaults | default({})
       }}
 
 - name: Classify APM ACL operations
@@ -708,46 +830,92 @@
         )
       }}
 
-- name: Classify APM network access operations
+- name: Classify APM auth server operations
   ansible.builtin.set_fact:
-    apm_network_access_delete: >-
+    apm_auth_servers_delete: >-
       {{
-        ((apm_network_access | default([])) + (apm_network_access_deletions | default([])))
+        ((apm_auth_servers | default([])) + (apm_auth_server_deletions | default([])))
         | selectattr('state', 'defined')
         | selectattr('state', 'equalto', 'absent')
         | list
       }}
-    apm_network_access_present: >-
+    apm_auth_servers_present: >-
       {{
-        (apm_network_access | default([]))
+        (apm_auth_servers | default([]))
         | rejectattr('state', 'defined')
         | list
         +
         (
-          (apm_network_access | default([]))
+          (apm_auth_servers | default([]))
           | selectattr('state', 'defined')
           | rejectattr('state', 'equalto', 'absent')
           | list
         )
       }}
 
-- name: Classify APM policy import operations
+- name: Classify APM SSO config operations
   ansible.builtin.set_fact:
-    apm_policies_delete: >-
+    apm_sso_configs_delete: >-
       {{
-        ((apm_policies | default([])) + (apm_policy_deletions | default([])))
+        ((apm_sso_configs | default([])) + (apm_sso_config_deletions | default([])))
         | selectattr('state', 'defined')
         | selectattr('state', 'equalto', 'absent')
         | list
       }}
-    apm_policies_present: >-
+    apm_sso_configs_present: >-
       {{
-        (apm_policies | default([]))
+        (apm_sso_configs | default([]))
         | rejectattr('state', 'defined')
         | list
         +
         (
-          (apm_policies | default([]))
+          (apm_sso_configs | default([]))
+          | selectattr('state', 'defined')
+          | rejectattr('state', 'equalto', 'absent')
+          | list
+        )
+      }}
+
+- name: Classify APM resource operations
+  ansible.builtin.set_fact:
+    apm_resources_delete: >-
+      {{
+        ((apm_resources | default([])) + (apm_resource_deletions | default([])))
+        | selectattr('state', 'defined')
+        | selectattr('state', 'equalto', 'absent')
+        | list
+      }}
+    apm_resources_present: >-
+      {{
+        (apm_resources | default([]))
+        | rejectattr('state', 'defined')
+        | list
+        +
+        (
+          (apm_resources | default([]))
+          | selectattr('state', 'defined')
+          | rejectattr('state', 'equalto', 'absent')
+          | list
+        )
+      }}
+
+- name: Classify APM policy node operations
+  ansible.builtin.set_fact:
+    apm_policy_nodes_delete: >-
+      {{
+        ((apm_policy_nodes | default([])) + (apm_policy_node_deletions | default([])))
+        | selectattr('state', 'defined')
+        | selectattr('state', 'equalto', 'absent')
+        | list
+      }}
+    apm_policy_nodes_present: >-
+      {{
+        (apm_policy_nodes | default([]))
+        | rejectattr('state', 'defined')
+        | list
+        +
+        (
+          (apm_policy_nodes | default([]))
           | selectattr('state', 'defined')
           | rejectattr('state', 'equalto', 'absent')
           | list

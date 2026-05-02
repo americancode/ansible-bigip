@@ -300,10 +300,28 @@ IMPORT_SPECS: dict[str, ImportSpec] = {
             "description": "description",
         },
     ),
-    "apm_network_access": ImportSpec(
-        endpoint="access/profile/network-access",
-        top_key="apm_network_access",
-        output_dir="security/apm/network_access",
+    "apm_auth_servers": ImportSpec(
+        endpoint="auth/remote-server",
+        top_key="apm_auth_servers",
+        output_dir="security/apm/auth_servers",
+        extract={
+            "name": "name",
+            "description": "description",
+        },
+    ),
+    "apm_sso_configs": ImportSpec(
+        endpoint="apm/sso/kerberos",
+        top_key="apm_sso_configs",
+        output_dir="security/apm/sso_configs",
+        extract={
+            "name": "name",
+            "description": "description",
+        },
+    ),
+    "apm_resources": ImportSpec(
+        endpoint="apm/resource",
+        top_key="apm_resources",
+        output_dir="security/apm/resources",
         extract={
             "name": "name",
             "description": "description",

@@ -1,0 +1,57 @@
+---
+# SSO config examples for all supported SSO methods.
+# SSO configs are referenced by policy nodes in `vars/security/apm/policy_nodes/`.
+# Supported types: kerberos, form_based, http_basic, ntlm, saml, oauth, citrix, domain_join.
+# See docs/authentication.md for type-specific fields.
+apm_sso_configs:
+  - name: kcd-backend-app
+    type: kerberos
+    method: kcd
+    keytab: /config/filestore/files_d/Common_d/keytab_d/bigip.keytab
+    spn: HTTP/app-backend.corp.example.com@CORP.EXAMPLE.COM
+    kdc: 10.0.1.10
+    realm: CORP.EXAMPLE.COM
+
+  - name: kcd-exchange
+    type: kerberos
+    method: negotiate
+    keytab: /config/filestore/files_d/Common_d/keytab_d/bigip.keytab
+    spn: HTTP/owa.corp.example.com@CORP.EXAMPLE.COM
+    kdc: 10.0.1.10
+    realm: CORP.EXAMPLE.COM
+
+  - name: form-backend-login
+    type: form_based
+    form_action_url: "https://app-backend/login"
+    username_field: "j_username"
+    password_field: "j_password"
+    submit_button: "submit"
+    login_success_regex: "Welcome"
+    login_failure_regex: "Invalid credentials"
+
+  - name: http-basic-backend
+    type: http_basic
+    use_session_creds: true
+
+  - name: ntlm-backend
+    type: ntlm
+    server: 10.0.1.10
+    domain: corp.example.com
+    use_machine_account: true
+
+  - name: saml-sso-salesforce
+    type: saml
+    idp_metadata_url: "https://login.salesforce.com/.well-known/samlidp"
+    sp_entity_id: "https://bigip.corp.example.com/saml/sp"
+    assertion_consumer_url: "https://login.salesforce.com/?saml=1"
+    sign_assertion: true
+    encrypt_assertion: true
+
+  - name: oauth-backend-api
+    type: oauth
+    provider_url: "https://auth.corp.example.com"
+    client_id: "{{ vault_oauth_client_id }}"
+    client_secret: "{{ vault_oauth_client_secret }}"
+    scopes:
+      - api:read
+      - api:write

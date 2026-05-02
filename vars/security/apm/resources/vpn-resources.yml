@@ -1,0 +1,37 @@
+---
+# APM resource examples (network access, webtops, remote desktop).
+# Resources are assigned within access policies via policy nodes in `vars/security/apm/policy_nodes/`.
+# Supported fields: `name`, `partition`, `type` (network_access, webtop, remote_desktop, portal_access),
+# and type-specific sub-fields. See authoring patterns in `docs/apm.md`.
+apm_resources:
+  - name: corporate-na
+    type: network_access
+    ip_versions:
+      - ipv4
+    address_spaces:
+      - subnet: 10.10.1.0/24
+      - subnet: 10.10.2.0/24
+    excluded_subnets:
+      - subnet: 192.168.100.0/24
+    dns_servers:
+      - 10.0.1.10
+    ntdomain: corp.example.com
+    split_tunnel: true
+
+  - name: full-webtop
+    type: webtop
+    webtop_type: full
+    items:
+      - type: resource
+        name: corporate-na
+      - type: resource
+        name: owa-portal
+
+  - name: links-webtop
+    type: webtop
+    webtop_type: links
+    items:
+      - type: resource
+        name: owa-portal
+      - type: resource
+        name: hr-portal

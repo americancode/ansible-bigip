@@ -409,18 +409,32 @@ class Validator:
                 settings_key="apm_acl_defaults",
             ),
             TreeSpec(
-                name="apm_network_access",
-                active_dir=VARS_DIR / "security" / "apm" / "network_access",
-                deletion_dir=VARS_DIR / "security" / "apm" / "deletions" / "network_access",
-                top_key="apm_network_access",
-                settings_key="apm_network_access_defaults",
+                name="apm_auth_servers",
+                active_dir=VARS_DIR / "security" / "apm" / "auth_servers",
+                deletion_dir=VARS_DIR / "security" / "apm" / "deletions" / "auth_servers",
+                top_key="apm_auth_servers",
+                settings_key="apm_auth_server_defaults",
             ),
             TreeSpec(
-                name="apm_policies",
-                active_dir=VARS_DIR / "security" / "apm" / "policies",
-                deletion_dir=VARS_DIR / "security" / "apm" / "deletions" / "policies",
-                top_key="apm_policies",
-                settings_key="apm_policy_defaults",
+                name="apm_sso_configs",
+                active_dir=VARS_DIR / "security" / "apm" / "sso_configs",
+                deletion_dir=VARS_DIR / "security" / "apm" / "deletions" / "sso_configs",
+                top_key="apm_sso_configs",
+                settings_key="apm_sso_config_defaults",
+            ),
+            TreeSpec(
+                name="apm_resources",
+                active_dir=VARS_DIR / "security" / "apm" / "resources",
+                deletion_dir=VARS_DIR / "security" / "apm" / "deletions" / "resources",
+                top_key="apm_resources",
+                settings_key="apm_resource_defaults",
+            ),
+            TreeSpec(
+                name="apm_policy_nodes",
+                active_dir=VARS_DIR / "security" / "apm" / "policy_nodes",
+                deletion_dir=VARS_DIR / "security" / "apm" / "deletions" / "policy_nodes",
+                top_key="apm_policy_nodes",
+                settings_key="apm_policy_node_defaults",
             ),
         ]
 
@@ -1561,8 +1575,10 @@ class Validator:
 
     def validate_apm(self) -> None:
         acls = self.objects.get("apm_acls", [])
-        network_access = self.objects.get("apm_network_access", [])
-        policies = self.objects.get("apm_policies", [])
+        auth_servers = self.objects.get("apm_auth_servers", [])
+        sso_configs = self.objects.get("apm_sso_configs", [])
+        resources = self.objects.get("apm_resources", [])
+        policy_nodes = self.objects.get("apm_policy_nodes", [])
 
         for obj in acls:
             self.require_fields(obj, ["name"])
@@ -1589,48 +1605,218 @@ class Validator:
             "APM ACL",
         )
 
-        for obj in network_access:
-            self.require_fields(obj, ["name"])
+        active_auth_server_names = set()
+        supported_auth_types = {
+            "active_directory", "ldap", "radius", "tacacs",
+            "rsa_securid", "cert", "localdb", "saml", "oauth",
+        }
+        ad_ldap_required = {"domain", "servers", "bind_dn", "bind_pw", "base_dn"}
+
+        for obj in auth_servers:
+            self.require_fields(obj, ["name", "type"])
             if obj.effective_state == "absent":
                 continue
-            ip_version = obj.data.get("ip_version")
-            if ip_version is not None and ip_version not in ("ipv4", "ipv6"):
-                self.error(obj.relpath, f"APM network access `{obj.data.get('name')}` `ip_version` must be `ipv4` or `ipv6`")
-            for space_field in ("ipv4_address_space", "excluded_ipv4_adresses"):
-                space = obj.data.get(space_field)
-                if space is not None:
-                    if not isinstance(space, list):
-                        self.error(obj.relpath, f"APM network access `{obj.data.get('name')}` `{space_field}` must be a list")
-                    else:
-                        for idx, subnet_entry in enumerate(space):
-                            if not isinstance(subnet_entry, dict) or "subnet" not in subnet_entry:
-                                self.error(obj.relpath, f"APM network access `{obj.data.get('name')}` `{space_field}` entry {idx} must define `subnet`")
+            auth_type = obj.data.get("type")
+            if auth_type not in supported_auth_types:
+                self.error(obj.relpath, f"APM auth server `{obj.data.get('name')}` `type` must be one of {sorted(supported_auth_types)}")
+            if auth_type in ("active_directory", "ldap"):
+                for field in ("servers", "bind_dn", "bind_pw"):
+                    if not obj.data.get(field):
+                        self.error(obj.relpath, f"APM auth server `{obj.data.get('name')}` of type `{auth_type}` must define `{field}`")
+                if auth_type == "active_directory" and not obj.data.get("domain"):
+                    self.error(obj.relpath, f"APM auth server `{obj.data.get('name')}` of type `active_directory` must define `domain`")
+            elif auth_type == "radius":
+                for field in ("servers", "secret"):
+                    if not obj.data.get(field):
+                        self.error(obj.relpath, f"APM auth server `{obj.data.get('name')}` of type `radius` must define `{field}`")
+                proto = obj.data.get("protocol")
+                if proto is not None and proto not in ("pap", "chap", "mschapv2"):
+                    self.error(obj.relpath, f"APM auth server `{obj.data.get('name')}` `protocol` must be pap, chap, or mschapv2")
+            elif auth_type == "tacacs":
+                for field in ("servers", "secret"):
+                    if not obj.data.get(field):
+                        self.error(obj.relpath, f"APM auth server `{obj.data.get('name')}` of type `tacacs` must define `{field}`")
+            elif auth_type == "rsa_securid":
+                for field in ("servers", "config_file"):
+                    if not obj.data.get(field):
+                        self.error(obj.relpath, f"APM auth server `{obj.data.get('name')}` of type `rsa_securid` must define `{field}`")
+            elif auth_type == "cert":
+                if not obj.data.get("ca_bundle"):
+                    self.error(obj.relpath, f"APM auth server `{obj.data.get('name')}` of type `cert` must define `ca_bundle`")
+            elif auth_type == "localdb":
+                if not obj.data.get("user_source"):
+                    self.error(obj.relpath, f"APM auth server `{obj.data.get('name')}` of type `localdb` must define `user_source`")
+            elif auth_type == "saml":
+                for field in ("idp_metadata_url", "sp_entity_id", "acs_url"):
+                    if not obj.data.get(field):
+                        self.error(obj.relpath, f"APM auth server `{obj.data.get('name')}` of type `saml` must define `{field}`")
+            elif auth_type == "oauth":
+                for field in ("provider_url", "client_id", "client_secret", "scopes"):
+                    if not obj.data.get(field):
+                        self.error(obj.relpath, f"APM auth server `{obj.data.get('name')}` of type `oauth` must define `{field}`")
+
+            servers = obj.data.get("servers")
+            if servers is not None:
+                if not isinstance(servers, list):
+                    self.error(obj.relpath, f"APM auth server `{obj.data.get('name')}` `servers` must be a list")
+                else:
+                    for idx, server in enumerate(servers):
+                        if not isinstance(server, str):
+                            self.error(obj.relpath, f"APM auth server `{obj.data.get('name')}` `servers[{idx}]` must be a string")
+            encryption = obj.data.get("encryption")
+            if encryption is not None and encryption not in ("none", "ssl", "starttls"):
+                self.error(obj.relpath, f"APM auth server `{obj.data.get('name')}` `encryption` must be one of none, ssl, starttls")
+            active_auth_server_names.add(self.fq_name(obj.partition, str(obj.data["name"])))
 
         self.check_duplicates(
-            network_access,
-            lambda obj: ("apm_network_access", obj.partition, obj.data.get("name")),
-            "APM network access",
+            auth_servers,
+            lambda obj: ("apm_auth_server", obj.partition, obj.data.get("name")),
+            "APM auth server",
         )
 
-        for obj in policies:
+        active_sso_names = set()
+        supported_sso_types = {
+            "kerberos", "form_based", "http_basic", "ntlm",
+            "saml", "oauth", "citrix", "domain_join",
+        }
+
+        for obj in sso_configs:
+            self.require_fields(obj, ["name", "type"])
+            if obj.effective_state == "absent":
+                continue
+            sso_type = obj.data.get("type")
+            if sso_type not in supported_sso_types:
+                self.error(obj.relpath, f"APM SSO config `{obj.data.get('name')}` `type` must be one of {sorted(supported_sso_types)}")
+            if sso_type == "kerberos":
+                for field in ("keytab", "spn"):
+                    if not obj.data.get(field):
+                        self.error(obj.relpath, f"APM SSO config `{obj.data.get('name')}` of type `kerberos` must define `{field}`")
+                method = obj.data.get("method")
+                if method is not None and method not in ("kcd", "negotiate"):
+                    self.error(obj.relpath, f"APM SSO config `{obj.data.get('name')}` `method` must be kcd or negotiate")
+            elif sso_type == "form_based":
+                for field in ("form_action_url", "username_field", "password_field"):
+                    if not obj.data.get(field):
+                        self.error(obj.relpath, f"APM SSO config `{obj.data.get('name')}` of type `form_based` must define `{field}`")
+            elif sso_type == "ntlm":
+                for field in ("server", "domain"):
+                    if not obj.data.get(field):
+                        self.error(obj.relpath, f"APM SSO config `{obj.data.get('name')}` of type `ntlm` must define `{field}`")
+            elif sso_type == "saml":
+                for field in ("idp_metadata_url", "sp_entity_id", "assertion_consumer_url"):
+                    if not obj.data.get(field):
+                        self.error(obj.relpath, f"APM SSO config `{obj.data.get('name')}` of type `saml` must define `{field}`")
+            elif sso_type == "oauth":
+                for field in ("provider_url", "client_id", "client_secret", "scopes"):
+                    if not obj.data.get(field):
+                        self.error(obj.relpath, f"APM SSO config `{obj.data.get('name')}` of type `oauth` must define `{field}`")
+            active_sso_names.add(self.fq_name(obj.partition, str(obj.data["name"])))
+
+        self.check_duplicates(
+            sso_configs,
+            lambda obj: ("apm_sso_config", obj.partition, obj.data.get("name")),
+            "APM SSO config",
+        )
+
+        active_resource_names = set()
+        supported_resource_types = {"network_access", "webtop", "remote_desktop", "portal_access"}
+
+        for obj in resources:
             self.require_fields(obj, ["name"])
             if obj.effective_state == "absent":
                 continue
-            self.require_fields(obj, ["source"])
-            policy_type = obj.data.get("type")
-            if policy_type is not None and policy_type not in ("access_policy", "access_profile"):
-                self.error(obj.relpath, f"APM policy `{obj.data.get('name')}` `type` must be `access_policy` or `access_profile`")
-            force = obj.data.get("force")
-            if force is not None and not isinstance(force, bool):
-                self.error(obj.relpath, f"APM policy `{obj.data.get('name')}` `force` must be a boolean")
-            reuse = obj.data.get("reuse_objects")
-            if reuse is not None and not isinstance(reuse, bool):
-                self.error(obj.relpath, f"APM policy `{obj.data.get('name')}` `reuse_objects` must be a boolean")
+            resource_type = obj.data.get("type")
+            if resource_type is not None and resource_type not in supported_resource_types:
+                self.error(obj.relpath, f"APM resource `{obj.data.get('name')}` `type` must be one of {sorted(supported_resource_types)}")
+            if resource_type == "network_access":
+                address_spaces = obj.data.get("address_spaces")
+                if address_spaces is not None:
+                    if not isinstance(address_spaces, list):
+                        self.error(obj.relpath, f"APM resource `{obj.data.get('name')}` `address_spaces` must be a list")
+                    else:
+                        for idx, space in enumerate(address_spaces):
+                            if not isinstance(space, dict) or "subnet" not in space:
+                                self.error(obj.relpath, f"APM resource `{obj.data.get('name')}` `address_spaces[{idx}]` must define `subnet`")
+                excluded_subnets = obj.data.get("excluded_subnets")
+                if excluded_subnets is not None:
+                    if not isinstance(excluded_subnets, list):
+                        self.error(obj.relpath, f"APM resource `{obj.data.get('name')}` `excluded_subnets` must be a list")
+                    else:
+                        for idx, subnet in enumerate(excluded_subnets):
+                            if not isinstance(subnet, dict) or "subnet" not in subnet:
+                                self.error(obj.relpath, f"APM resource `{obj.data.get('name')}` `excluded_subnets[{idx}]` must define `subnet`")
+            if resource_type == "webtop":
+                webtop_type = obj.data.get("webtop_type")
+                if webtop_type is not None and webtop_type not in ("full", "links"):
+                    self.error(obj.relpath, f"APM resource `{obj.data.get('name')}` `webtop_type` must be `full` or `links`")
+                items = obj.data.get("items")
+                if items is not None:
+                    if not isinstance(items, list):
+                        self.error(obj.relpath, f"APM resource `{obj.data.get('name')}` `items` must be a list")
+                    else:
+                        for idx, item_entry in enumerate(items):
+                            if not isinstance(item_entry, dict):
+                                self.error(obj.relpath, f"APM resource `{obj.data.get('name')}` `items[{idx}]` must be a mapping")
+            active_resource_names.add(self.fq_name(obj.partition, str(obj.data["name"])))
 
         self.check_duplicates(
-            policies,
-            lambda obj: ("apm_policy", obj.partition, obj.data.get("name")),
-            "APM policy",
+            resources,
+            lambda obj: ("apm_resource", obj.partition, obj.data.get("name")),
+            "APM resource",
+        )
+
+        supported_node_types = {
+            "logon_page", "ad_auth", "ldap_auth", "kerberos_auth",
+            "kcd_sso", "branch", "allow", "deny", "fallback",
+            "macro", "variable_assign", "ad_query",
+        }
+        sso_ref_keys = {"kerberos_sso_object", "sso_config", "saml_sso", "oauth_sso", "form_based_sso", "http_basic_sso", "ntlm_sso"}
+
+        for obj in policy_nodes:
+            self.require_fields(obj, ["name", "policy"])
+            if obj.effective_state == "absent":
+                continue
+            node_type = obj.data.get("type")
+            if node_type is not None and node_type not in supported_node_types:
+                self.error(obj.relpath, f"APM policy node `{obj.data.get('name')}` `type` must be one of {sorted(supported_node_types)}")
+            properties = obj.data.get("properties")
+            if properties is not None and not isinstance(properties, dict):
+                self.error(obj.relpath, f"APM policy node `{obj.data.get('name')}` `properties` must be a mapping")
+            if node_type in ("ad_auth", "ad_query") and properties:
+                if "ad_server" in properties:
+                    ad_ref = properties["ad_server"]
+                    fq_ad = ad_ref if str(ad_ref).startswith("/") else self.fq_name(obj.partition, str(ad_ref))
+                    if fq_ad not in active_auth_server_names:
+                        self.error(obj.relpath, f"APM policy node `{obj.data.get('name')}` references undefined auth server `{fq_ad}`")
+            if node_type == "ldap_auth" and properties:
+                if "ldap_server" in properties:
+                    ldap_ref = properties["ldap_server"]
+                    fq_ldap = ldap_ref if str(ldap_ref).startswith("/") else self.fq_name(obj.partition, str(ldap_ref))
+                    if fq_ldap not in active_auth_server_names:
+                        self.error(obj.relpath, f"APM policy node `{obj.data.get('name')}` references undefined auth server `{fq_ldap}`")
+            if node_type in ("kcd_sso", "kerberos_auth") and properties:
+                for key in sso_ref_keys:
+                    if key in properties:
+                        sso_ref = properties[key]
+                        fq_sso = sso_ref if str(sso_ref).startswith("/") else self.fq_name(obj.partition, str(sso_ref))
+                        if fq_sso not in active_sso_names:
+                            self.error(obj.relpath, f"APM policy node `{obj.data.get('name')}` references undefined SSO config `{fq_sso}`")
+            if node_type == "branch" and properties:
+                rules = properties.get("rules")
+                if rules is not None:
+                    if not isinstance(rules, list):
+                        self.error(obj.relpath, f"APM policy node `{obj.data.get('name')}` `properties.rules` must be a list")
+                    else:
+                        for idx, rule in enumerate(rules):
+                            if not isinstance(rule, dict):
+                                self.error(obj.relpath, f"APM policy node `{obj.data.get('name')}` `properties.rules[{idx}]` must be a mapping")
+                            elif "name" not in rule or "expression" not in rule:
+                                self.error(obj.relpath, f"APM policy node `{obj.data.get('name')}` `properties.rules[{idx}]` must define `name` and `expression`")
+
+        self.check_duplicates(
+            policy_nodes,
+            lambda obj: ("apm_policy_node", obj.partition, obj.data.get("policy"), obj.data.get("name")),
+            "APM policy node",
         )
 
     @staticmethod

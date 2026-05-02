@@ -1,0 +1,2 @@
+apm_policy_node_defaults:
+  partition: Common

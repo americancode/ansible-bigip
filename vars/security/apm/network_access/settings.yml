@@ -1,5 +1,0 @@
----
-# APM Network Access settings.
-# Network Access resources are assigned within APM access policies (managed via VPE or policy imports).
-apm_network_access_defaults:
-  partition: Common
