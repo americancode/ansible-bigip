@@ -26,11 +26,13 @@ Canonical playbooks live under `playbooks/`. Root-level `*.yml` files remain as 
 
 ## Playbook Layout
 
-The larger domains are split internally so the top-level playbook stays readable:
+Canonical playbooks use a consistent split so the entrypoint stays small and the discovery and execution logic remain easy to follow:
 
-- `playbooks/network.yml`, `playbooks/ltm.yml`, and `playbooks/gtm.yml` are canonical entrypoints
+- `playbooks/<domain>.yml` is the canonical entrypoint
 - `playbooks/<domain>/prep.yml` contains fragment discovery, `include_vars`, defaults loading, and aggregation logic
 - `playbooks/<domain>/tasks/manage.yml` contains the actual create/delete/apply tasks
+
+This pattern is the default for `network`, `system`, `ha`, `tls`, `ltm`, and `gtm`. If a future playbook stays small enough that splitting it adds no value, document that choice in the roadmap before keeping it monolithic.
 
 Path handling inside canonical playbooks is anchored from `playbook_dir`, so moving playbooks under `playbooks/` does not break references to `vars/`.
 
