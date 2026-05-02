@@ -16,24 +16,23 @@ Target outcome:
 
 The repository already supports:
 
-- declarative `network`, `ltm`, and `gtm` playbooks
+- declarative `network`, `system`, `ha`, `ltm`, `gtm`, and `tls` playbooks
 - canonical playbooks organized under `playbooks/` with root-level wrapper entrypoints
-- all current canonical playbooks use the split entrypoint model with `playbooks/<domain>/prep.yml` and `playbooks/<domain>/tasks/manage.yml`
-- all current task layers split destructive ordering into `tasks/delete.yml` and present-state application into `tasks/apply.yml`
-- split var trees for scale
-- per-directory `settings.yml` inheritance
+- all canonical playbooks use the split model: `<domain>.yml`, `prep.yml`, `tasks/manage.yml`, `tasks/apply.yml`, `tasks/delete.yml`
+- split var trees for scale across all domains
+- per-directory `settings.yml` inheritance with object-level override → sibling settings → playbook fallback precedence
 - object-level partition overrides with `Common` fallback
 - inventory-driven BIG-IP target selection through `f5_host` with `F5_HOST` env fallback
 - hybrid object modeling:
   - embedded pools under LTM virtual servers
   - embedded pools under GTM Wide IPs
   - first-class shared trees for reusable objects
-- explicit deletion trees under `vars/*/deletions`
+  - hybrid readability shortcuts (`pool_defaults`, `member_defaults`, `monitor_sets`)
+- explicit deletion trees under `vars/*/deletions` and `state: absent` inline pattern
 - reusable monitor definitions
 - universal `enabled: true` default where modules support admin state
-- offline validation through `tools/validate-vars`
-- `make validate` wrapper
-- `system.yml` for hostname, DNS, NTP, provisioning, users, and config save
+- offline validation through `tools/validate-vars` with `make validate` wrapper
+- modular documentation under `docs/` covering playbook structure, var layout, hybrid authoring, deletion workflows, AWX operation, validation, TLS secrets, and bootstrap paths
 
 The main remaining gaps are:
 
@@ -256,14 +255,32 @@ This is the recommended end-state layout.
 
 These are binding repo maintenance rules for every feature change, including future AI agents working in this repository.
 
-- Update `ROADMAP.md` current state, backlog items, and milestone checklists when scope changes.
-- Keep canonical playbooks under `playbooks/` and keep root-level wrapper playbooks working during transitions.
-- Default to the split canonical playbook model: keep discovery/default aggregation in `playbooks/<domain>/prep.yml`, keep `tasks/manage.yml` as the ordering wrapper, and separate destructive tasks into `tasks/delete.yml` from present-state tasks in `tasks/apply.yml`. If a future playbook is intentionally left monolithic, record the reason in this roadmap.
-- Update example var files when a feature adds or changes an authoring pattern.
-- Update docs alongside code so linkages and reference strings are explained where operators read them.
-- If an empty directory must be kept intentionally, include a `.gitkeep`.
-- Validate after each major change before moving to the next implementation step.
-- Include a suggested commit name only after the implementation and validation are complete.
+### Documentation and Examples
+
+- update `docs/` alongside every code change so linkages and reference strings are explained where operators read them
+- update `README.md` when a feature changes the high-level playbook list, validation commands, or quick links table
+- update example var files under `vars/` when a feature adds or changes an authoring pattern
+- do not add documentation to `README.md` that belongs in `docs/`; the README stays minimal with a table of doc links
+- if an empty directory must exist intentionally, include a `.gitkeep`
+
+### Roadmap Maintenance
+
+- update `ROADMAP.md` Current State section when new features are implemented
+- update the backlog item checklist (`Recommended Near-Term Backlog`) when work is completed
+- update milestone checklists in `Issue-Sized Execution Plan` when work is completed
+- update the Implementation Audit section when new objects or playbooks are added
+- update the Not Implemented Yet list when gaps are filled
+- if a playbook is intentionally kept monolithic instead of split, record the reason here
+
+### Playbook Structure
+
+- keep canonical playbooks under `playbooks/` and keep root-level wrapper playbooks working during transitions
+- default to the split canonical playbook model: keep discovery/default aggregation in `playbooks/<domain>/prep.yml`, keep `tasks/manage.yml` as the ordering wrapper, and separate destructive tasks into `tasks/delete.yml` from present-state tasks in `tasks/apply.yml`
+
+### Validation and Commits
+
+- validate after each major change before moving to the next implementation step
+- at the end of every implementation prompt, after changes are made and validated, print a suggested commit message
 
 ## Program Phases
 
@@ -607,6 +624,7 @@ This is the practical next sequence for the current repo.
    - [x] subdirectory maintenance defaults via `settings.yml` object defaults
 9. [x] Add optional LTM virtual resolution
 10. [x] Define TLS secret handling approach
+11. [ ] Complete missing documentation
 
 ## Issue-Sized Execution Plan
 
@@ -652,6 +670,49 @@ These are the first concrete tickets I would open.
 - [x] Add `tls.yml`
 - [x] Add certificate, key, and SSL profile trees
 - [x] Define secret handling approach
+
+### Milestone 6: Documentation
+
+- [ ] Add network objects guide
+  - VLANs, trunks, route domains, self IPs (floating/local), static routes
+  - SNAT pools, SNAT translations, NATs (tmsh workflow)
+  - Cross-references between network objects (e.g., NAT to VLAN)
+- [ ] Add system management guide
+  - hostname, DNS, NTP, provisioning, users, config save workflow
+  - Partition and naming conventions for system objects
+- [ ] Add deletion workflows guide
+  - How to use `vars/*/deletions/` trees
+  - `state: absent` pattern on objects in normal trees
+  - Review and approval process for destructive changes
+- [ ] Add validation tooling guide
+  - How `tools/validate-vars` works and what it checks
+  - CI integration and gate behavior
+  - How to add validation rules for new object types
+  - Handling of `!vault` tags in offline validation
+- [ ] Add variable precedence and settings guide
+  - object-level → `settings.yml` → playbook fallback resolution
+  - Per-directory `settings.yml` patterns
+  - `pool_defaults`, `member_defaults`, `monitor_sets` inheritance
+  - Partition override behavior with `Common` fallback
+- [ ] Add LTM advanced fields guide
+  - Priority groups, service down action, min active members
+  - Slow ramp, queueing, connection limits
+  - Persistence, fallback persistence, source CIDR
+  - VLAN restrictions, metadata, iRules, policy attachments
+- [ ] Add GTM advanced fields guide
+  - Aliases, persistence, last resort pool
+  - Load-balancing policy combinations
+  - LTM virtual resolution for pool members (`address`/`port` auto-resolution)
+- [ ] Add hybrid authoring guide
+  - When to embed vs promote shared objects
+  - Concise vs verbose models with decision criteria
+  - Cross-file linkage patterns and reference resolution
+  - Built-in vs custom health check aliases
+- [ ] Add playbook structure guide
+  - Split layout rationale: `prep.yml`, `manage.yml`, `apply.yml`, `delete.yml`
+  - How discovery, defaults loading, and aggregation work in `prep.yml`
+  - Task ordering semantics in `manage.yml`
+  - When to keep a playbook monolithic vs split
 
 ## Network Expansion Status
 

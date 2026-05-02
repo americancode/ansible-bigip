@@ -8,25 +8,102 @@ Use this path when:
 - you need to initialize one or more new BIG-IP devices from a terminal
 - you want a simple, repeatable bootstrap process before shifting to AWX
 
-The goal is to bootstrap BIG-IP from a terminal, then hand normal ongoing operations to AWX later.
+## Setting Up a Jump Host
 
-## Prerequisites
+### Ubuntu 22.04 / 24.04 Minimal
 
-You need:
+Start from a fresh Ubuntu Server or desktop install. You need root or sudo access.
 
-- a workstation or jump host with this repository checked out
-- Python 3
-- Ansible installed
-- the `f5networks.f5_modules` collection installed
-- network reachability from your terminal host to the BIG-IP management interfaces
-- working admin credentials on the new BIG-IP devices
+#### 1. Install System Dependencies
 
-Quick local checks:
+```sh
+sudo apt update
+sudo apt install -y python3 python3-pip python3-venv git
+```
+
+#### 2. Create an Isolated Python Environment
+
+Using a virtual environment keeps the system Python clean and avoids package conflicts:
+
+```sh
+mkdir -p ~/ansible-bigip && cd ~/ansible-bigip
+python3 -m venv .venv
+source .venv/bin/activate
+```
+
+To re-enter the virtual environment in a new shell session:
+
+```sh
+cd ~/ansible-bigip && source .venv/bin/activate
+```
+
+#### 3. Install Ansible
+
+Pin to a supported version (2.15+ recommended):
+
+```sh
+pip install 'ansible>=9.0,<10.0'
+```
+
+Verify:
+
+```sh
+ansible-playbook --version
+```
+
+#### 4. Install the F5 Modules Collection
+
+```sh
+ansible-galaxy collection install f5networks.f5_modules
+```
+
+Verify:
+
+```sh
+ansible-galaxy collection list | grep f5networks.f5_modules
+```
+
+#### 5. Clone the Repository
+
+```sh
+git clone <repo-url> .
+```
+
+Or if the repo is already present:
+
+```sh
+cd /path/to/ansible-bigip
+source .venv/bin/activate
+pip install -r requirements.txt 2>/dev/null || true
+```
+
+#### 6. Install Collection Dependencies
+
+If the repo has a `collections/requirements.yml`:
+
+```sh
+ansible-galaxy collection install -r collections/requirements.yml
+```
+
+#### 7. Verify Everything
 
 ```sh
 python3 --version
 ansible-playbook --version
-ansible-galaxy collection list | rg f5networks.f5_modules
+ansible-galaxy collection list | grep f5networks
+make validate 2>/dev/null || python3 tools/validate-vars
+```
+
+### Alternative: Quick One-Liner Setup
+
+For a disposable VM or container:
+
+```sh
+sudo apt update && sudo apt install -y python3 python3-pip python3-venv git
+python3 -m venv ~/.ansible-bigip-venv
+source ~/.ansible-bigip-venv/bin/activate
+pip install 'ansible>=9.0,<10.0'
+ansible-galaxy collection install f5networks.f5_modules
 ```
 
 ## How Targeting Works from the CLI
@@ -37,9 +114,9 @@ That means:
 
 - Ansible executes locally on your terminal host
 - the target BIG-IP is chosen by the inventory host var `f5_host`
-- credentials normally come from environment variables
+- credentials come from environment variables
 
-From [vars/common.yml](/Users/nathanielchurchill/source/ansible-bigip/vars/common.yml):
+From `vars/common.yml`:
 
 - `f5_host` is the preferred target source
 - `F5_HOST` is only an environment fallback
@@ -91,11 +168,11 @@ Example topology:
 
 The repo-side HA examples already assume a one-target bootstrap perspective:
 
-- [vars/ha/device_trust/foundation-peer.yml](/Users/nathanielchurchill/source/ansible-bigip/vars/ha/device_trust/foundation-peer.yml)
-- [vars/ha/device_groups/foundation-groups.yml](/Users/nathanielchurchill/source/ansible-bigip/vars/ha/device_groups/foundation-groups.yml)
-- [vars/ha/device_group_members/foundation-members.yml](/Users/nathanielchurchill/source/ansible-bigip/vars/ha/device_group_members/foundation-members.yml)
-- [vars/ha/traffic_groups/foundation-traffic-groups.yml](/Users/nathanielchurchill/source/ansible-bigip/vars/ha/traffic_groups/foundation-traffic-groups.yml)
-- [vars/ha/configsync_actions/manual-sync.yml](/Users/nathanielchurchill/source/ansible-bigip/vars/ha/configsync_actions/manual-sync.yml)
+- `vars/ha/device_trust/foundation-peer.yml`
+- `vars/ha/device_groups/foundation-groups.yml`
+- `vars/ha/device_group_members/foundation-members.yml`
+- `vars/ha/traffic_groups/foundation-traffic-groups.yml`
+- `vars/ha/configsync_actions/manual-sync.yml`
 
 Those examples mean:
 
@@ -187,8 +264,10 @@ ansible-playbook -i inventory/bootstrap.ini playbooks/ha.yml --limit bigip-east-
 Once BIG-IP is initialized and AWX is safely reachable behind it:
 
 1. Create the AWX inventory host with the same `f5_host`
-2. Create the auth-only BIG-IP credential from [bigip-credential-config.yaml](/Users/nathanielchurchill/source/ansible-bigip/bigip-credential-config.yaml)
+2. Create the auth-only BIG-IP credential from `bigip-credential-config.yaml`
 3. Point AWX templates at the same sync-owner execution host model
+
+See [awx-operation.md](awx-operation.md) for the full AWX pattern.
 
 At that point the CLI bootstrap path and the AWX path use the same repo model:
 
