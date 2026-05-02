@@ -215,17 +215,66 @@ ltm_virtual_servers:
 | `fallback_persistence_profile` | string | - | Fallback persistence profile name |
 | `irules` | list | - | iRule names to attach |
 | `policies` | list | - | LTM policy names to attach |
+| `vlans` | list | - | VLAN names to allow or deny |
+| `vlans_enabled` | bool | - | `true` = allow list, `false` = deny list |
+| `metadata` | list | - | Key/value metadata entries |
+| `log_profiles` | list | - | Log profile references |
 | `description` | string | - | Description |
 | `enabled` | bool | `true` | Admin state |
+
+### VLAN Filtering
+
+```yaml
+ltm_virtual_servers:
+  - name: "vs_app_443"
+    destination: "10.201.0.80"
+    destination_port: 443
+    pool: "pool_app"
+    vlans:
+      - "vlan_frontend"
+      - "vlan_servers"
+    vlans_enabled: true
+```
+
+Set `vlans_enabled: true` to use the VLAN list as an allow list (traffic only accepted on listed VLANs). Set `vlans_enabled: false` to use it as a deny list.
+
+### Metadata
+
+```yaml
+ltm_virtual_servers:
+  - name: "vs_app_443"
+    destination: "10.201.0.80"
+    destination_port: 443
+    pool: "pool_app"
+    metadata:
+      - key: "owner"
+        value: "app-team"
+      - key: "environment"
+        value: "production"
+      - key: "ticket"
+        value: "JIRA-1234"
+```
+
+### Log Profiles
+
+```yaml
+ltm_virtual_servers:
+  - name: "vs_app_443"
+    destination: "10.201.0.80"
+    destination_port: 443
+    pool: "pool_app"
+    log_profiles:
+      - "local-db"
+      - "/Common/security-log-profile"
+```
+
+Common log profiles: `local-db`, `remote-high-speed-log`, `splunk`, or custom-created profiles.
 
 ### Not Yet Implemented
 
 The following virtual server fields are roadmap items:
 
 - source address translation (custom CIDR)
-- VLAN filtering/allow list
-- metadata
-- log profile references
 
 ## Persistence Profiles
 

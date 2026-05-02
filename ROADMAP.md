@@ -38,7 +38,6 @@ The repository already supports:
 The main remaining gaps are:
 
 - deeper HA lifecycle beyond trust, groups, traffic groups, and config sync
-- LTM virtual server VLAN filtering, metadata, log profiles
 - GTM topology records and regions
 - security module coverage (AFM, WAF/ASM, APM)
 - drift detection and promotion workflows
@@ -98,6 +97,7 @@ Implemented today:
   - first-class data groups (`string`, `ip`, `integer`)
   - first-class LTM policies with rules, conditions, and actions
   - virtual server attachments for persistence, iRules, and policies
+  - virtual server VLAN filtering, metadata, and log profiles
   - per-object and per-directory partition handling
   - enabled/disabled semantics where supported
   - deletion trees
@@ -123,7 +123,6 @@ Implemented today:
 
 Not implemented yet:
 
-- LTM virtual server VLAN filtering, metadata, log profiles
 - GTM topology records and regions
 - security modules
 - live drift/import/promotion tooling
@@ -632,6 +631,7 @@ This is the practical next sequence for the current repo.
 10. [x] Define TLS secret handling approach
  11. [x] Complete missing documentation
  12. [x] Add LTM persistence, iRules, data groups, and policies
+ 13. [x] Add virtual server VLAN filtering, metadata, and log profiles
 
 ## Issue-Sized Execution Plan
 
@@ -686,6 +686,7 @@ These are the first concrete tickets I would open.
 - [x] Add `vars/ltm/policies` for first-class LTM policies
 - [x] Update `ltm.yml` apply/delete tasks for new object types
 - [x] Add virtual server fields: `default_persistence_profile`, `fallback_persistence_profile`, `irules`, `policies`
+- [x] Add virtual server fields: `vlans`, `vlans_enabled`, `metadata`, `log_profiles`
 - [x] Add deletion trees for all new object types
 
 ## Network Expansion Status

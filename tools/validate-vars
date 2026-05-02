@@ -281,6 +281,34 @@ class Validator:
                 extra_settings_keys=("ltm_pool_defaults", "ltm_member_defaults", "ltm_monitor_sets"),
             ),
             TreeSpec(
+                name="ltm_persistence_profiles",
+                active_dir=VARS_DIR / "ltm" / "persistence",
+                deletion_dir=VARS_DIR / "ltm" / "deletions" / "persistence",
+                top_key="ltm_persistence_profiles",
+                settings_key="ltm_persistence_profile_defaults",
+            ),
+            TreeSpec(
+                name="ltm_irules",
+                active_dir=VARS_DIR / "ltm" / "irules",
+                deletion_dir=VARS_DIR / "ltm" / "deletions" / "irules",
+                top_key="ltm_irules",
+                settings_key="ltm_irule_defaults",
+            ),
+            TreeSpec(
+                name="ltm_data_groups",
+                active_dir=VARS_DIR / "ltm" / "data_groups",
+                deletion_dir=VARS_DIR / "ltm" / "deletions" / "data_groups",
+                top_key="ltm_data_groups",
+                settings_key="ltm_data_group_defaults",
+            ),
+            TreeSpec(
+                name="ltm_policies",
+                active_dir=VARS_DIR / "ltm" / "policies",
+                deletion_dir=VARS_DIR / "ltm" / "deletions" / "policies",
+                top_key="ltm_policies",
+                settings_key="ltm_policy_defaults",
+            ),
+            TreeSpec(
                 name="gtm_monitors",
                 active_dir=VARS_DIR / "gtm" / "monitors",
                 deletion_dir=VARS_DIR / "gtm" / "deletions" / "monitors",
@@ -812,6 +840,11 @@ class Validator:
         virtual_servers = self.objects.get("ltm_virtual_servers", [])
         tls_client_ssl_profiles = self.objects.get("tls_client_ssl_profiles", [])
         tls_server_ssl_profiles = self.objects.get("tls_server_ssl_profiles", [])
+        network_vlans = self.objects.get("network_vlans", [])
+        persistence_profiles = self.objects.get("ltm_persistence_profiles", [])
+        irules = self.objects.get("ltm_irules", [])
+        data_groups = self.objects.get("ltm_data_groups", [])
+        policies = self.objects.get("ltm_policies", [])
 
         active_node_names = set()
         for obj in nodes:
@@ -886,6 +919,11 @@ class Validator:
 
         self.check_duplicates(pools, lambda obj: ("ltm_pool", obj.partition, obj.data.get("name")), "LTM pool")
 
+        active_vlan_names = set()
+        for obj in network_vlans:
+            if obj.effective_state != "absent" and obj.data.get("name"):
+                active_vlan_names.add(self.fq_name(obj.partition, str(obj.data["name"])))
+
         for obj in virtual_servers:
             self.require_fields(obj, ["name"])
             if obj.effective_state == "absent":
@@ -905,6 +943,28 @@ class Validator:
                             known_profiles=active_profile_names,
                             kind="LTM virtual server profile",
                         )
+            vs_vlans = obj.data.get("vlans")
+            if vs_vlans is not None:
+                if not isinstance(vs_vlans, list):
+                    self.error(obj.relpath, f"virtual server `{obj.data.get('name')}` `vlans` must be a list")
+                else:
+                    for vlan in vs_vlans:
+                        self.validate_named_or_fq_reference(
+                            obj.relpath,
+                            vlan,
+                            obj.partition,
+                            active_vlan_names,
+                            "virtual server VLAN",
+                        )
+            vs_metadata = obj.data.get("metadata")
+            if vs_metadata is not None and not isinstance(vs_metadata, list):
+                self.error(obj.relpath, f"virtual server `{obj.data.get('name')}` `metadata` must be a list")
+            log_profiles = obj.data.get("log_profiles")
+            if log_profiles is not None and not isinstance(log_profiles, list):
+                self.error(obj.relpath, f"virtual server `{obj.data.get('name')}` `log_profiles` must be a list")
+            vlans_enabled = obj.data.get("vlans_enabled")
+            if vlans_enabled is not None and not isinstance(vlans_enabled, bool):
+                self.error(obj.relpath, f"virtual server `{obj.data.get('name')}` `vlans_enabled` must be a boolean")
             pool = obj.data.get("pool")
             if isinstance(pool, str):
                 pool_ref = self.normalize_pool_reference(pool, obj.partition)
@@ -954,6 +1014,64 @@ class Validator:
             virtual_servers,
             lambda obj: ("ltm_virtual_server", obj.partition, obj.data.get("name")),
             "LTM virtual server",
+        )
+
+        supported_persistence_types = {"cookie", "source_addr", "universal"}
+        active_persistence_names = set()
+        for obj in persistence_profiles:
+            self.require_fields(obj, ["name", "type"])
+            if obj.effective_state == "absent":
+                continue
+            ptype = str(obj.data.get("type"))
+            if ptype not in supported_persistence_types:
+                self.error(
+                    obj.relpath,
+                    f"LTM persistence profile `{obj.data.get('name')}` type `{ptype}` is unsupported; use one of {sorted(supported_persistence_types)}",
+                )
+            active_persistence_names.add(self.fq_name(obj.partition, str(obj.data["name"])))
+
+        self.check_duplicates(
+            persistence_profiles,
+            lambda obj: ("ltm_persistence_profile", obj.partition, obj.data.get("name")),
+            "LTM persistence profile",
+        )
+
+        for obj in irules:
+            self.require_fields(obj, ["name"])
+            if obj.effective_state != "absent" and not obj.data.get("rule"):
+                self.error(obj.relpath, f"LTM iRule `{obj.data.get('name')}` must define `rule`")
+
+        self.check_duplicates(
+            irules,
+            lambda obj: ("ltm_irule", obj.partition, obj.data.get("name")),
+            "LTM iRule",
+        )
+
+        supported_data_group_types = {"string", "ip", "integer"}
+        for obj in data_groups:
+            self.require_fields(obj, ["name", "type"])
+            if obj.effective_state == "absent":
+                continue
+            dgtype = str(obj.data.get("type"))
+            if dgtype not in supported_data_group_types:
+                self.error(
+                    obj.relpath,
+                    f"LTM data group `{obj.data.get('name')}` type `{dgtype}` is unsupported; use one of {sorted(supported_data_group_types)}",
+                )
+
+        self.check_duplicates(
+            data_groups,
+            lambda obj: ("ltm_data_group", obj.partition, obj.data.get("name")),
+            "LTM data group",
+        )
+
+        for obj in policies:
+            self.require_fields(obj, ["name"])
+
+        self.check_duplicates(
+            policies,
+            lambda obj: ("ltm_policy", obj.partition, obj.data.get("name")),
+            "LTM policy",
         )
 
     def validate_ltm_pool_members(

@@ -47,6 +47,12 @@ This repository manages F5 BIG-IP through declarative Ansible playbooks organize
 
 - run `make validate` after each major change before moving to the next step
 - validation must pass before any playbook execution
+- update `tools/validate-vars` when adding new var trees or object types:
+  - add a `TreeSpec` entry for every new active and deletion directory
+  - add type-specific validation in the appropriate `validate_*` method
+  - add duplicate checks for all new object types
+  - validate new fields (type, required keys, cross-references) where applicable
+- never introduce a new var tree without corresponding validation coverage
 
 ## Commit Messages
 
