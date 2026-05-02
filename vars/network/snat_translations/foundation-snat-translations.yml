@@ -1,0 +1,11 @@
+---
+bigip_snat_translations:
+  - name: "platform-egress-a"
+    address: "10.10.11.200"
+    traffic_group: "traffic-group-1"
+    description: "Primary floating egress SNAT"
+
+  - name: "platform-egress-b"
+    address: "10.10.11.201"
+    traffic_group: "traffic-group-1"
+    description: "Secondary floating egress SNAT"

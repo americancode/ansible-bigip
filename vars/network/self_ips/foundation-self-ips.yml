@@ -7,6 +7,13 @@ bigip_self_ips:
     traffic_group: "traffic-group-local-only"
     allow_service: "default"
 
+  - name: "self_external_float"
+    address: "10.10.11.11"
+    netmask: "255.255.255.0"
+    vlan: "external"
+    traffic_group: "traffic-group-1"
+    allow_service: "default"
+
   - name: "self_internal"
     address: "10.10.21.10"
     netmask: "255.255.255.0"

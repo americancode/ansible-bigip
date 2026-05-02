@@ -4,7 +4,7 @@ Declarative BIG-IP playbooks organized for GitOps-style management.
 
 ## Playbooks
 
-- `network.yml`: VLANs and self IPs
+- `network.yml`: VLANs, route domains, self IPs, static routes, SNAT translations, and SNAT pools
 - `system.yml`: base system settings like hostname, DNS, NTP, provisioning, users
 - `ha.yml`: device trust, device groups, traffic groups, config sync actions
 - `ltm.yml`: LTM monitors, nodes, pools, virtual servers
@@ -31,6 +31,12 @@ Precedence is:
 3. playbook fallback
 
 For partitions, the fallback is `Common`.
+
+The network examples include:
+
+- local and floating self IP patterns
+- route-domain-scoped routing
+- reusable SNAT translations and SNAT pools
 
 ## Hybrid Model
 

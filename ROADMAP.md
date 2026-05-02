@@ -48,7 +48,11 @@ Implemented today:
 
 - `network.yml`
   - VLANs
+  - route domains
   - self IPs
+  - static routes
+  - SNAT translations
+  - SNAT pools
   - deletion trees
   - per-directory `settings.yml`
 - `system.yml`
@@ -95,7 +99,7 @@ Implemented today:
 
 Not implemented yet:
 
-- routes, route domains, SNATs, NATs, trunks
+- NATs and trunks
 - LTM profiles, persistence, policies, iRules, data groups
 - GTM topology and regions
 - security modules
@@ -520,7 +524,7 @@ This is the practical next sequence for the current repo.
 4. [x] Add `system.yml` for base platform settings
 5. [x] Add `ha.yml` for trust/sync/failover
 6. [x] Add `tls.yml` for certs and SSL profiles
-7. [ ] Add network routes, route domains, and SNAT/NAT support
+7. [ ] Add NAT and trunk support to complete network expansion
 8. [ ] Add hybrid readability shortcuts:
    - [x] `pool_defaults`
    - [x] `member_defaults`
@@ -571,6 +575,14 @@ These are the first concrete tickets I would open.
 - [x] Add `tls.yml`
 - [x] Add certificate, key, and SSL profile trees
 - [ ] Define secret handling approach
+
+## Network Expansion Status
+
+The repo now covers route domains, static routes, SNAT translations, and SNAT pools.
+
+Remaining network gap:
+
+- NAT object management does not have a first-class module in the installed `f5networks.f5_modules` collection, so this roadmap item remains open until that strategy is defined alongside trunk support.
 
 ## Decisions To Make Early
 

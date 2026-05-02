@@ -1,0 +1,10 @@
+---
+bigip_route_domains:
+  - name: "tenant-a"
+    id: 100
+    parent: "0"
+    strict: true
+    description: "Tenant A route domain"
+    vlans:
+      - "external"
+      - "internal"

@@ -1,5 +1,4 @@
----
-- name: Configure BIG-IP VLANs and self IPs
+- name: Configure BIG-IP network objects
   hosts: localhost
   gather_facts: false
   collections:
@@ -70,6 +69,67 @@
             ).network_vlan_defaults | default({})
           }}
 
+    - name: Discover route domain fragments
+      ansible.builtin.set_fact:
+        route_domain_files: >-
+          {{
+            lookup(
+              'ansible.builtin.pipe',
+              "find vars/network/route_domains -type f -name '*.yml' ! -name 'settings.yml' 2>/dev/null | sort"
+            ).splitlines() | reject('equalto', '') | list
+          }}
+        route_domain_deletion_files: >-
+          {{
+            lookup(
+              'ansible.builtin.pipe',
+              "find vars/network/deletions/route_domains -type f -name '*.yml' ! -name 'settings.yml' 2>/dev/null | sort"
+            ).splitlines() | reject('equalto', '') | list
+          }}
+
+    - name: Load route domain fragments
+      ansible.builtin.include_vars:
+        file: "{{ item }}"
+        name: route_domain_fragment
+      loop: "{{ route_domain_files }}"
+      register: route_domain_include_results
+
+    - name: Load route domain deletion fragments
+      ansible.builtin.include_vars:
+        file: "{{ item }}"
+        name: route_domain_deletion_fragment
+      loop: "{{ route_domain_deletion_files }}"
+      register: route_domain_deletion_include_results
+
+    - name: Aggregate route domains with directory settings
+      ansible.builtin.set_fact:
+        bigip_route_domains: "{{ bigip_route_domains | default([]) + [ route_domain_directory_defaults | combine(item.1, recursive=True) ] }}"
+      loop: "{{ query('subelements', route_domain_include_results.results, 'ansible_facts.route_domain_fragment.bigip_route_domains', {'skip_missing': True}) }}"
+      vars:
+        route_domain_settings_path: "{{ item.0.item | regex_replace('/[^/]+$', '/settings.yml') }}"
+        route_domain_directory_defaults: >-
+          {{
+            (
+              lookup('ansible.builtin.file', route_domain_settings_path, errors='ignore')
+              | default('{}', true)
+              | from_yaml
+            ).network_route_domain_defaults | default({})
+          }}
+
+    - name: Aggregate route domain deletions with directory settings
+      ansible.builtin.set_fact:
+        bigip_route_domain_deletions: "{{ bigip_route_domain_deletions | default([]) + [ (route_domain_deletion_directory_defaults | combine(item.1, recursive=True)) | combine({'state': 'absent'}, recursive=True) ] }}"
+      loop: "{{ query('subelements', route_domain_deletion_include_results.results, 'ansible_facts.route_domain_deletion_fragment.bigip_route_domains', {'skip_missing': True}) }}"
+      vars:
+        route_domain_deletion_settings_path: "{{ item.0.item | regex_replace('/[^/]+$', '/settings.yml') }}"
+        route_domain_deletion_directory_defaults: >-
+          {{
+            (
+              lookup('ansible.builtin.file', route_domain_deletion_settings_path, errors='ignore')
+              | default('{}', true)
+              | from_yaml
+            ).network_route_domain_defaults | default({})
+          }}
+
     - name: Discover self IP fragments
       ansible.builtin.set_fact:
         self_ip_files: >-
@@ -131,6 +191,189 @@
             ).network_self_ip_defaults | default({})
           }}
 
+    - name: Discover static route fragments
+      ansible.builtin.set_fact:
+        static_route_files: >-
+          {{
+            lookup(
+              'ansible.builtin.pipe',
+              "find vars/network/routes -type f -name '*.yml' ! -name 'settings.yml' 2>/dev/null | sort"
+            ).splitlines() | reject('equalto', '') | list
+          }}
+        static_route_deletion_files: >-
+          {{
+            lookup(
+              'ansible.builtin.pipe',
+              "find vars/network/deletions/routes -type f -name '*.yml' ! -name 'settings.yml' 2>/dev/null | sort"
+            ).splitlines() | reject('equalto', '') | list
+          }}
+
+    - name: Load static route fragments
+      ansible.builtin.include_vars:
+        file: "{{ item }}"
+        name: static_route_fragment
+      loop: "{{ static_route_files }}"
+      register: static_route_include_results
+
+    - name: Load static route deletion fragments
+      ansible.builtin.include_vars:
+        file: "{{ item }}"
+        name: static_route_deletion_fragment
+      loop: "{{ static_route_deletion_files }}"
+      register: static_route_deletion_include_results
+
+    - name: Aggregate static routes with directory settings
+      ansible.builtin.set_fact:
+        bigip_static_routes: "{{ bigip_static_routes | default([]) + [ static_route_directory_defaults | combine(item.1, recursive=True) ] }}"
+      loop: "{{ query('subelements', static_route_include_results.results, 'ansible_facts.static_route_fragment.bigip_static_routes', {'skip_missing': True}) }}"
+      vars:
+        static_route_settings_path: "{{ item.0.item | regex_replace('/[^/]+$', '/settings.yml') }}"
+        static_route_directory_defaults: >-
+          {{
+            (
+              lookup('ansible.builtin.file', static_route_settings_path, errors='ignore')
+              | default('{}', true)
+              | from_yaml
+            ).network_route_defaults | default({})
+          }}
+
+    - name: Aggregate static route deletions with directory settings
+      ansible.builtin.set_fact:
+        bigip_static_route_deletions: "{{ bigip_static_route_deletions | default([]) + [ (static_route_deletion_directory_defaults | combine(item.1, recursive=True)) | combine({'state': 'absent'}, recursive=True) ] }}"
+      loop: "{{ query('subelements', static_route_deletion_include_results.results, 'ansible_facts.static_route_deletion_fragment.bigip_static_routes', {'skip_missing': True}) }}"
+      vars:
+        static_route_deletion_settings_path: "{{ item.0.item | regex_replace('/[^/]+$', '/settings.yml') }}"
+        static_route_deletion_directory_defaults: >-
+          {{
+            (
+              lookup('ansible.builtin.file', static_route_deletion_settings_path, errors='ignore')
+              | default('{}', true)
+              | from_yaml
+            ).network_route_defaults | default({})
+          }}
+
+    - name: Discover SNAT translation fragments
+      ansible.builtin.set_fact:
+        snat_translation_files: >-
+          {{
+            lookup(
+              'ansible.builtin.pipe',
+              "find vars/network/snat_translations -type f -name '*.yml' ! -name 'settings.yml' 2>/dev/null | sort"
+            ).splitlines() | reject('equalto', '') | list
+          }}
+        snat_translation_deletion_files: >-
+          {{
+            lookup(
+              'ansible.builtin.pipe',
+              "find vars/network/deletions/snat_translations -type f -name '*.yml' ! -name 'settings.yml' 2>/dev/null | sort"
+            ).splitlines() | reject('equalto', '') | list
+          }}
+
+    - name: Load SNAT translation fragments
+      ansible.builtin.include_vars:
+        file: "{{ item }}"
+        name: snat_translation_fragment
+      loop: "{{ snat_translation_files }}"
+      register: snat_translation_include_results
+
+    - name: Load SNAT translation deletion fragments
+      ansible.builtin.include_vars:
+        file: "{{ item }}"
+        name: snat_translation_deletion_fragment
+      loop: "{{ snat_translation_deletion_files }}"
+      register: snat_translation_deletion_include_results
+
+    - name: Aggregate SNAT translations with directory settings
+      ansible.builtin.set_fact:
+        bigip_snat_translations: "{{ bigip_snat_translations | default([]) + [ snat_translation_directory_defaults | combine(item.1, recursive=True) ] }}"
+      loop: "{{ query('subelements', snat_translation_include_results.results, 'ansible_facts.snat_translation_fragment.bigip_snat_translations', {'skip_missing': True}) }}"
+      vars:
+        snat_translation_settings_path: "{{ item.0.item | regex_replace('/[^/]+$', '/settings.yml') }}"
+        snat_translation_directory_defaults: >-
+          {{
+            (
+              lookup('ansible.builtin.file', snat_translation_settings_path, errors='ignore')
+              | default('{}', true)
+              | from_yaml
+            ).network_snat_translation_defaults | default({})
+          }}
+
+    - name: Aggregate SNAT translation deletions with directory settings
+      ansible.builtin.set_fact:
+        bigip_snat_translation_deletions: "{{ bigip_snat_translation_deletions | default([]) + [ (snat_translation_deletion_directory_defaults | combine(item.1, recursive=True)) | combine({'state': 'absent'}, recursive=True) ] }}"
+      loop: "{{ query('subelements', snat_translation_deletion_include_results.results, 'ansible_facts.snat_translation_deletion_fragment.bigip_snat_translations', {'skip_missing': True}) }}"
+      vars:
+        snat_translation_deletion_settings_path: "{{ item.0.item | regex_replace('/[^/]+$', '/settings.yml') }}"
+        snat_translation_deletion_directory_defaults: >-
+          {{
+            (
+              lookup('ansible.builtin.file', snat_translation_deletion_settings_path, errors='ignore')
+              | default('{}', true)
+              | from_yaml
+            ).network_snat_translation_defaults | default({})
+          }}
+
+    - name: Discover SNAT pool fragments
+      ansible.builtin.set_fact:
+        snat_pool_files: >-
+          {{
+            lookup(
+              'ansible.builtin.pipe',
+              "find vars/network/snats -type f -name '*.yml' ! -name 'settings.yml' 2>/dev/null | sort"
+            ).splitlines() | reject('equalto', '') | list
+          }}
+        snat_pool_deletion_files: >-
+          {{
+            lookup(
+              'ansible.builtin.pipe',
+              "find vars/network/deletions/snats -type f -name '*.yml' ! -name 'settings.yml' 2>/dev/null | sort"
+            ).splitlines() | reject('equalto', '') | list
+          }}
+
+    - name: Load SNAT pool fragments
+      ansible.builtin.include_vars:
+        file: "{{ item }}"
+        name: snat_pool_fragment
+      loop: "{{ snat_pool_files }}"
+      register: snat_pool_include_results
+
+    - name: Load SNAT pool deletion fragments
+      ansible.builtin.include_vars:
+        file: "{{ item }}"
+        name: snat_pool_deletion_fragment
+      loop: "{{ snat_pool_deletion_files }}"
+      register: snat_pool_deletion_include_results
+
+    - name: Aggregate SNAT pools with directory settings
+      ansible.builtin.set_fact:
+        bigip_snat_pools: "{{ bigip_snat_pools | default([]) + [ snat_pool_directory_defaults | combine(item.1, recursive=True) ] }}"
+      loop: "{{ query('subelements', snat_pool_include_results.results, 'ansible_facts.snat_pool_fragment.bigip_snat_pools', {'skip_missing': True}) }}"
+      vars:
+        snat_pool_settings_path: "{{ item.0.item | regex_replace('/[^/]+$', '/settings.yml') }}"
+        snat_pool_directory_defaults: >-
+          {{
+            (
+              lookup('ansible.builtin.file', snat_pool_settings_path, errors='ignore')
+              | default('{}', true)
+              | from_yaml
+            ).network_snat_pool_defaults | default({})
+          }}
+
+    - name: Aggregate SNAT pool deletions with directory settings
+      ansible.builtin.set_fact:
+        bigip_snat_pool_deletions: "{{ bigip_snat_pool_deletions | default([]) + [ (snat_pool_deletion_directory_defaults | combine(item.1, recursive=True)) | combine({'state': 'absent'}, recursive=True) ] }}"
+      loop: "{{ query('subelements', snat_pool_deletion_include_results.results, 'ansible_facts.snat_pool_deletion_fragment.bigip_snat_pools', {'skip_missing': True}) }}"
+      vars:
+        snat_pool_deletion_settings_path: "{{ item.0.item | regex_replace('/[^/]+$', '/settings.yml') }}"
+        snat_pool_deletion_directory_defaults: >-
+          {{
+            (
+              lookup('ansible.builtin.file', snat_pool_deletion_settings_path, errors='ignore')
+              | default('{}', true)
+              | from_yaml
+            ).network_snat_pool_defaults | default({})
+          }}
+
     - name: Classify network object operations
       ansible.builtin.set_fact:
         bigip_vlans_delete: >-
@@ -148,6 +391,26 @@
             +
             (
               (bigip_vlans | default([]))
+              | selectattr('state', 'defined')
+              | rejectattr('state', 'equalto', 'absent')
+              | list
+            )
+          }}
+        bigip_route_domains_delete: >-
+          {{
+            ((bigip_route_domains | default([])) + (bigip_route_domain_deletions | default([])))
+            | selectattr('state', 'defined')
+            | selectattr('state', 'equalto', 'absent')
+            | list
+          }}
+        bigip_route_domains_present: >-
+          {{
+            (bigip_route_domains | default([]))
+            | rejectattr('state', 'defined')
+            | list
+            +
+            (
+              (bigip_route_domains | default([]))
               | selectattr('state', 'defined')
               | rejectattr('state', 'equalto', 'absent')
               | list
@@ -173,8 +436,98 @@
               | list
             )
           }}
+        bigip_static_routes_delete: >-
+          {{
+            ((bigip_static_routes | default([])) + (bigip_static_route_deletions | default([])))
+            | selectattr('state', 'defined')
+            | selectattr('state', 'equalto', 'absent')
+            | list
+          }}
+        bigip_static_routes_present: >-
+          {{
+            (bigip_static_routes | default([]))
+            | rejectattr('state', 'defined')
+            | list
+            +
+            (
+              (bigip_static_routes | default([]))
+              | selectattr('state', 'defined')
+              | rejectattr('state', 'equalto', 'absent')
+              | list
+            )
+          }}
+        bigip_snat_translations_delete: >-
+          {{
+            ((bigip_snat_translations | default([])) + (bigip_snat_translation_deletions | default([])))
+            | selectattr('state', 'defined')
+            | selectattr('state', 'equalto', 'absent')
+            | list
+          }}
+        bigip_snat_translations_present: >-
+          {{
+            (bigip_snat_translations | default([]))
+            | rejectattr('state', 'defined')
+            | list
+            +
+            (
+              (bigip_snat_translations | default([]))
+              | selectattr('state', 'defined')
+              | rejectattr('state', 'equalto', 'absent')
+              | list
+            )
+          }}
+        bigip_snat_pools_delete: >-
+          {{
+            ((bigip_snat_pools | default([])) + (bigip_snat_pool_deletions | default([])))
+            | selectattr('state', 'defined')
+            | selectattr('state', 'equalto', 'absent')
+            | list
+          }}
+        bigip_snat_pools_present: >-
+          {{
+            (bigip_snat_pools | default([]))
+            | rejectattr('state', 'defined')
+            | list
+            +
+            (
+              (bigip_snat_pools | default([]))
+              | selectattr('state', 'defined')
+              | rejectattr('state', 'equalto', 'absent')
+              | list
+            )
+          }}
 
   tasks:
+    - name: Delete static routes
+      f5networks.f5_modules.bigip_static_route:
+        provider: "{{ provider }}"
+        partition: "{{ item.partition | default('Common') }}"
+        name: "{{ item.name }}"
+        state: absent
+      loop: "{{ bigip_static_routes_delete | default([]) }}"
+      loop_control:
+        label: "{{ item.partition | default('Common') }}/{{ item.name }}"
+
+    - name: Delete SNAT pools
+      f5networks.f5_modules.bigip_snat_pool:
+        provider: "{{ provider }}"
+        partition: "{{ item.partition | default('Common') }}"
+        name: "{{ item.name }}"
+        state: absent
+      loop: "{{ bigip_snat_pools_delete | default([]) }}"
+      loop_control:
+        label: "{{ item.partition | default('Common') }}/{{ item.name }}"
+
+    - name: Delete SNAT translations
+      f5networks.f5_modules.bigip_snat_translation:
+        provider: "{{ provider }}"
+        partition: "{{ item.partition | default('Common') }}"
+        name: "{{ item.name }}"
+        state: absent
+      loop: "{{ bigip_snat_translations_delete | default([]) }}"
+      loop_control:
+        label: "{{ item.partition | default('Common') }}/{{ item.name }}"
+
     - name: Delete self IPs
       f5networks.f5_modules.bigip_selfip:
         provider: "{{ provider }}"
@@ -182,6 +535,16 @@
         name: "{{ item.name }}"
         state: absent
       loop: "{{ bigip_self_ips_delete | default([]) }}"
+      loop_control:
+        label: "{{ item.partition | default('Common') }}/{{ item.name }}"
+
+    - name: Delete route domains
+      f5networks.f5_modules.bigip_routedomain:
+        provider: "{{ provider }}"
+        partition: "{{ item.partition | default('Common') }}"
+        name: "{{ item.name }}"
+        state: absent
+      loop: "{{ bigip_route_domains_delete | default([]) }}"
       loop_control:
         label: "{{ item.partition | default('Common') }}/{{ item.name }}"
 
@@ -209,6 +572,27 @@
       loop_control:
         label: "{{ item.partition | default('Common') }}/{{ item.name }}"
 
+    - name: Create route domains
+      f5networks.f5_modules.bigip_routedomain:
+        provider: "{{ provider }}"
+        partition: "{{ item.partition | default('Common') }}"
+        name: "{{ item.name | default(omit) }}"
+        id: "{{ item.id | default(omit) }}"
+        parent: "{{ item.parent | default(omit) }}"
+        strict: "{{ item.strict | default(omit) }}"
+        vlans: "{{ item.vlans | default(omit) }}"
+        description: "{{ item.description | default(omit) }}"
+        connection_limit: "{{ item.connection_limit | default(omit) }}"
+        routing_protocol: "{{ item.routing_protocol | default(omit) }}"
+        bwc_policy: "{{ item.bwc_policy | default(omit) }}"
+        flow_eviction_policy: "{{ item.flow_eviction_policy | default(omit) }}"
+        fw_enforced_policy: "{{ item.fw_enforced_policy | default(omit) }}"
+        service_policy: "{{ item.service_policy | default(omit) }}"
+        state: "{{ item.state | default('present') }}"
+      loop: "{{ bigip_route_domains_present | default([]) }}"
+      loop_control:
+        label: "{{ item.partition | default('Common') }}/{{ item.name | default(item.id) }}"
+
     - name: Create self IPs
       f5networks.f5_modules.bigip_selfip:
         provider: "{{ provider }}"
@@ -221,5 +605,54 @@
         allow_service: "{{ item.allow_service | default(omit) }}"
         state: "{{ item.state | default('present') }}"
       loop: "{{ bigip_self_ips_present | default([]) }}"
+      loop_control:
+        label: "{{ item.partition | default('Common') }}/{{ item.name }}"
+
+    - name: Create SNAT translations
+      f5networks.f5_modules.bigip_snat_translation:
+        provider: "{{ provider }}"
+        partition: "{{ item.partition | default('Common') }}"
+        name: "{{ item.name }}"
+        address: "{{ item.address | default(omit) }}"
+        arp: "{{ item.arp | default(omit) }}"
+        connection_limit: "{{ item.connection_limit | default(omit) }}"
+        description: "{{ item.description | default(omit) }}"
+        ip_idle_timeout: "{{ item.ip_idle_timeout | default(omit) }}"
+        tcp_idle_timeout: "{{ item.tcp_idle_timeout | default(omit) }}"
+        udp_idle_timeout: "{{ item.udp_idle_timeout | default(omit) }}"
+        traffic_group: "{{ item.traffic_group | default(omit) }}"
+        state: "{{ item.state | default('present') }}"
+      loop: "{{ bigip_snat_translations_present | default([]) }}"
+      loop_control:
+        label: "{{ item.partition | default('Common') }}/{{ item.name }}"
+
+    - name: Create SNAT pools
+      f5networks.f5_modules.bigip_snat_pool:
+        provider: "{{ provider }}"
+        partition: "{{ item.partition | default('Common') }}"
+        name: "{{ item.name }}"
+        members: "{{ item.members | default(omit) }}"
+        description: "{{ item.description | default(omit) }}"
+        state: "{{ item.state | default('present') }}"
+      loop: "{{ bigip_snat_pools_present | default([]) }}"
+      loop_control:
+        label: "{{ item.partition | default('Common') }}/{{ item.name }}"
+
+    - name: Create static routes
+      f5networks.f5_modules.bigip_static_route:
+        provider: "{{ provider }}"
+        partition: "{{ item.partition | default('Common') }}"
+        name: "{{ item.name }}"
+        destination: "{{ item.destination | default(omit) }}"
+        netmask: "{{ item.netmask | default(omit) }}"
+        gateway_address: "{{ item.gateway_address | default(omit) }}"
+        mtu: "{{ item.mtu | default(omit) }}"
+        pool: "{{ item.pool | default(omit) }}"
+        reject: "{{ item.reject | default(omit) }}"
+        route_domain: "{{ item.route_domain | default(omit) }}"
+        vlan: "{{ item.vlan | default(omit) }}"
+        description: "{{ item.description | default(omit) }}"
+        state: "{{ item.state | default('present') }}"
+      loop: "{{ bigip_static_routes_present | default([]) }}"
       loop_control:
         label: "{{ item.partition | default('Common') }}/{{ item.name }}"
