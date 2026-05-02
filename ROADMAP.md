@@ -774,13 +774,51 @@ This is the practical next sequence for the current repo.
  16. [x] Add APM ACLs and tmsh-driven resource objects to security playbook
  17. [x] Add APM auth servers, SSO configs, and policy nodes (tmsh-driven)
 18. [x] Add APM access profiles, per-session policies, and macros
-19. [ ] Audit checked-off roadmap items against runtime, validation, drift/import tooling, docs, and examples
+19. [x] Audit checked-off roadmap items against runtime, validation, drift/import tooling, docs, and examples
 20. [ ] Correct drift/import endpoint and var-key mappings for newly added object families
 21. [ ] Align runtime, validator, docs, and example vars where field models drifted apart
 22. [x] Complete exhaustive drift/import parity for every newest object tree
 23. [ ] Deepen drift detection to compare meaningful fields for newly added object families
 24. [ ] Add day-0 BIG-IP onboarding for licensing and initial management bootstrap
 25. [ ] Document initial setup from first boot through handoff to Git-managed operation
+
+### Checked-Off Item Audit Result
+
+Audit date:
+
+- 2026-05-02
+
+Completion-class summary for checked backlog items:
+
+- `full parity`
+  - 1. Add validation tooling and CI gates
+  - 10. Define TLS secret handling approach
+  - 11. Complete missing documentation
+- `runtime+validation+helper-tools`
+  - 2. Add `vars/ltm/nodes` and `vars/ltm/pools`
+  - 3. Add `vars/gtm/datacenters` and `vars/gtm/pools`
+  - 6. Add `tls.yml` for certs and SSL profiles
+  - 7. Add NAT and trunk support to complete network expansion
+  - 8. Add hybrid readability shortcuts
+  - 9. Add optional LTM virtual resolution
+  - 12. Add LTM persistence, iRules, data groups, and policies
+  - 13. Add virtual server VLAN filtering, metadata, and log profiles
+  - 14. Add GTM topology regions and topology records
+  - 15. Add WAF/ASM policies and server technologies to security playbook
+  - 16. Add APM ACLs and tmsh-driven resource objects to security playbook
+  - 17. Add APM auth servers, SSO configs, and policy nodes (tmsh-driven)
+  - 18. Add APM access profiles, per-session policies, and macros
+  - 22. Complete exhaustive drift/import parity for every newest object tree
+- `runtime+validation`
+  - 4. Add `system.yml` for base platform settings
+  - 5. Add `ha.yml` for trust/sync/failover
+
+Audit findings captured as remaining work:
+
+- item 20 remains open because the audit process still requires continued verification whenever new object families are added
+- item 21 remains open because future field-model drift must still be detected and corrected as implementations evolve
+- item 23 remains open because helper-tool object coverage is broader now, but field-level drift fidelity is still shallow for many newer object types
+- milestone 16 item on `system` and `ha` helper-tool support remains open because those domains are currently intentionally `runtime+validation`, not `full parity`
 
 ## Extended Backlog
 
@@ -939,7 +977,7 @@ These are the first concrete tickets I would open.
 ### Milestone 16: Coverage Stabilization
 
 - [ ] Treat correction of previously checked-off but partially implemented items as higher priority than adding new feature coverage
-- [ ] Audit each checked-off roadmap item against runtime, validation, drift/import tooling, docs, and example vars
+- [x] Audit each checked-off roadmap item against runtime, validation, drift/import tooling, docs, and example vars
 - [x] Correct network helper-tool mappings for trunks and SNAT pools
 - [x] Correct newer helper-tool mappings for WAF server technologies and APM policy nodes
 - [ ] Align runtime, validator, docs, and examples for any feature where the declared field model drifted
