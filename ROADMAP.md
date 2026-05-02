@@ -16,7 +16,7 @@ Target outcome:
 
 The repository already supports:
 
-- declarative `network`, `system`, `ha`, `ltm`, `gtm`, and `tls` playbooks
+- declarative `network`, `system`, `ha`, `ltm`, `gtm`, `security`, and `tls` playbooks
 - canonical playbooks organized under `playbooks/` with root-level wrapper entrypoints
 - all canonical playbooks use the split model: `<domain>.yml`, `prep.yml`, `tasks/manage.yml`, `tasks/apply.yml`, `tasks/delete.yml`
 - split var trees for scale across all domains
@@ -39,6 +39,8 @@ The repository already supports:
 The main remaining gaps are:
 
 - finish helper-tool parity for the newest object trees where runtime playbook support now exists but drift/import coverage is not yet exhaustive
+- correct helper-tool object mappings where newer coverage was added against the wrong BIG-IP endpoints or wrong repo var keys
+- align APM access-profile validation with the runtime/documented field model used by the security playbook
 - deepen drift tooling from basic existence checks to field-level comparison for newer object families
 - add true day-0 onboarding for brand-new BIG-IPs so Git can drive licensing, initial management bootstrap, and first secure API handoff
 - add explicit initial-setup documentation for first-boot prerequisites, pre-AWX appliance preparation, and cutover into repo-managed state
@@ -152,14 +154,11 @@ Implemented today:
   - `tools/import-from-bigip` for brownfield import
   - CI-ready JSON output for dashboards
   - LTM, GTM, network, AFM, WAF, APM, and TLS object type support
+  - partial newer-object coverage added for network route domains, trunks, SNATs, NATs, GTM topology, TLS CA bundles/client SSL/server SSL, WAF server technologies, and APM policy nodes/SSO configs
+  - exhaustive parity still requires verified endpoint/key mappings and model-accurate extraction
 
 Not implemented yet:
 
-- Top-priority remediation before further feature expansion:
-  - security playbook provider normalization to `provider`
-  - security playbook task ordering normalization to delete-first/apply-second
-  - roadmap state reconciliation after recent security, drift/import, and docs changes
-  - broken README/doc link cleanup after documentation consolidation
 - HA connection mirroring and failover metadata
 - Automated failover testing workflows
 - UCS backup/export workflow
@@ -677,10 +676,12 @@ This is the practical next sequence for the current repo.
  16. [x] Add APM ACLs and tmsh-driven resource objects to security playbook
  17. [x] Add APM auth servers, SSO configs, and policy nodes (tmsh-driven)
 18. [x] Add APM access profiles, per-session policies, and macros
-19. [ ] Complete exhaustive drift/import parity for every newest object tree
-20. [ ] Deepen drift detection to compare meaningful fields for newly added object families
-21. [ ] Add day-0 BIG-IP onboarding for licensing and initial management bootstrap
-22. [ ] Document initial setup from first boot through handoff to Git-managed operation
+ 19. [ ] Complete exhaustive drift/import parity for every newest object tree
+ 20. [ ] Deepen drift detection to compare meaningful fields for newly added object families
+21. [ ] Correct drift/import endpoint and var-key mappings for newly added object families
+22. [ ] Align APM access-profile validation with the runtime/documented field model
+23. [ ] Add day-0 BIG-IP onboarding for licensing and initial management bootstrap
+24. [ ] Document initial setup from first boot through handoff to Git-managed operation
 
 ## Extended Backlog
 
@@ -775,6 +776,7 @@ These are the first concrete tickets I would open.
 - [x] Support LTM, GTM, network, AFM, WAF, and TLS object types
 - [x] Provide JSON output for CI integration
 - [x] Document drift and import workflows
+- [ ] Add exhaustive drift/import parity for all object trees (network route_domains, trunks, snats, nats; gtm topology; tls ca_bundles, client_ssl_profiles, server_ssl_profiles; waf server_technologies; apm policy_nodes, sso_configs full coverage)
 
 ### Milestone 11: Promotion and Rollback
 

@@ -183,6 +183,15 @@ IMPORT_SPECS: dict[str, ImportSpec] = {
             "description": "description",
         },
     ),
+    "ltm_persistence_profiles": ImportSpec(
+        endpoint="ltm/profile/persistence",
+        top_key="ltm_persistence_profiles",
+        output_dir="ltm/persistence",
+        extract={
+            "name": "name",
+            "description": "description",
+        },
+    ),
     "gtm_datacenters": ImportSpec(
         endpoint="gtm/datacenter",
         top_key="gtm_datacenters",
@@ -264,6 +273,61 @@ IMPORT_SPECS: dict[str, ImportSpec] = {
             "gateway_address": "gw",
         },
     ),
+    "network_route_domains": ImportSpec(
+        endpoint="net/route-domain",
+        top_key="bigip_route_domains",
+        output_dir="network/route_domains",
+        extract={
+            "name": "name",
+            "id": "id",
+            "description": "description",
+        },
+    ),
+    "network_trunks": ImportSpec(
+        endpoint="net/tunnel/tunnel",
+        top_key="bigip_trunks",
+        output_dir="network/trunks",
+        extract={
+            "name": "name",
+            "description": "description",
+        },
+    ),
+    "network_snats": ImportSpec(
+        endpoint="ltm/snat",
+        top_key="bigip_snats",
+        output_dir="network/snats",
+        extract={
+            "name": "name",
+            "description": "description",
+        },
+    ),
+    "network_nats": ImportSpec(
+        endpoint="ltm/nat",
+        top_key="bigip_nats",
+        output_dir="network/nats",
+        extract={
+            "name": "name",
+            "description": "description",
+        },
+    ),
+    "gtm_topology_regions": ImportSpec(
+        endpoint="gtm/region",
+        top_key="gtm_topology_regions",
+        output_dir="gtm/regions",
+        extract={
+            "name": "name",
+            "description": "description",
+        },
+    ),
+    "gtm_topology_records": ImportSpec(
+        endpoint="gtm/topology",
+        top_key="gtm_topology_records",
+        output_dir="gtm/topology",
+        extract={
+            "name": "name",
+            "description": "description",
+        },
+    ),
     "afm_address_lists": ImportSpec(
         endpoint="security/firewall/address-list",
         top_key="afm_address_lists",
@@ -310,7 +374,7 @@ IMPORT_SPECS: dict[str, ImportSpec] = {
         },
     ),
     "apm_sso_configs": ImportSpec(
-        endpoint="apm/sso/kerberos",
+        endpoint="apm/sso",
         top_key="apm_sso_configs",
         output_dir="security/apm/sso_configs",
         extract={
@@ -369,6 +433,51 @@ IMPORT_SPECS: dict[str, ImportSpec] = {
         extract={
             "name": "name",
             "description": "description",
+        },
+    ),
+    "tls_ca_bundles": ImportSpec(
+        endpoint="sys/crypto/ca_bundle",
+        top_key="tls_ca_bundles",
+        output_dir="tls/ca_bundles",
+        extract={
+            "name": "name",
+            "description": "description",
+        },
+    ),
+    "tls_client_ssl_profiles": ImportSpec(
+        endpoint="ltm/profile/client-ssl",
+        top_key="tls_client_ssl_profiles",
+        output_dir="tls/client_ssl_profiles",
+        extract={
+            "name": "name",
+            "description": "description",
+        },
+    ),
+    "tls_server_ssl_profiles": ImportSpec(
+        endpoint="ltm/profile/server-ssl",
+        top_key="tls_server_ssl_profiles",
+        output_dir="tls/server_ssl_profiles",
+        extract={
+            "name": "name",
+            "description": "description",
+        },
+    ),
+    "waf_server_technologies": ImportSpec(
+        endpoint="asm/policies",
+        top_key="waf_server_technologies",
+        output_dir="security/waf/server_technologies",
+        extract={
+            "name": "name",
+            "policy_name": "policy_name",
+        },
+    ),
+    "apm_policy_nodes": ImportSpec(
+        endpoint="access/profile",
+        top_key="apm_policy_nodes",
+        output_dir="security/apm/policy_nodes",
+        extract={
+            "name": "name",
+            "policy": "policy",
         },
     ),
 }

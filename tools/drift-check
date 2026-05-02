@@ -150,10 +150,16 @@ class VarTreeLoader:
         self._load_simple_tree("gtm_servers", VARS_DIR / "gtm" / "servers", "gtm_servers")
         self._load_simple_tree("gtm_pools", VARS_DIR / "gtm" / "pools", "gtm_pools")
         self._load_simple_tree("gtm_wide_ips", VARS_DIR / "gtm" / "wide_ips", "gtm_wide_ips")
+        self._load_simple_tree("gtm_topology_regions", VARS_DIR / "gtm" / "regions", "gtm_topology_regions")
+        self._load_simple_tree("gtm_topology_records", VARS_DIR / "gtm" / "topology", "gtm_topology_records")
         self._load_simple_tree("gtm_monitors", VARS_DIR / "gtm" / "monitors", "gtm_monitors")
         self._load_simple_tree("network_vlans", VARS_DIR / "network" / "vlans", "bigip_vlans")
         self._load_simple_tree("network_self_ips", VARS_DIR / "network" / "self_ips", "bigip_self_ips")
         self._load_simple_tree("network_routes", VARS_DIR / "network" / "routes", "bigip_routes")
+        self._load_simple_tree("network_route_domains", VARS_DIR / "network" / "route_domains", "bigip_route_domains")
+        self._load_simple_tree("network_trunks", VARS_DIR / "network" / "trunks", "bigip_trunks")
+        self._load_simple_tree("network_snats", VARS_DIR / "network" / "snats", "bigip_snats")
+        self._load_simple_tree("network_nats", VARS_DIR / "network" / "nats", "bigip_nats")
         self._load_simple_tree("afm_address_lists", VARS_DIR / "security" / "afm" / "address_lists", "afm_address_lists")
         self._load_simple_tree("afm_port_lists", VARS_DIR / "security" / "afm" / "port_lists", "afm_port_lists")
         self._load_simple_tree("afm_rules", VARS_DIR / "security" / "afm" / "rules", "afm_rules")
@@ -166,8 +172,12 @@ class VarTreeLoader:
         self._load_simple_tree("apm_access_profiles", VARS_DIR / "security" / "apm" / "access_profiles", "apm_access_profiles")
         self._load_simple_tree("apm_per_session_policies", VARS_DIR / "security" / "apm" / "per_session_policies", "apm_per_session_policies")
         self._load_simple_tree("apm_macros", VARS_DIR / "security" / "apm" / "macros", "apm_macros")
+        self._load_simple_tree("apm_policy_nodes", VARS_DIR / "security" / "apm" / "policy_nodes", "apm_policy_nodes")
         self._load_simple_tree("tls_keys", VARS_DIR / "tls" / "keys", "tls_keys")
         self._load_simple_tree("tls_certificates", VARS_DIR / "tls" / "certificates", "tls_certificates")
+        self._load_simple_tree("tls_ca_bundles", VARS_DIR / "tls" / "ca_bundles", "tls_ca_bundles")
+        self._load_simple_tree("tls_client_ssl_profiles", VARS_DIR / "tls" / "client_ssl_profiles", "tls_client_ssl_profiles")
+        self._load_simple_tree("tls_server_ssl_profiles", VARS_DIR / "tls" / "server_ssl_profiles", "tls_server_ssl_profiles")
 
     def _load_simple_tree(self, key: str, directory: Path, top_key: str) -> None:
         if not directory.exists():
@@ -198,27 +208,39 @@ class DriftChecker:
         "ltm_irules": "ltm/rule",
         "ltm_data_groups": "ltm/data-group",
         "ltm_policies": "ltm/policy",
+        "ltm_persistence_profiles": "ltm/persistence",
         "gtm_datacenters": "gtm/datacenter",
         "gtm_servers": "gtm/server",
         "gtm_pools": "gtm/pool",
         "gtm_wide_ips": "gtm/wideip",
+        "gtm_topology_regions": "gtm/region",
+        "gtm_topology_records": "gtm/topology",
         "network_vlans": "net/vlan",
         "network_self_ips": "net/self",
         "network_routes": "net/route",
+        "network_route_domains": "net/route-domain",
+        "network_trunks": "net/tunnel/tunnel",
+        "network_snats": "ltm/snat",
+        "network_nats": "ltm/nat",
         "afm_address_lists": "security/firewall/address-list",
         "afm_port_lists": "security/firewall/port-list",
         "afm_rules": "security/firewall/rule",
         "afm_policies": "security/firewall/rule-list",
         "waf_policies": "asm/policies",
+        "waf_server_technologies": "asm/policies",
         "apm_acls": "access/policy/acl",
         "apm_auth_servers": "auth/remote-server",
-        "apm_kerberos_sso": "apm/sso/kerberos",
+        "apm_sso_configs": "apm/sso",
         "apm_resources": "apm/resource",
         "apm_access_profiles": "access/profile",
         "apm_per_session_policies": "access/per-session-policy",
         "apm_macros": "access/macro",
+        "apm_policy_nodes": "access/profile",
         "tls_keys": "sys/crypto/key",
         "tls_certificates": "sys/crypto/cert",
+        "tls_ca_bundles": "sys/crypto/ca-bundle",
+        "tls_client_ssl_profiles": "ltm/profile/client-ssl",
+        "tls_server_ssl_profiles": "ltm/profile/server-ssl",
     }
 
     NAME_FIELDS = {
@@ -317,6 +339,15 @@ class DriftChecker:
             "protocol": ("ipProtocol", ""),
             "location": ("location", ""),
             "contact": ("contact", ""),
+            "tag": ("tag", ""),
+            "mtu": ("mtu", ""),
+            "address": ("address", ""),
+            "vlan": ("vlan", ""),
+            "gateway_address": ("gw", ""),
+            "partition": ("partition", "Common"),
+            "rule": ("rule", ""),
+            "type": ("type", ""),
+            "name": ("name", ""),
         }
 
         for decl_key, (live_key, default) in comparisons.items():
