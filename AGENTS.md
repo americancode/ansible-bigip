@@ -8,7 +8,7 @@ This repository manages F5 BIG-IP through declarative Ansible playbooks organize
 
 ## Core Structure
 
-- `playbooks/` — canonical playbooks (network, system, ha, ltm, gtm, tls)
+- `playbooks/` — canonical playbooks (network, system, ha, ltm, gtm, tls, security)
 - `vars/` — split var trees organized by domain with `settings.yml` inheritance
 - `docs/` — all operational documentation
 - `tools/` — validation and utility scripts
@@ -16,12 +16,54 @@ This repository manages F5 BIG-IP through declarative Ansible playbooks organize
 
 ## Documentation Rules
 
-- update `docs/` alongside every code change
-- keep `README.md` minimal: only project overview, quick links table, playbook list, and validation command
-- do not add operational detail to `README.md`; put it in `docs/`
-- update example var files under `vars/` when a feature adds or changes an authoring pattern
-- explain cross-file linkages and reference strings inline where operators will read them
-- if an empty directory must exist intentionally, include a `.gitkeep`
+These are binding. Do not skip any of these steps when implementing a feature.
+
+### Inline Var File Documentation
+
+Every example var file must begin with a YAML comment block that documents:
+
+- **purpose**: what this file demonstrates and which domain it belongs to
+- **cross-file linkages**: which other var files reference objects defined here, and which files the objects here reference (use backtick-quoted relative paths like `` `vars/ltm/pools/vm-applications.yml` ``)
+- **supported fields**: a brief list of the top-level fields the objects in this file accept, especially non-obvious ones
+
+Example header:
+
+```yaml
+---
+# AFM address list examples for network firewall policy enforcement.
+# Address lists are referenced by AFM firewall rules in `vars/security/afm/rules/platform-rules.yml`.
+# Supported fields: `addresses` (individual IPs/CIDRs), `address_ranges` (start-end format),
+# `address_lists` (nested references), `geo_locations`, and `fqdns`.
+```
+
+### Per-Domain Documentation
+
+Every new domain/playbook must produce a `docs/<domain>.md` file that covers:
+
+- overview of what the playbook manages
+- playbook structure diagram (entrypoint, prep, tasks)
+- var tree layout with directory paths
+- object type reference table with fields, types, and whether required
+- authoring patterns (defaults, deletions, hybrid model)
+- dependency order for apply and delete operations
+
+Update existing `docs/` files when an existing domain changes:
+
+- `docs/playbook-structure.md` — add new playbooks to the playbook list and split layout mention
+- `docs/var-layout.md` — add new var trees to the domain trees list
+- `docs/example-models.md` — add a section explaining the new domain's authoring model and cross-file linkages
+- `docs/hybrid-authoring.md` — update if a new hybrid pattern is introduced
+
+### README.md Updates
+
+When a new playbook is added:
+
+- add a row to the quick links table pointing to the new `docs/<domain>.md`
+- add a row to the playbooks table with the domain name and object coverage
+
+### Empty Directories
+
+If an empty directory must exist intentionally (e.g., a deletions tree with no entries yet), include a `.gitkeep`.
 
 ## Roadmap Maintenance
 
@@ -53,6 +95,7 @@ This repository manages F5 BIG-IP through declarative Ansible playbooks organize
   - add duplicate checks for all new object types
   - validate new fields (type, required keys, cross-references) where applicable
 - never introduce a new var tree without corresponding validation coverage
+- update `Makefile` validate-ansible target to include new playbooks
 
 ## Commit Messages
 
