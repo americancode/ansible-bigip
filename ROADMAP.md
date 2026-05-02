@@ -38,6 +38,11 @@ The repository already supports:
 
 The main remaining gaps are:
 
+- top-priority structural remediation from recent feature/refactor review:
+  - align `security.yml` runtime provider usage with the repo-wide `provider` contract from `vars/common.yml`
+  - restore repo-wide delete-before-apply ordering in `playbooks/security/tasks/manage.yml`
+  - reconcile `ROADMAP.md` Current State and remaining-gap sections with the actual implemented security and drift/import feature set
+  - repair broken README quick links and doc references introduced by the docs refactor
 - deeper HA lifecycle (connection mirroring, failover metadata, automated testing)
 - UCS backup/export workflow
 - certificate rotation automation
@@ -152,6 +157,11 @@ Implemented today:
 
 Not implemented yet:
 
+- Top-priority remediation before further feature expansion:
+  - security playbook provider normalization to `provider`
+  - security playbook task ordering normalization to delete-first/apply-second
+  - roadmap state reconciliation after recent security, drift/import, and docs changes
+  - broken README/doc link cleanup after documentation consolidation
 - HA connection mirroring and failover metadata
 - Automated failover testing workflows
 - UCS backup/export workflow
