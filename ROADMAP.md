@@ -14,7 +14,7 @@ Target outcome:
 
 ## Current State
 
-The repository already supports:
+The repository is already a viable GitOps control plane for BIG-IP runtime configuration:
 
 - declarative `network`, `system`, `ha`, `ltm`, `gtm`, `security`, and `tls` playbooks
 - canonical playbooks organized under `playbooks/` with root-level wrapper entrypoints
@@ -36,11 +36,24 @@ The repository already supports:
 - offline validation through `tools/validate-vars` with `make validate` wrapper
 - modular documentation under `docs/` covering playbook structure, var layout, hybrid authoring, deletion workflows, AWX operation, validation, TLS secrets, network objects, system management, LTM advanced fields, GTM advanced fields, and bootstrap paths
 
-The main remaining gaps are:
+The repo is not yet at full GitOps parity for every lifecycle path. The main remaining work falls into three buckets:
 
-- finish helper-tool parity for the newest object trees where runtime playbook support now exists but drift/import coverage is not yet exhaustive
-- correct helper-tool object mappings where newer coverage was added against the wrong BIG-IP endpoints or wrong repo var keys
-- align APM access-profile validation with the runtime/documented field model used by the security playbook
+- stabilize feature parity across runtime, validation, drift detection, import tooling, examples, and docs
+- close day-0 and operator-lifecycle gaps so initial setup and long-term maintenance are both Git-driven
+- expand deeper platform lifecycle coverage where runtime support is still missing
+
+## Immediate Stabilization Priorities
+
+These items come before claiming more feature completion.
+
+- audit every checked-off roadmap item against actual code, examples, validator coverage, drift tooling, and import tooling
+- fix helper-tool object mappings where newer coverage was added against the wrong BIG-IP endpoints or wrong repo var keys
+- finish helper-tool parity for newer object trees where runtime playbook support exists but drift/import parity is still partial
+- align APM access-profile validation with the runtime and documented field model used by the security playbook
+- decide explicitly which domains are considered runtime-complete but not yet drift/import-complete, and document that boundary clearly
+
+## Next Major Gaps
+
 - deepen drift tooling from basic existence checks to field-level comparison for newer object families
 - add true day-0 onboarding for brand-new BIG-IPs so Git can drive licensing, initial management bootstrap, and first secure API handoff
 - add explicit initial-setup documentation for first-boot prerequisites, pre-AWX appliance preparation, and cutover into repo-managed state
@@ -138,7 +151,7 @@ Implemented today:
   - APM SSO configurations (Kerberos, form-based, HTTP Basic, NTLM, SAML, OAuth, Citrix, domain-join)
   - APM resources (network access, webtop, remote desktop, portal access)
   - APM policy nodes (VPE flow nodes with auth/SSO/resource references)
-  - APM access profiles (session timeouts, log levels, platform restrictions)
+  - APM access profiles (runtime support present; validator alignment still pending)
   - APM per-session policies (session-level authentication flows)
   - APM macros (reusable VPE building blocks)
   - per-directory `settings.yml` inheritance
@@ -165,6 +178,21 @@ Not implemented yet:
 - Certificate rotation automation
 - Auth provider integration for BIG-IP admin users
 - Login banner management
+
+## Coverage Status By Layer
+
+This is the expected interpretation of feature status going forward.
+
+- Runtime complete:
+  - playbook `prep.yml`, `tasks/delete.yml`, and `tasks/apply.yml` exist and match the intended var model
+- Validation complete:
+  - `tools/validate-vars` understands the tree, required fields, references, and duplicate semantics
+- Drift/import complete:
+  - `tools/drift-check` and `tools/import-from-bigip` use the correct BIG-IP endpoints, correct repo var keys, and enough field extraction to reconstruct the repo model without misleading output
+- Documentation/example complete:
+  - `README.md`, domain docs, roadmap state, and example var files all describe the actual runtime field model and linkage behavior
+
+Checked-off roadmap items should only be treated as fully complete when all four layers above are true, unless the roadmap explicitly says the item is runtime-only.
 
 ## Target Repo Shape
 
@@ -676,22 +704,23 @@ This is the practical next sequence for the current repo.
  16. [x] Add APM ACLs and tmsh-driven resource objects to security playbook
  17. [x] Add APM auth servers, SSO configs, and policy nodes (tmsh-driven)
 18. [x] Add APM access profiles, per-session policies, and macros
- 19. [ ] Complete exhaustive drift/import parity for every newest object tree
- 20. [ ] Deepen drift detection to compare meaningful fields for newly added object families
-21. [ ] Correct drift/import endpoint and var-key mappings for newly added object families
+19. [ ] Audit checked-off roadmap items against runtime, validation, drift/import tooling, docs, and examples
+20. [ ] Correct drift/import endpoint and var-key mappings for newly added object families
+21. [ ] Complete exhaustive drift/import parity for every newest object tree
 22. [ ] Align APM access-profile validation with the runtime/documented field model
-23. [ ] Add day-0 BIG-IP onboarding for licensing and initial management bootstrap
-24. [ ] Document initial setup from first boot through handoff to Git-managed operation
+23. [ ] Deepen drift detection to compare meaningful fields for newly added object families
+24. [ ] Add day-0 BIG-IP onboarding for licensing and initial management bootstrap
+25. [ ] Document initial setup from first boot through handoff to Git-managed operation
 
 ## Extended Backlog
 
 These are valuable enhancements identified during implementation:
 
-23. [ ] Deeper HA lifecycle management (connection mirroring, failover metadata, automated failover testing)
-24. [ ] UCS backup/export workflow for configuration snapshots
-25. [ ] Certificate rotation automation with renewal detection
-26. [ ] Auth provider integration for system users (LDAP/AD/RADIUS for BIG-IP admin auth)
-27. [ ] Login banner management for system compliance
+26. [ ] Deeper HA lifecycle management (connection mirroring, failover metadata, automated failover testing)
+27. [ ] UCS backup/export workflow for configuration snapshots
+28. [ ] Certificate rotation automation with renewal detection
+29. [ ] Auth provider integration for system users (LDAP/AD/RADIUS for BIG-IP admin auth)
+30. [ ] Login banner management for system compliance
 
 ## Issue-Sized Execution Plan
 
@@ -836,6 +865,15 @@ These are the first concrete tickets I would open.
 - [ ] Add certificate rotation automation with expiry detection
 - [ ] Add auth provider integration for BIG-IP admin users (LDAP/AD/RADIUS)
 - [ ] Add login banner management to `system.yml`
+
+### Milestone 16: Coverage Stabilization
+
+- [ ] Audit each checked-off roadmap item against runtime, validation, drift/import tooling, docs, and example vars
+- [ ] Correct network helper-tool mappings for trunks and SNAT pools
+- [ ] Correct newer helper-tool mappings for WAF server technologies and APM policy nodes
+- [ ] Decide whether `system` and `ha` should gain drift/import support now or be explicitly documented as runtime-only for the current phase
+- [ ] Align APM access-profile validation with the current runtime field model
+- [ ] Reconcile the roadmap, README, and docs whenever a checked-off item is found to be only partially complete
 
 ## Network Expansion Status
 
