@@ -163,6 +163,9 @@ class VarTreeLoader:
         self._load_simple_tree("apm_auth_servers", VARS_DIR / "security" / "apm" / "auth_servers", "apm_auth_servers")
         self._load_simple_tree("apm_sso_configs", VARS_DIR / "security" / "apm" / "sso_configs", "apm_sso_configs")
         self._load_simple_tree("apm_resources", VARS_DIR / "security" / "apm" / "resources", "apm_resources")
+        self._load_simple_tree("apm_access_profiles", VARS_DIR / "security" / "apm" / "access_profiles", "apm_access_profiles")
+        self._load_simple_tree("apm_per_session_policies", VARS_DIR / "security" / "apm" / "per_session_policies", "apm_per_session_policies")
+        self._load_simple_tree("apm_macros", VARS_DIR / "security" / "apm" / "macros", "apm_macros")
         self._load_simple_tree("tls_keys", VARS_DIR / "tls" / "keys", "tls_keys")
         self._load_simple_tree("tls_certificates", VARS_DIR / "tls" / "certificates", "tls_certificates")
 
@@ -211,6 +214,9 @@ class DriftChecker:
         "apm_auth_servers": "auth/remote-server",
         "apm_kerberos_sso": "apm/sso/kerberos",
         "apm_resources": "apm/resource",
+        "apm_access_profiles": "access/profile",
+        "apm_per_session_policies": "access/per-session-policy",
+        "apm_macros": "access/macro",
         "tls_keys": "sys/crypto/key",
         "tls_certificates": "sys/crypto/cert",
     }

@@ -436,6 +436,27 @@ class Validator:
                 top_key="apm_policy_nodes",
                 settings_key="apm_policy_node_defaults",
             ),
+            TreeSpec(
+                name="apm_access_profiles",
+                active_dir=VARS_DIR / "security" / "apm" / "access_profiles",
+                deletion_dir=VARS_DIR / "security" / "apm" / "deletions" / "access_profiles",
+                top_key="apm_access_profiles",
+                settings_key="apm_access_profile_defaults",
+            ),
+            TreeSpec(
+                name="apm_per_session_policies",
+                active_dir=VARS_DIR / "security" / "apm" / "per_session_policies",
+                deletion_dir=VARS_DIR / "security" / "apm" / "deletions" / "per_session_policies",
+                top_key="apm_per_session_policies",
+                settings_key="apm_per_session_policy_defaults",
+            ),
+            TreeSpec(
+                name="apm_macros",
+                active_dir=VARS_DIR / "security" / "apm" / "macros",
+                deletion_dir=VARS_DIR / "security" / "apm" / "deletions" / "macros",
+                top_key="apm_macros",
+                settings_key="apm_macro_defaults",
+            ),
         ]
 
     def run(self) -> int:
@@ -1579,38 +1600,15 @@ class Validator:
         sso_configs = self.objects.get("apm_sso_configs", [])
         resources = self.objects.get("apm_resources", [])
         policy_nodes = self.objects.get("apm_policy_nodes", [])
-
-        for obj in acls:
-            self.require_fields(obj, ["name"])
-            if obj.effective_state == "absent":
-                continue
-            acl_type = obj.data.get("type")
-            if acl_type is not None and acl_type not in ("l4", "l7"):
-                self.error(obj.relpath, f"APM ACL `{obj.data.get('name')}` `type` must be `l4` or `l7`")
-            entries = obj.data.get("entries")
-            if entries is not None:
-                if not isinstance(entries, list):
-                    self.error(obj.relpath, f"APM ACL `{obj.data.get('name')}` `entries` must be a list")
-                else:
-                    for idx, entry in enumerate(entries):
-                        if not isinstance(entry, dict):
-                            self.error(obj.relpath, f"APM ACL `{obj.data.get('name')}` entry {idx} must be a mapping")
-                            continue
-                        if "action" not in entry:
-                            self.error(obj.relpath, f"APM ACL `{obj.data.get('name')}` entry {idx} must define `action`")
-
-        self.check_duplicates(
-            acls,
-            lambda obj: ("apm_acl", obj.partition, obj.data.get("name")),
-            "APM ACL",
-        )
+        access_profiles = self.objects.get("apm_access_profiles", [])
+        per_session_policies = self.objects.get("apm_per_session_policies", [])
+        macros = self.objects.get("apm_macros", [])
 
         active_auth_server_names = set()
         supported_auth_types = {
             "active_directory", "ldap", "radius", "tacacs",
             "rsa_securid", "cert", "localdb", "saml", "oauth",
         }
-        ad_ldap_required = {"domain", "servers", "bind_dn", "bind_pw", "base_dn"}
 
         for obj in auth_servers:
             self.require_fields(obj, ["name", "type"])
@@ -1763,6 +1761,76 @@ class Validator:
             resources,
             lambda obj: ("apm_resource", obj.partition, obj.data.get("name")),
             "APM resource",
+        )
+
+        for obj in access_profiles:
+            self.require_fields(obj, ["name"])
+            if obj.effective_state == "absent":
+                continue
+            log_level = obj.data.get("log_level")
+            if log_level is not None and log_level not in ("debug", "info", "notice", "warning", "error", "emergency", "alert", "crit"):
+                self.error(obj.relpath, f"APM access profile `{obj.data.get('name')}` `log_level` must be one of debug, info, notice, warning, error, emergency, alert, crit")
+            allow_platforms = obj.data.get("allow_platforms")
+            if allow_platforms is not None:
+                if not isinstance(allow_platforms, list):
+                    self.error(obj.relpath, f"APM access profile `{obj.data.get('name')}` `allow_platforms` must be a list")
+                else:
+                    for idx, platform in enumerate(allow_platforms):
+                        if not isinstance(platform, str):
+                            self.error(obj.relpath, f"APM access profile `{obj.data.get('name')}` `allow_platforms[{idx}]` must be a string")
+
+        self.check_duplicates(
+            access_profiles,
+            lambda obj: ("apm_access_profile", obj.partition, obj.data.get("name")),
+            "APM access profile",
+        )
+
+        for obj in per_session_policies:
+            self.require_fields(obj, ["name"])
+            if obj.effective_state == "absent":
+                continue
+            nodes = obj.data.get("nodes")
+            if nodes is not None:
+                if not isinstance(nodes, list):
+                    self.error(obj.relpath, f"APM per-session policy `{obj.data.get('name')}` `nodes` must be a list")
+                else:
+                    for idx, node in enumerate(nodes):
+                        if not isinstance(node, dict):
+                            self.error(obj.relpath, f"APM per-session policy `{obj.data.get('name')}` `nodes[{idx}]` must be a mapping")
+                        else:
+                            if "name" not in node:
+                                self.error(obj.relpath, f"APM per-session policy `{obj.data.get('name')}` `nodes[{idx}]` must define `name`")
+                            if "type" not in node:
+                                self.error(obj.relpath, f"APM per-session policy `{obj.data.get('name')}` `nodes[{idx}]` must define `type`")
+
+        self.check_duplicates(
+            per_session_policies,
+            lambda obj: ("apm_per_session_policy", obj.partition, obj.data.get("name")),
+            "APM per-session policy",
+        )
+
+        for obj in macros:
+            self.require_fields(obj, ["name"])
+            if obj.effective_state == "absent":
+                continue
+            nodes = obj.data.get("nodes")
+            if nodes is not None:
+                if not isinstance(nodes, list):
+                    self.error(obj.relpath, f"APM macro `{obj.data.get('name')}` `nodes` must be a list")
+                else:
+                    for idx, node in enumerate(nodes):
+                        if not isinstance(node, dict):
+                            self.error(obj.relpath, f"APM macro `{obj.data.get('name')}` `nodes[{idx}]` must be a mapping")
+                        else:
+                            if "name" not in node:
+                                self.error(obj.relpath, f"APM macro `{obj.data.get('name')}` `nodes[{idx}]` must define `name`")
+                            if "type" not in node:
+                                self.error(obj.relpath, f"APM macro `{obj.data.get('name')}` `nodes[{idx}]` must define `type`")
+
+        self.check_duplicates(
+            macros,
+            lambda obj: ("apm_macro", obj.partition, obj.data.get("name")),
+            "APM macro",
         )
 
         supported_node_types = {

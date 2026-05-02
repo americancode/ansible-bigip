@@ -1,0 +1,29 @@
+---
+# APM access profile examples for authentication and policy enforcement.
+# Access profiles reference VPE policy nodes defined in `vars/security/apm/policy_nodes/`
+# and macros defined in `vars/security/apm/macros/`.
+# Supported fields: `name`, `partition`, `description`, `allow_mac_addresses` (bool),
+# `allow_platforms` (list), `default_timeout` (seconds), `inactive_timeout` (seconds),
+# `log_level` (debug/info/notice/warning/error/emergency/alert/crit),
+# `session_timeout` (seconds), `startup_uri` (uri), `use_for_default_url` (bool).
+apm_access_profiles:
+  - name: corp-sso-profile
+    description: Corporate SSO access profile with Kerberos
+    default_timeout: 3600
+    inactive_timeout: 1800
+    session_timeout: 28800
+    log_level: notice
+    startup_uri: /my.policy
+    allow_mac_addresses: false
+    allow_platforms:
+      - windows
+      - mac
+
+  - name: remote-vpn-profile
+    description: Remote VPN access with network access resource
+    default_timeout: 7200
+    inactive_timeout: 3600
+    session_timeout: 43200
+    log_level: info
+    startup_uri: /Common/remote-vpn.policy
+    use_for_default_url: false

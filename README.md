@@ -42,7 +42,7 @@ Canonical playbooks live under `playbooks/`. Root-level `*.yml` files are compat
 | `playbooks/ltm.yml` | monitors, profiles, nodes, pools, virtual servers |
 | `playbooks/gtm.yml` | monitors, datacenters, servers, pools, Wide IPs, topology |
 | `playbooks/tls.yml` | keys, certificates, CA bundles, SSL profiles |
-| `playbooks/security.yml` | AFM address lists, port lists, firewall rules, policies; WAF policies, server technologies; APM ACLs, network access, policy imports |
+| `playbooks/security.yml` | AFM address lists, port lists, firewall rules, policies; WAF policies, server technologies; APM ACLs, auth servers, SSO configs, resources, policy nodes, access profiles, per-session policies, macros |
 
 ## Validation
 

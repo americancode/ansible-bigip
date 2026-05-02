@@ -85,6 +85,8 @@
   loop: "{{ apm_acls_present | default([]) }}"
   when: apm_acls_present | default([]) | length > 0
 
+# ─── APM Auth Servers ───
+
 - name: Create APM AD/LDAP auth servers
   bigip_command:
     provider: "{{ f5_provider }}"
@@ -198,6 +200,136 @@
   loop: "{{ apm_auth_servers_present | default([]) | selectattr('type', 'equalto', 'rsa_securid') | list }}"
   when: apm_auth_servers_present | default([]) | length > 0
 
+- name: Create APM certificate auth servers
+  bigip_command:
+    provider: "{{ f5_provider }}"
+    commands:
+      - >-
+        tmsh create apm resource certificate-auth /{{ item.partition | default('Common') }}/{{ item.name }}
+        {% if item.ca_bundle is defined %}ca-file "{{ item.ca_bundle }}"{% endif %}
+        {% if item.crl_file is defined %}crl-file "{{ item.crl_file }}"{% endif %}
+        {% if item.ocsp_responder is defined %}ocsp-responder "{{ item.ocsp_responder }}"{% endif %}
+        {% if item.cert_field is defined %}cert-field "{{ item.cert_field }}"{% endif %}
+        {% if item.client_cert is defined %}client-cert "{{ item.client_cert }}"{% endif %}
+        {% if item.client_key is defined %}client-key "{{ item.client_key }}"{% endif %}
+  loop: "{{ apm_auth_servers_present | default([]) | selectattr('type', 'equalto', 'cert') | list }}"
+  when: apm_auth_servers_present | default([]) | length > 0
+  failed_when: false
+
+- name: Modify APM certificate auth servers
+  bigip_command:
+    provider: "{{ f5_provider }}"
+    commands:
+      - >-
+        tmsh modify apm resource certificate-auth /{{ item.partition | default('Common') }}/{{ item.name }}
+        {% if item.ca_bundle is defined %}ca-file "{{ item.ca_bundle }}"{% endif %}
+        {% if item.crl_file is defined %}crl-file "{{ item.crl_file }}"{% endif %}
+        {% if item.ocsp_responder is defined %}ocsp-responder "{{ item.ocsp_responder }}"{% endif %}
+        {% if item.cert_field is defined %}cert-field "{{ item.cert_field }}"{% endif %}
+        {% if item.client_cert is defined %}client-cert "{{ item.client_cert }}"{% endif %}
+        {% if item.client_key is defined %}client-key "{{ item.client_key }}"{% endif %}
+  loop: "{{ apm_auth_servers_present | default([]) | selectattr('type', 'equalto', 'cert') | list }}"
+  when: apm_auth_servers_present | default([]) | length > 0
+
+- name: Create APM localdb auth servers
+  bigip_command:
+    provider: "{{ f5_provider }}"
+    commands:
+      - >-
+        tmsh create apm user-db users /{{ item.partition | default('Common') }}/{{ item.name }}
+        {% if item.password_encoding is defined %}password-encoding {{ item.password_encoding }}{% endif %}
+  loop: "{{ apm_auth_servers_present | default([]) | selectattr('type', 'equalto', 'localdb') | list }}"
+  when: apm_auth_servers_present | default([]) | length > 0
+  failed_when: false
+
+- name: Modify APM localdb auth servers
+  bigip_command:
+    provider: "{{ f5_provider }}"
+    commands:
+      - >-
+        tmsh modify apm user-db users /{{ item.partition | default('Common') }}/{{ item.name }}
+        {% if item.password_encoding is defined %}password-encoding {{ item.password_encoding }}{% endif %}
+  loop: "{{ apm_auth_servers_present | default([]) | selectattr('type', 'equalto', 'localdb') | list }}"
+  when: apm_auth_servers_present | default([]) | length > 0
+
+- name: Create APM SAML auth servers
+  bigip_command:
+    provider: "{{ f5_provider }}"
+    commands:
+      - >-
+        tmsh create apm sso saml /{{ item.partition | default('Common') }}/{{ item.name }}
+        {% if item.idp_metadata_url is defined %}idp-metadata-url "{{ item.idp_metadata_url }}"{% endif %}
+        {% if item.idp_entity_id is defined %}idp-entity-id "{{ item.idp_entity_id }}"{% endif %}
+        {% if item.sp_entity_id is defined %}sp-entity-id "{{ item.sp_entity_id }}"{% endif %}
+        {% if item.acs_url is defined %}acs-url "{{ item.acs_url }}"{% endif %}
+        {% if item.slo_url is defined %}slo-url "{{ item.slo_url }}"{% endif %}
+        {% if item.nameid_format is defined %}nameid-format "{{ item.nameid_format }}"{% endif %}
+        {% if item.sign_authn_request is defined %}sign-authn-request {% if item.sign_authn_request %}enabled{% else %}disabled{% endif %}{% endif %}
+        {% if item.encrypt_assertion is defined %}encrypt-assertion {% if item.encrypt_assertion %}enabled{% else %}disabled{% endif %}{% endif %}
+        {% if item.signing_cert is defined %}signing-cert "{{ item.signing_cert }}"{% endif %}
+        {% if item.signing_key is defined %}signing-key "{{ item.signing_key }}"{% endif %}
+  loop: "{{ apm_auth_servers_present | default([]) | selectattr('type', 'equalto', 'saml') | list }}"
+  when: apm_auth_servers_present | default([]) | length > 0
+  failed_when: false
+
+- name: Modify APM SAML auth servers
+  bigip_command:
+    provider: "{{ f5_provider }}"
+    commands:
+      - >-
+        tmsh modify apm sso saml /{{ item.partition | default('Common') }}/{{ item.name }}
+        {% if item.idp_metadata_url is defined %}idp-metadata-url "{{ item.idp_metadata_url }}"{% endif %}
+        {% if item.idp_entity_id is defined %}idp-entity-id "{{ item.idp_entity_id }}"{% endif %}
+        {% if item.sp_entity_id is defined %}sp-entity-id "{{ item.sp_entity_id }}"{% endif %}
+        {% if item.acs_url is defined %}acs-url "{{ item.acs_url }}"{% endif %}
+        {% if item.slo_url is defined %}slo-url "{{ item.slo_url }}"{% endif %}
+        {% if item.nameid_format is defined %}nameid-format "{{ item.nameid_format }}"{% endif %}
+        {% if item.sign_authn_request is defined %}sign-authn-request {% if item.sign_authn_request %}enabled{% else %}disabled{% endif %}{% endif %}
+        {% if item.encrypt_assertion is defined %}encrypt-assertion {% if item.encrypt_assertion %}enabled{% else %}disabled{% endif %}{% endif %}
+        {% if item.signing_cert is defined %}signing-cert "{{ item.signing_cert }}"{% endif %}
+        {% if item.signing_key is defined %}signing-key "{{ item.signing_key }}"{% endif %}
+  loop: "{{ apm_auth_servers_present | default([]) | selectattr('type', 'equalto', 'saml') | list }}"
+  when: apm_auth_servers_present | default([]) | length > 0
+
+- name: Create APM OAuth/OIDC auth servers
+  bigip_command:
+    provider: "{{ f5_provider }}"
+    commands:
+      - >-
+        tmsh create apm sso oauth /{{ item.partition | default('Common') }}/{{ item.name }}
+        {% if item.provider_url is defined %}provider-url "{{ item.provider_url }}"{% endif %}
+        {% if item.client_id is defined %}client-id "{{ item.client_id }}"{% endif %}
+        {% if item.client_secret is defined %}client-secret "{{ item.client_secret }}"{% endif %}
+        {% if item.authorization_endpoint is defined %}authorization-endpoint "{{ item.authorization_endpoint }}"{% endif %}
+        {% if item.token_endpoint is defined %}token-endpoint "{{ item.token_endpoint }}"{% endif %}
+        {% if item.userinfo_endpoint is defined %}userinfo-endpoint "{{ item.userinfo_endpoint }}"{% endif %}
+        {% if item.scopes is defined %}scopes {{ item.scopes | join(' ') }}{% endif %}
+        {% if item.response_type is defined %}response-type {{ item.response_type }}{% endif %}
+        {% if item.use_pkce is defined %}use-pkce {% if item.use_pkce %}enabled{% else %}disabled{% endif %}{% endif %}
+  loop: "{{ apm_auth_servers_present | default([]) | selectattr('type', 'equalto', 'oauth') | list }}"
+  when: apm_auth_servers_present | default([]) | length > 0
+  failed_when: false
+
+- name: Modify APM OAuth/OIDC auth servers
+  bigip_command:
+    provider: "{{ f5_provider }}"
+    commands:
+      - >-
+        tmsh modify apm sso oauth /{{ item.partition | default('Common') }}/{{ item.name }}
+        {% if item.provider_url is defined %}provider-url "{{ item.provider_url }}"{% endif %}
+        {% if item.client_id is defined %}client-id "{{ item.client_id }}"{% endif %}
+        {% if item.client_secret is defined %}client-secret "{{ item.client_secret }}"{% endif %}
+        {% if item.authorization_endpoint is defined %}authorization-endpoint "{{ item.authorization_endpoint }}"{% endif %}
+        {% if item.token_endpoint is defined %}token-endpoint "{{ item.token_endpoint }}"{% endif %}
+        {% if item.userinfo_endpoint is defined %}userinfo-endpoint "{{ item.userinfo_endpoint }}"{% endif %}
+        {% if item.scopes is defined %}scopes {{ item.scopes | join(' ') }}{% endif %}
+        {% if item.response_type is defined %}response-type {{ item.response_type }}{% endif %}
+        {% if item.use_pkce is defined %}use-pkce {% if item.use_pkce %}enabled{% else %}disabled{% endif %}{% endif %}
+  loop: "{{ apm_auth_servers_present | default([]) | selectattr('type', 'equalto', 'oauth') | list }}"
+  when: apm_auth_servers_present | default([]) | length > 0
+
+# ─── APM SSO Configs ───
+
 - name: Create APM Kerberos SSO configs
   bigip_command:
     provider: "{{ f5_provider }}"
@@ -308,6 +440,126 @@
   loop: "{{ apm_sso_configs_present | default([]) | selectattr('type', 'equalto', 'ntlm') | list }}"
   when: apm_sso_configs_present | default([]) | length > 0
 
+- name: Create APM SAML SSO configs
+  bigip_command:
+    provider: "{{ f5_provider }}"
+    commands:
+      - >-
+        tmsh create apm sso saml /{{ item.partition | default('Common') }}/{{ item.name }}
+        {% if item.idp_metadata_url is defined %}idp-metadata-url "{{ item.idp_metadata_url }}"{% endif %}
+        {% if item.sp_entity_id is defined %}sp-entity-id "{{ item.sp_entity_id }}"{% endif %}
+        {% if item.assertion_consumer_url is defined %}assertion-consumer-url "{{ item.assertion_consumer_url }}"{% endif %}
+        {% if item.nameid_format is defined %}nameid-format "{{ item.nameid_format }}"{% endif %}
+        {% if item.sign_assertion is defined %}sign-assertion {% if item.sign_assertion %}enabled{% else %}disabled{% endif %}{% endif %}
+        {% if item.encrypt_assertion is defined %}encrypt-assertion {% if item.encrypt_assertion %}enabled{% else %}disabled{% endif %}{% endif %}
+        {% if item.signing_cert is defined %}signing-cert "{{ item.signing_cert }}"{% endif %}
+        {% if item.signing_key is defined %}signing-key "{{ item.signing_key }}"{% endif %}
+  loop: "{{ apm_sso_configs_present | default([]) | selectattr('type', 'equalto', 'saml') | list }}"
+  when: apm_sso_configs_present | default([]) | length > 0
+  failed_when: false
+
+- name: Modify APM SAML SSO configs
+  bigip_command:
+    provider: "{{ f5_provider }}"
+    commands:
+      - >-
+        tmsh modify apm sso saml /{{ item.partition | default('Common') }}/{{ item.name }}
+        {% if item.idp_metadata_url is defined %}idp-metadata-url "{{ item.idp_metadata_url }}"{% endif %}
+        {% if item.sp_entity_id is defined %}sp-entity-id "{{ item.sp_entity_id }}"{% endif %}
+        {% if item.assertion_consumer_url is defined %}assertion-consumer-url "{{ item.assertion_consumer_url }}"{% endif %}
+        {% if item.nameid_format is defined %}nameid-format "{{ item.nameid_format }}"{% endif %}
+        {% if item.sign_assertion is defined %}sign-assertion {% if item.sign_assertion %}enabled{% else %}disabled{% endif %}{% endif %}
+        {% if item.encrypt_assertion is defined %}encrypt-assertion {% if item.encrypt_assertion %}enabled{% else %}disabled{% endif %}{% endif %}
+        {% if item.signing_cert is defined %}signing-cert "{{ item.signing_cert }}"{% endif %}
+        {% if item.signing_key is defined %}signing-key "{{ item.signing_key }}"{% endif %}
+  loop: "{{ apm_sso_configs_present | default([]) | selectattr('type', 'equalto', 'saml') | list }}"
+  when: apm_sso_configs_present | default([]) | length > 0
+
+- name: Create APM OAuth SSO configs
+  bigip_command:
+    provider: "{{ f5_provider }}"
+    commands:
+      - >-
+        tmsh create apm sso oauth /{{ item.partition | default('Common') }}/{{ item.name }}
+        {% if item.provider_url is defined %}provider-url "{{ item.provider_url }}"{% endif %}
+        {% if item.client_id is defined %}client-id "{{ item.client_id }}"{% endif %}
+        {% if item.client_secret is defined %}client-secret "{{ item.client_secret }}"{% endif %}
+        {% if item.authorization_endpoint is defined %}authorization-endpoint "{{ item.authorization_endpoint }}"{% endif %}
+        {% if item.token_endpoint is defined %}token-endpoint "{{ item.token_endpoint }}"{% endif %}
+        {% if item.scopes is defined %}scopes {{ item.scopes | join(' ') }}{% endif %}
+  loop: "{{ apm_sso_configs_present | default([]) | selectattr('type', 'equalto', 'oauth') | list }}"
+  when: apm_sso_configs_present | default([]) | length > 0
+  failed_when: false
+
+- name: Modify APM OAuth SSO configs
+  bigip_command:
+    provider: "{{ f5_provider }}"
+    commands:
+      - >-
+        tmsh modify apm sso oauth /{{ item.partition | default('Common') }}/{{ item.name }}
+        {% if item.provider_url is defined %}provider-url "{{ item.provider_url }}"{% endif %}
+        {% if item.client_id is defined %}client-id "{{ item.client_id }}"{% endif %}
+        {% if item.client_secret is defined %}client-secret "{{ item.client_secret }}"{% endif %}
+        {% if item.authorization_endpoint is defined %}authorization-endpoint "{{ item.authorization_endpoint }}"{% endif %}
+        {% if item.token_endpoint is defined %}token-endpoint "{{ item.token_endpoint }}"{% endif %}
+        {% if item.scopes is defined %}scopes {{ item.scopes | join(' ') }}{% endif %}
+  loop: "{{ apm_sso_configs_present | default([]) | selectattr('type', 'equalto', 'oauth') | list }}"
+  when: apm_sso_configs_present | default([]) | length > 0
+
+- name: Create APM Citrix SSO configs
+  bigip_command:
+    provider: "{{ f5_provider }}"
+    commands:
+      - >-
+        tmsh create apm sso citrix /{{ item.partition | default('Common') }}/{{ item.name }}
+        {% if item.storefront_url is defined %}storefront-url "{{ item.storefront_url }}"{% endif %}
+        {% if item.username_field is defined %}username-field "{{ item.username_field }}"{% endif %}
+        {% if item.password_field is defined %}password-field "{{ item.password_field }}"{% endif %}
+        {% if item.domain_field is defined %}domain-field "{{ item.domain_field }}"{% endif %}
+        {% if item.use_session_creds is defined %}use-session-credentials {% if item.use_session_creds %}enabled{% else %}disabled{% endif %}{% endif %}
+  loop: "{{ apm_sso_configs_present | default([]) | selectattr('type', 'equalto', 'citrix') | list }}"
+  when: apm_sso_configs_present | default([]) | length > 0
+  failed_when: false
+
+- name: Modify APM Citrix SSO configs
+  bigip_command:
+    provider: "{{ f5_provider }}"
+    commands:
+      - >-
+        tmsh modify apm sso citrix /{{ item.partition | default('Common') }}/{{ item.name }}
+        {% if item.storefront_url is defined %}storefront-url "{{ item.storefront_url }}"{% endif %}
+        {% if item.username_field is defined %}username-field "{{ item.username_field }}"{% endif %}
+        {% if item.password_field is defined %}password-field "{{ item.password_field }}"{% endif %}
+        {% if item.domain_field is defined %}domain-field "{{ item.domain_field }}"{% endif %}
+        {% if item.use_session_creds is defined %}use-session-credentials {% if item.use_session_creds %}enabled{% else %}disabled{% endif %}{% endif %}
+  loop: "{{ apm_sso_configs_present | default([]) | selectattr('type', 'equalto', 'citrix') | list }}"
+  when: apm_sso_configs_present | default([]) | length > 0
+
+- name: Create APM domain-join SSO configs
+  bigip_command:
+    provider: "{{ f5_provider }}"
+    commands:
+      - >-
+        tmsh create apm sso domain-join /{{ item.partition | default('Common') }}/{{ item.name }}
+        {% if item.domain is defined %}domain "{{ item.domain }}"{% endif %}
+        {% if item.server is defined %}server {{ item.server }}{% endif %}
+  loop: "{{ apm_sso_configs_present | default([]) | selectattr('type', 'equalto', 'domain_join') | list }}"
+  when: apm_sso_configs_present | default([]) | length > 0
+  failed_when: false
+
+- name: Modify APM domain-join SSO configs
+  bigip_command:
+    provider: "{{ f5_provider }}"
+    commands:
+      - >-
+        tmsh modify apm sso domain-join /{{ item.partition | default('Common') }}/{{ item.name }}
+        {% if item.domain is defined %}domain "{{ item.domain }}"{% endif %}
+        {% if item.server is defined %}server {{ item.server }}{% endif %}
+  loop: "{{ apm_sso_configs_present | default([]) | selectattr('type', 'equalto', 'domain_join') | list }}"
+  when: apm_sso_configs_present | default([]) | length > 0
+
+# ─── APM Resources ───
+
 - name: Create APM network access resources
   bigip_command:
     provider: "{{ f5_provider }}"
@@ -320,6 +572,10 @@
         {% if item.dns_servers is defined %}dns-servers {{ item.dns_servers | join(' ') }}{% endif %}
         {% if item.ntdomain is defined %}ntdomain "{{ item.ntdomain }}"{% endif %}
         {% if item.split_tunnel is defined %}split-tunnel {{ 'enabled' if item.split_tunnel else 'disabled' }}{% endif %}
+        {% if item.snat_pool is defined %}snat-pool "{{ item.snat_pool }}"{% endif %}
+        {% if item.ipv4_lease_pool is defined %}ipv4-lease-pool "{{ item.ipv4_lease_pool }}"{% endif %}
+        {% if item.allow_local_subnet is defined %}allow-local-subnet {% if item.allow_local_subnet %}enabled{% else %}disabled{% endif %}{% endif %}
+        {% if item.allow_local_dns is defined %}allow-local-dns {% if item.allow_local_dns %}enabled{% else %}disabled{% endif %}{% endif %}
   loop: "{{ apm_resources_present | default([]) | selectattr('type', 'equalto', 'network_access') | list }}"
   when: apm_resources_present | default([]) | length > 0
   failed_when: false
@@ -336,6 +592,10 @@
         {% if item.dns_servers is defined %}dns-servers {{ item.dns_servers | join(' ') }}{% endif %}
         {% if item.ntdomain is defined %}ntdomain "{{ item.ntdomain }}"{% endif %}
         {% if item.split_tunnel is defined %}split-tunnel {{ 'enabled' if item.split_tunnel else 'disabled' }}{% endif %}
+        {% if item.snat_pool is defined %}snat-pool "{{ item.snat_pool }}"{% endif %}
+        {% if item.ipv4_lease_pool is defined %}ipv4-lease-pool "{{ item.ipv4_lease_pool }}"{% endif %}
+        {% if item.allow_local_subnet is defined %}allow-local-subnet {% if item.allow_local_subnet %}enabled{% else %}disabled{% endif %}{% endif %}
+        {% if item.allow_local_dns is defined %}allow-local-dns {% if item.allow_local_dns %}enabled{% else %}disabled{% endif %}{% endif %}
   loop: "{{ apm_resources_present | default([]) | selectattr('type', 'equalto', 'network_access') | list }}"
   when: apm_resources_present | default([]) | length > 0
 
@@ -365,6 +625,273 @@
         {% endif %}
   loop: "{{ apm_resources_present | default([]) | selectattr('type', 'equalto', 'webtop') | list }}"
   when: apm_resources_present | default([]) | length > 0
+
+- name: Create APM remote desktop resources
+  bigip_command:
+    provider: "{{ f5_provider }}"
+    commands:
+      - >-
+        tmsh create apm resource rdp /{{ item.partition | default('Common') }}/{{ item.name }}
+        {% if item.server is defined %}rdp-server {{ item.server }}{% endif %}
+        {% if item.port is defined %}rdp-port {{ item.port }}{% endif %}
+        {% if item.server_fqdn is defined %}rdp-server-fqdn {{ item.server_fqdn }}{% endif %}
+        {% if item.use_session_creds is defined %}use-session-credentials {% if item.use_session_creds %}enabled{% else %}disabled{% endif %}{% endif %}
+        {% if item.server_cert is defined %}server-cert "{{ item.server_cert }}"{% endif %}
+        {% if item.console_mode is defined %}console-mode {% if item.console_mode %}enabled{% else %}disabled{% endif %}{% endif %}
+        {% if item.server_name is defined %}server-name "{{ item.server_name }}"{% endif %}
+  loop: "{{ apm_resources_present | default([]) | selectattr('type', 'equalto', 'remote_desktop') | list }}"
+  when: apm_resources_present | default([]) | length > 0
+  failed_when: false
+
+- name: Modify APM remote desktop resources
+  bigip_command:
+    provider: "{{ f5_provider }}"
+    commands:
+      - >-
+        tmsh modify apm resource rdp /{{ item.partition | default('Common') }}/{{ item.name }}
+        {% if item.server is defined %}rdp-server {{ item.server }}{% endif %}
+        {% if item.port is defined %}rdp-port {{ item.port }}{% endif %}
+        {% if item.server_fqdn is defined %}rdp-server-fqdn {{ item.server_fqdn }}{% endif %}
+        {% if item.use_session_creds is defined %}use-session-credentials {% if item.use_session_creds %}enabled{% else %}disabled{% endif %}{% endif %}
+        {% if item.server_cert is defined %}server-cert "{{ item.server_cert }}"{% endif %}
+        {% if item.console_mode is defined %}console-mode {% if item.console_mode %}enabled{% else %}disabled{% endif %}{% endif %}
+        {% if item.server_name is defined %}server-name "{{ item.server_name }}"{% endif %}
+  loop: "{{ apm_resources_present | default([]) | selectattr('type', 'equalto', 'remote_desktop') | list }}"
+  when: apm_resources_present | default([]) | length > 0
+
+- name: Create APM portal access resources
+  bigip_command:
+    provider: "{{ f5_provider }}"
+    commands:
+      - >-
+        tmsh create apm resource portal-access /{{ item.partition | default('Common') }}/{{ item.name }}
+        {% if item.hosts is defined %}hosts {{ item.hosts | join(' ') }}{% endif %}
+        {% if item.uri is defined %}uri "{{ item.uri }}"{% endif %}
+        {% if item.use_advanced_proxy is defined %}use-advanced-proxy {% if item.use_advanced_proxy %}enabled{% else %}disabled{% endif %}{% endif %}
+        {% if item.rewrite_mode is defined %}rewrite-mode {{ item.rewrite_mode }}{% endif %}
+        {% if item.enable_nossl is defined %}enable-nossl {% if item.enable_nossl %}enabled{% else %}disabled{% endif %}{% endif %}
+  loop: "{{ apm_resources_present | default([]) | selectattr('type', 'equalto', 'portal_access') | list }}"
+  when: apm_resources_present | default([]) | length > 0
+  failed_when: false
+
+- name: Modify APM portal access resources
+  bigip_command:
+    provider: "{{ f5_provider }}"
+    commands:
+      - >-
+        tmsh modify apm resource portal-access /{{ item.partition | default('Common') }}/{{ item.name }}
+        {% if item.hosts is defined %}hosts {{ item.hosts | join(' ') }}{% endif %}
+        {% if item.uri is defined %}uri "{{ item.uri }}"{% endif %}
+        {% if item.use_advanced_proxy is defined %}use-advanced-proxy {% if item.use_advanced_proxy %}enabled{% else %}disabled{% endif %}{% endif %}
+        {% if item.rewrite_mode is defined %}rewrite-mode {{ item.rewrite_mode }}{% endif %}
+        {% if item.enable_nossl is defined %}enable-nossl {% if item.enable_nossl %}enabled{% else %}disabled{% endif %}{% endif %}
+  loop: "{{ apm_resources_present | default([]) | selectattr('type', 'equalto', 'portal_access') | list }}"
+  when: apm_resources_present | default([]) | length > 0
+
+# ─── APM Access Profiles ───
+
+- name: Create APM access profiles
+  bigip_command:
+    provider: "{{ f5_provider }}"
+    commands:
+      - >-
+        tmsh create apm profile access /{{ item.partition | default('Common') }}/{{ item.name }}
+        {% if item.default_access_policy is defined %}default-access-policy "{{ item.default_access_policy }}"{% endif %}
+        {% if item.default_per_session_policy is defined %}default-per-session-policy "{{ item.default_per_session_policy }}"{% endif %}
+        {% if item.sso_configuration is defined %}sso-configuration "{{ item.sso_configuration }}"{% endif %}
+        {% if item.domain is defined %}domain "{{ item.domain }}"{% endif %}
+        {% if item.agent_cap is defined %}agent-cap {% if item.agent_cap %}enabled{% else %}disabled{% endif %}{% endif %}
+        {% if item.session_timeout is defined %}session-timeout {{ item.session_timeout }}{% endif %}
+        {% if item.idle_timeout is defined %}idle-timeout {{ item.idle_timeout }}{% endif %}
+        {% if item.max_sessions is defined %}max-sessions {{ item.max_sessions }}{% endif %}
+        {% if item.cookie_fallback is defined %}cookie-fallback {% if item.cookie_fallback %}enabled{% else %}disabled{% endif %}{% endif %}
+  loop: "{{ apm_access_profiles_present | default([]) }}"
+  when: apm_access_profiles_present | default([]) | length > 0
+  failed_when: false
+
+- name: Modify APM access profiles
+  bigip_command:
+    provider: "{{ f5_provider }}"
+    commands:
+      - >-
+        tmsh modify apm profile access /{{ item.partition | default('Common') }}/{{ item.name }}
+        {% if item.default_access_policy is defined %}default-access-policy "{{ item.default_access_policy }}"{% endif %}
+        {% if item.default_per_session_policy is defined %}default-per-session-policy "{{ item.default_per_session_policy }}"{% endif %}
+        {% if item.sso_configuration is defined %}sso-configuration "{{ item.sso_configuration }}"{% endif %}
+        {% if item.domain is defined %}domain "{{ item.domain }}"{% endif %}
+        {% if item.agent_cap is defined %}agent-cap {% if item.agent_cap %}enabled{% else %}disabled{% endif %}{% endif %}
+        {% if item.session_timeout is defined %}session-timeout {{ item.session_timeout }}{% endif %}
+        {% if item.idle_timeout is defined %}idle-timeout {{ item.idle_timeout }}{% endif %}
+        {% if item.max_sessions is defined %}max-sessions {{ item.max_sessions }}{% endif %}
+        {% if item.cookie_fallback is defined %}cookie-fallback {% if item.cookie_fallback %}enabled{% else %}disabled{% endif %}{% endif %}
+  loop: "{{ apm_access_profiles_present | default([]) }}"
+  when: apm_access_profiles_present | default([]) | length > 0
+
+# ─── APM Per-Session Policies ───
+
+- name: Create APM per-session policies
+  bigip_command:
+    provider: "{{ f5_provider }}"
+    commands:
+      - >-
+        tmsh create apm policy per-session-policy /{{ item.partition | default('Common') }}/{{ item.name }}
+        {% if item.description is defined %}description "{{ item.description }}"{% endif %}
+  loop: "{{ apm_per_session_policies_present | default([]) }}"
+  when: apm_per_session_policies_present | default([]) | length > 0
+  failed_when: false
+
+- name: Modify APM per-session policies
+  bigip_command:
+    provider: "{{ f5_provider }}"
+    commands:
+      - >-
+        tmsh modify apm policy per-session-policy /{{ item.partition | default('Common') }}/{{ item.name }}
+        {% if item.description is defined %}description "{{ item.description }}"{% endif %}
+  loop: "{{ apm_per_session_policies_present | default([]) }}"
+  when: apm_per_session_policies_present | default([]) | length > 0
+
+- name: Create APM per-session policy nodes
+  bigip_command:
+    provider: "{{ f5_provider }}"
+    commands:
+      - >-
+        tmsh modify apm policy per-session-policy /{{ item.partition | default('Common') }}/{{ item.policy }}
+        items add {
+          {{ item.name }} {
+            {% if item.type is defined %}type {{ item.type }}{% endif %}
+            {% if item.properties is defined %}
+            {% for key, value in item.properties.items() %}
+            {% if key == 'rules' %}
+            rules {
+              {% for rule in value %}
+              {{ rule.name }} { expression "{{ rule.expression }}" }
+              {% endfor %}
+            }
+            {% elif key in ['ad_server', 'ldap_server', 'kerberos_sso_object', 'sso_config', 'auth_server'] %}
+            {{ key }} /{{ item.partition | default('Common') }}/{{ value }}
+            {% else %}
+            {{ key }} "{{ value }}"
+            {% endif %}
+            {% endfor %}
+            {% endif %}
+          }
+        }
+  loop: "{{ apm_per_session_nodes_present | default([]) }}"
+  when: apm_per_session_nodes_present | default([]) | length > 0
+  failed_when: false
+
+- name: Modify APM per-session policy nodes
+  bigip_command:
+    provider: "{{ f5_provider }}"
+    commands:
+      - >-
+        tmsh modify apm policy per-session-policy /{{ item.partition | default('Common') }}/{{ item.policy }}
+        items modify {
+          {{ item.name }} {
+            {% if item.type is defined %}type {{ item.type }}{% endif %}
+            {% if item.properties is defined %}
+            {% for key, value in item.properties.items() %}
+            {% if key == 'rules' %}
+            rules {
+              {% for rule in value %}
+              {{ rule.name }} { expression "{{ rule.expression }}" }
+              {% endfor %}
+            }
+            {% elif key in ['ad_server', 'ldap_server', 'kerberos_sso_object', 'sso_config', 'auth_server'] %}
+            {{ key }} /{{ item.partition | default('Common') }}/{{ value }}
+            {% else %}
+            {{ key }} "{{ value }}"
+            {% endif %}
+            {% endfor %}
+            {% endif %}
+          }
+        }
+  loop: "{{ apm_per_session_nodes_present | default([]) }}"
+  when: apm_per_session_nodes_present | default([]) | length > 0
+
+# ─── APM Macros ───
+
+- name: Create APM macros
+  bigip_command:
+    provider: "{{ f5_provider }}"
+    commands:
+      - >-
+        tmsh create apm policy macro /{{ item.partition | default('Common') }}/{{ item.name }}
+        {% if item.description is defined %}description "{{ item.description }}"{% endif %}
+  loop: "{{ apm_macros_present | default([]) }}"
+  when: apm_macros_present | default([]) | length > 0
+  failed_when: false
+
+- name: Modify APM macros
+  bigip_command:
+    provider: "{{ f5_provider }}"
+    commands:
+      - >-
+        tmsh modify apm policy macro /{{ item.partition | default('Common') }}/{{ item.name }}
+        {% if item.description is defined %}description "{{ item.description }}"{% endif %}
+  loop: "{{ apm_macros_present | default([]) }}"
+  when: apm_macros_present | default([]) | length > 0
+
+- name: Create APM macro nodes
+  bigip_command:
+    provider: "{{ f5_provider }}"
+    commands:
+      - >-
+        tmsh modify apm policy macro /{{ item.partition | default('Common') }}/{{ item.macro }}
+        items add {
+          {{ item.name }} {
+            {% if item.type is defined %}type {{ item.type }}{% endif %}
+            {% if item.properties is defined %}
+            {% for key, value in item.properties.items() %}
+            {% if key == 'rules' %}
+            rules {
+              {% for rule in value %}
+              {{ rule.name }} { expression "{{ rule.expression }}" }
+              {% endfor %}
+            }
+            {% elif key in ['ad_server', 'ldap_server', 'kerberos_sso_object', 'sso_config', 'auth_server'] %}
+            {{ key }} /{{ item.partition | default('Common') }}/{{ value }}
+            {% else %}
+            {{ key }} "{{ value }}"
+            {% endif %}
+            {% endfor %}
+            {% endif %}
+          }
+        }
+  loop: "{{ apm_macro_nodes_present | default([]) }}"
+  when: apm_macro_nodes_present | default([]) | length > 0
+  failed_when: false
+
+- name: Modify APM macro nodes
+  bigip_command:
+    provider: "{{ f5_provider }}"
+    commands:
+      - >-
+        tmsh modify apm policy macro /{{ item.partition | default('Common') }}/{{ item.macro }}
+        items modify {
+          {{ item.name }} {
+            {% if item.type is defined %}type {{ item.type }}{% endif %}
+            {% if item.properties is defined %}
+            {% for key, value in item.properties.items() %}
+            {% if key == 'rules' %}
+            rules {
+              {% for rule in value %}
+              {{ rule.name }} { expression "{{ rule.expression }}" }
+              {% endfor %}
+            }
+            {% elif key in ['ad_server', 'ldap_server', 'kerberos_sso_object', 'sso_config', 'auth_server'] %}
+            {{ key }} /{{ item.partition | default('Common') }}/{{ value }}
+            {% else %}
+            {{ key }} "{{ value }}"
+            {% endif %}
+            {% endfor %}
+            {% endif %}
+          }
+        }
+  loop: "{{ apm_macro_nodes_present | default([]) }}"
+  when: apm_macro_nodes_present | default([]) | length > 0
+
+# ─── APM Access Policy Nodes ───
 
 - name: Create APM policy nodes
   bigip_command:

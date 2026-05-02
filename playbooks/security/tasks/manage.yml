@@ -20,6 +20,9 @@
     (apm_sso_configs_present | default([]) | length > 0) or
     (apm_resources_present | default([]) | length > 0) or
     (apm_policy_nodes_present | default([]) | length > 0) or
+    (apm_access_profiles_present | default([]) | length > 0) or
+    (apm_per_session_policies_present | default([]) | length > 0) or
+    (apm_macros_present | default([]) | length > 0) or
     (afm_address_lists_delete | default([]) | length > 0) or
     (afm_port_lists_delete | default([]) | length > 0) or
     (afm_rules_delete | default([]) | length > 0) or
@@ -30,4 +33,7 @@
     (apm_auth_servers_delete | default([]) | length > 0) or
     (apm_sso_configs_delete | default([]) | length > 0) or
     (apm_resources_delete | default([]) | length > 0) or
-    (apm_policy_nodes_delete | default([]) | length > 0)
+    (apm_policy_nodes_delete | default([]) | length > 0) or
+    (apm_access_profiles_delete | default([]) | length > 0) or
+    (apm_per_session_policies_delete | default([]) | length > 0) or
+    (apm_macros_delete | default([]) | length > 0)

@@ -35,12 +35,24 @@ vars/security/apm/
 ├── policy_nodes/                   # VPE flow nodes within access policies
 │   ├── settings.yml
 │   └── ldap-kerberos-flow.yml
+├── access_profiles/                # Access profile definitions
+│   ├── settings.yml
+│   └── corp-profiles.yml
+├── per_session_policies/           # Per-session policy definitions
+│   ├── settings.yml
+│   └── session-policies.yml
+├── macros/                         # Reusable VPE macro definitions
+│   ├── settings.yml
+│   └── common-macros.yml
 └── deletions/                      # Explicit deletion trees
     ├── acls/
     ├── auth_servers/
     ├── sso_configs/
     ├── resources/
-    └── policy_nodes/
+    ├── policy_nodes/
+    ├── access_profiles/
+    ├── per_session_policies/
+    └── macros/
 ```
 
 ## Object Types
@@ -97,12 +109,62 @@ Nodes define the VPE flow within an access policy. Each node has a `type` and op
 
 Common types: `logon_page`, `ad_auth`, `ldap_auth`, `kerberos_auth`, `kcd_sso`, `branch`, `allow`, `deny`, `fallback`, `macro`, `variable_assign`.
 
+### Access Profiles
+
+Access profiles define session timeouts, log levels, platform restrictions, and the startup URI for the VPE policy.
+
+| Field | Type | Required | Description |
+|---|---|---|---|
+| `name` | string | yes | Profile name |
+| `partition` | string | no | Partition (default: Common) |
+| `description` | string | no | Human-readable description |
+| `default_timeout` | integer | no | Default session timeout in seconds |
+| `inactive_timeout` | integer | no | Inactivity timeout in seconds |
+| `session_timeout` | integer | no | Maximum session lifetime in seconds |
+| `log_level` | string | no | One of: debug, info, notice, warning, error, emergency, alert, crit |
+| `startup_uri` | string | no | VPE policy URI (e.g., `/my.policy`) |
+| `use_for_default_url` | bool | no | Use as default URL handler |
+| `allow_mac_addresses` | bool | no | Allow MAC address filtering |
+| `allow_platforms` | list | no | Allowed client platforms (windows, mac, etc.) |
+
+### Per-Session Policies
+
+Per-session policies define session-level authentication and authorization logic with node-based flows.
+
+| Field | Type | Required | Description |
+|---|---|---|---|
+| `name` | string | yes | Policy name |
+| `partition` | string | no | Partition (default: Common) |
+| `description` | string | no | Human-readable description |
+| `nodes` | list | no | Ordered list of policy nodes |
+
+Each node in `nodes` has:
+- `ordinal` (integer): Execution order
+- `name` (string): Node identifier
+- `type` (string): Node type (logon_page, ad_auth, variable_assign, ending, etc.)
+- `config` (dict): Node-specific configuration
+
+### Macros
+
+Reusable VPE flow building blocks that can be embedded in access policies or per-session policies.
+
+| Field | Type | Required | Description |
+|---|---|---|---|
+| `name` | string | yes | Macro name |
+| `partition` | string | no | Partition (default: Common) |
+| `description` | string | no | Human-readable description |
+| `nodes` | list | no | Ordered list of policy nodes |
+
+Each node in `nodes` has the same structure as per-session policy nodes.
+
 ## Cross-File Linkages
 
-- Auth servers (``vars/security/apm/auth_servers/``) are referenced by policy nodes via `ad_server` or `ldap_server` properties.
+- Auth servers (``vars/security/apm/auth_servers/``) are referenced by policy nodes via `ad_server` or `ldap_server` properties, and by per-session policy nodes.
 - SSO configs (``vars/security/apm/sso_configs/``) are referenced by policy nodes via `kerberos_sso_object` or similar properties.
 - Resources (``vars/security/apm/resources/``) are assigned within policy nodes or referenced by webtop items.
 - ACLs (``vars/security/apm/acls/``) enforce L4/L7 access control in APM profiles.
+- Macros (``vars/security/apm/macros/``) are referenced by access policies and per-session policies via `macro` node types.
+- Access profiles (``vars/security/apm/access_profiles/``) reference VPE policies whose nodes are defined in `vars/security/apm/policy_nodes/`.
 
 ## Authoring Patterns
 
@@ -192,11 +254,97 @@ apm_policy_nodes:
     type: allow
 ```
 
+### Example Access Profile
+
+```yaml
+---
+apm_access_profiles:
+  - name: corp-sso-profile
+    description: Corporate SSO access profile with Kerberos
+    default_timeout: 3600
+    inactive_timeout: 1800
+    session_timeout: 28800
+    log_level: notice
+    startup_uri: /my.policy
+```
+
+### Example Per-Session Policy
+
+```yaml
+---
+apm_per_session_policies:
+  - name: advanced-session-policy
+    description: Per-session policy with conditional branching
+    nodes:
+      - ordinal: 1
+        name: start
+        type: logon_page
+        config:
+          logon_page: /common/custom_logon.php
+          auth_server: corp-ad-server
+          next_node: check_group
+      - ordinal: 2
+        name: check_group
+        type: variable_assign
+        config:
+          assignments:
+            - variable: session.custom.group
+              value: expr{[mcget {session.ad.last.attr.memberOf}]}
+          next_node: end
+      - ordinal: 3
+        name: end
+        type: ending
+        config:
+          ending_type: allow
+```
+
+### Example Macro
+
+```yaml
+---
+apm_macros:
+  - name: ldap-auth-macro
+    description: Reusable LDAP authentication macro
+    nodes:
+      - ordinal: 1
+        name: ldap_logon
+        type: logon_page
+        config:
+          logon_page: /common/custom_logon.php
+          next_node: ldap_auth
+      - ordinal: 2
+        name: ldap_auth
+        type: ad_auth
+        config:
+          ad_server: corp-ldap-server
+          fallback: true
+          next_node: ldap_result
+      - ordinal: 3
+        name: ldap_result
+        type: empty
+        config:
+          branches:
+            - name: Success
+              next_node: end_allow
+            - name: Failure
+              next_node: end_deny
+      - ordinal: 4
+        name: end_allow
+        type: ending
+        config:
+          ending_type: allow
+      - ordinal: 5
+        name: end_deny
+        type: ending
+        config:
+          ending_type: deny
+```
+
 ## Dependency Order
 
-**Apply:** Auth Servers → SSO Configs → Resources → Policy Nodes → ACLs
+**Apply:** Auth Servers → SSO Configs → Resources → Macros → Per-Session Policies → Policy Nodes → Access Profiles → ACLs
 
-**Delete:** ACLs → Policy Nodes → Resources → SSO Configs → Auth Servers (reverse dependency)
+**Delete:** ACLs → Access Profiles → Policy Nodes → Per-Session Policies → Macros → Resources → SSO Configs → Auth Servers (reverse dependency)
 
 The `security.yml` playbook handles this ordering automatically.
 
@@ -208,6 +356,9 @@ The `security.yml` playbook handles this ordering automatically.
 - Resources: type-specific field validation (address_spaces for network_access, items for webtops)
 - Policy nodes: cross-reference validation against declared auth servers and SSO configs
 - ACLs: type validation, entry structure validation
+- Access profiles: log_level validation, allow_platforms structure validation
+- Per-session policies: node structure validation (name, type required)
+- Macros: node structure validation (name, type required)
 - No duplicate objects within the same partition
 
 ## Drift Detection
@@ -217,13 +368,16 @@ The `security.yml` playbook handles this ordering automatically.
 - Auth servers via `auth/remote-server` endpoint
 - SSO configs via `apm/sso/kerberos` endpoint
 - Resources via `apm/resource` endpoint
+- Access profiles via `access/profile` endpoint
+- Per-session policies via `access/per-session-policy` endpoint
+- Macros via `access/macro` endpoint
 
 ## Import
 
 `tools/import-from-bigip` can import live APM objects:
 
 ```sh
-F5_HOST=bigip.example.com F5_PASSWORD=secret python3 tools/import-from-bigip --out imported/ --types apm_acls apm_auth_servers apm_sso_configs apm_resources
+F5_HOST=bigip.example.com F5_PASSWORD=secret python3 tools/import-from-bigip --out imported/ --types apm_acls apm_auth_servers apm_sso_configs apm_resources apm_access_profiles apm_per_session_policies apm_macros
 ```
 
 ## Related Docs

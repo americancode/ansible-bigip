@@ -327,6 +327,33 @@ IMPORT_SPECS: dict[str, ImportSpec] = {
             "description": "description",
         },
     ),
+    "apm_access_profiles": ImportSpec(
+        endpoint="access/profile",
+        top_key="apm_access_profiles",
+        output_dir="security/apm/access_profiles",
+        extract={
+            "name": "name",
+            "description": "description",
+        },
+    ),
+    "apm_per_session_policies": ImportSpec(
+        endpoint="access/per-session-policy",
+        top_key="apm_per_session_policies",
+        output_dir="security/apm/per_session_policies",
+        extract={
+            "name": "name",
+            "description": "description",
+        },
+    ),
+    "apm_macros": ImportSpec(
+        endpoint="access/macro",
+        top_key="apm_macros",
+        output_dir="security/apm/macros",
+        extract={
+            "name": "name",
+            "description": "description",
+        },
+    ),
     "tls_keys": ImportSpec(
         endpoint="sys/crypto/key",
         top_key="tls_keys",

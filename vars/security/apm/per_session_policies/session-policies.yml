@@ -1,0 +1,29 @@
+---
+# APM per-session policy examples for advanced session-based logic.
+# Per-session policies reference auth servers in `vars/security/apm/auth_servers/`
+# and SSO configs in `vars/security/apm/sso_configs/`.
+# Supported fields: `name`, `partition`, `description`, `nodes` (list of node mappings).
+apm_per_session_policies:
+  - name: advanced-session-policy
+    description: Per-session policy with conditional branching
+    nodes:
+      - ordinal: 1
+        name: start
+        type: logon_page
+        config:
+          logon_page: /common/custom_logon.php
+          auth_server: corp-ad-server
+          next_node: check_group
+      - ordinal: 2
+        name: check_group
+        type: variable_assign
+        config:
+          assignments:
+            - variable: session.custom.group
+              value: expr{[mcget {session.ad.last.attr.memberOf}]}
+          next_node: end
+      - ordinal: 3
+        name: end
+        type: ending
+        config:
+          ending_type: allow
