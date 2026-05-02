@@ -776,7 +776,7 @@ This is the practical next sequence for the current repo.
 18. [x] Add APM access profiles, per-session policies, and macros
 19. [x] Audit checked-off roadmap items against runtime, validation, drift/import tooling, docs, and examples
 20. [x] Correct drift/import endpoint and var-key mappings for newly added object families
-21. [ ] Align runtime, validator, docs, and example vars where field models drifted apart
+21. [x] Align runtime, validator, docs, and example vars where field models drifted apart
 22. [x] Complete exhaustive drift/import parity for every newest object tree
 23. [ ] Deepen drift detection to compare meaningful fields for newly added object families
 24. [ ] Add day-0 BIG-IP onboarding for licensing and initial management bootstrap
@@ -823,6 +823,12 @@ Endpoint/var-key audit result:
 
 - helper-tool-supported object families no longer have known wrong BIG-IP endpoint mappings or wrong repo var-key mappings
 - remaining lifecycle gaps are now fidelity gaps or intentionally runtime-only domains, not endpoint/key mismatches
+
+Field-model alignment audit result:
+
+- no remaining known mismatches where docs/examples describe a different field model than the current runtime and validator intentionally support
+- WAF coverage is now documented and validated as `Common`-scoped because the current runtime tasks do not consume a partition field
+- AFM rule endpoint validation now follows the rule partition instead of assuming `/Common` for implicit address-list references
 
 ## Extended Backlog
 
@@ -985,7 +991,7 @@ These are the first concrete tickets I would open.
 - [x] Correct network helper-tool mappings for trunks and SNAT pools
 - [x] Correct newer helper-tool mappings for WAF server technologies and APM policy nodes
 - [x] Correct remaining drift/import endpoint and var-key mappings for helper-tool-supported object families
-- [ ] Align runtime, validator, docs, and examples for any feature where the declared field model drifted
+- [x] Align runtime, validator, docs, and examples for any feature where the declared field model drifted
 - [ ] Decide whether `system` and `ha` should gain drift/import support now or be explicitly documented as runtime-only for the current phase
 - [x] Align APM access-profile validation with the current runtime field model
 - [ ] Reconcile the roadmap, README, and docs whenever a checked-off item is found to be only partially complete

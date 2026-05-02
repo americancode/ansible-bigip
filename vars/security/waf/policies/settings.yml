@@ -1,2 +1,1 @@
-waf_policy_defaults:
-  partition: Common
+waf_policy_defaults: {}

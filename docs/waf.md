@@ -40,7 +40,6 @@ Managed by `bigip_asm_policy_manage`. Fields:
 | Field | Type | Required | Description |
 |---|---|---|---|
 | `name` | string | yes | Policy name |
-| `partition` | string | no | Partition (default: `Common`) |
 | `template` | string | no | Built-in template (e.g., `Comprehensive`, `Rapid Deployment`) |
 | `active` | bool | no | Whether policy is active |
 | `apply` | bool | no | Apply pending policy changes (TMOS v14+) |
@@ -56,6 +55,11 @@ Managed by `bigip_asm_policy_server_technology`. Fields:
 | `name` | string | yes | Server technology name |
 | `policy_name` | string | yes | Parent WAF policy name |
 
+Current limitation:
+
+- the current runtime tasks do not consume a partition field for WAF policies or server technologies
+- treat WAF policy names and `policy_name` references as `Common`-scoped unless the runtime is expanded later
+
 ## Authoring Patterns
 
 ### Defaults
@@ -63,13 +67,9 @@ Managed by `bigip_asm_policy_server_technology`. Fields:
 Directory-level `settings.yml` files provide defaults:
 
 ```yaml
-# vars/security/waf/policies/settings.yml
-waf_policy_defaults:
-  partition: Common
-
 # vars/security/waf/server_technologies/settings.yml
 waf_server_technology_defaults:
-  partition: Common
+  state: present
 ```
 
 ### Example Policy

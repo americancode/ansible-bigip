@@ -1490,12 +1490,12 @@ class Validator:
                 if source is not None and not isinstance(source, dict):
                     self.error(obj.relpath, f"AFM rule `{obj.data.get('name')}` `source` must be a mapping")
                 elif source is not None:
-                    self.validate_afm_rule_endpoint(source, obj.relpath, obj.data.get("name"), "source", active_address_list_names)
+                    self.validate_afm_rule_endpoint(source, obj.relpath, obj.data.get("name"), "source", obj.partition, active_address_list_names)
                 destination = obj.data.get("destination")
                 if destination is not None and not isinstance(destination, dict):
                     self.error(obj.relpath, f"AFM rule `{obj.data.get('name')}` `destination` must be a mapping")
                 elif destination is not None:
-                    self.validate_afm_rule_endpoint(destination, obj.relpath, obj.data.get("name"), "destination", active_address_list_names)
+                    self.validate_afm_rule_endpoint(destination, obj.relpath, obj.data.get("name"), "destination", obj.partition, active_address_list_names)
 
         self.check_duplicates(
             rules,
@@ -1529,6 +1529,7 @@ class Validator:
         source: str,
         rule_name: Any,
         kind: str,
+        default_partition: str,
         active_address_list_names: set[str],
     ) -> None:
         address_lists = endpoint.get("address_lists")
@@ -1538,7 +1539,7 @@ class Validator:
             else:
                 for al_ref in address_lists:
                     if isinstance(al_ref, str):
-                        fq_al = al_ref if al_ref.startswith("/") else self.fq_name("Common", al_ref)
+                        fq_al = al_ref if al_ref.startswith("/") else self.fq_name(default_partition, al_ref)
                         if fq_al not in active_address_list_names:
                             self.error(source, f"AFM rule `{rule_name}` `{kind}` references undefined address list `{fq_al}`")
         port_lists = endpoint.get("port_lists")
@@ -1563,6 +1564,8 @@ class Validator:
         for obj in policies:
             self.require_fields(obj, ["name"])
             if obj.effective_state != "absent":
+                if obj.partition != "Common":
+                    self.error(obj.relpath, f"WAF policy `{obj.data.get('name')}` must use partition `Common`; the current runtime tasks do not consume a partition field")
                 active_policy_names.add(self.fq_name(obj.partition, str(obj.data["name"])))
                 template = obj.data.get("template")
                 if template is not None and template not in supported_templates:
@@ -1584,7 +1587,9 @@ class Validator:
             self.require_fields(obj, ["name", "policy_name"])
             if obj.effective_state == "absent":
                 continue
-            fq_policy = obj.data["policy_name"] if str(obj.data["policy_name"]).startswith("/") else self.fq_name("Common", str(obj.data["policy_name"]))
+            if obj.partition != "Common":
+                self.error(obj.relpath, f"WAF server technology `{obj.data.get('name')}` must use partition `Common`; the current runtime tasks do not consume a partition field")
+            fq_policy = obj.data["policy_name"] if str(obj.data["policy_name"]).startswith("/") else self.fq_name(obj.partition, str(obj.data["policy_name"]))
             if fq_policy not in active_policy_names:
                 self.error(obj.relpath, f"WAF server technology `{obj.data.get('name')}` references undefined policy `{fq_policy}`")
 
