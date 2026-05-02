@@ -89,25 +89,27 @@ If an empty directory must exist intentionally (e.g., a deletions tree with no e
 
 - run `make validate` after each major change before moving to the next step
 - validation must pass before any playbook execution
-- update `tools/validate-vars` when adding new var trees or object types:
-  - add a `TreeSpec` entry for every new active and deletion directory
-  - add type-specific validation in the appropriate `validate_*` method
-  - add duplicate checks for all new object types
-  - validate new fields (type, required keys, cross-references) where applicable
+- on every feature change (new object types, new fields, new var trees):
+  - update `tools/validate-vars` with TreeSpec entries, type-specific validation, duplicate checks, and field validation
+  - update `Makefile` validate-ansible target to include new playbooks
 - never introduce a new var tree without corresponding validation coverage
-- update `Makefile` validate-ansible target to include new playbooks
 
 ## Drift Detection
 
-- when adding a new object type to any playbook, also add it to `tools/drift-check`:
-  - add a `load` entry in `VarTreeLoader.load()` mapping the new type to its var tree directory and top-level YAML key
-  - add an entry in `DriftChecker.BIGIP_ENDPOINTS` mapping the type to its BIG-IP REST API endpoint
-  - if the new type uses a non-standard name field (not `name`), add it to `DriftChecker.NAME_FIELDS`
-  - add value drift comparisons in `_find_value_drift` for the new type's meaningful fields
-- when adding a new object type, also add it to `tools/import-from-bigip`:
-  - add an `ImportSpec` entry in `IMPORT_SPECS` with the REST endpoint, output directory, top-level key, and field extraction map
-  - add any type-specific transformation logic in `_transform_item` (pool members, virtual server references, etc.)
-- ensure `requests` is listed as a dependency in `Dockerfile.validation` if not already present
+- on every feature change, update `tools/drift-check`:
+  - add a `load` entry in `VarTreeLoader.load()` for new var tree directories
+  - add a BIG-IP REST endpoint mapping in `DriftChecker.BIGIP_ENDPOINTS`
+  - add non-standard name fields to `DriftChecker.NAME_FIELDS` if applicable
+  - add value drift comparisons in `_find_value_drift` for the new type's fields
+- on every feature change, update `tools/import-from-bigip`:
+  - add an `ImportSpec` entry in `IMPORT_SPECS` with endpoint, output directory, top-level key, and field extraction
+  - add type-specific transformation logic in `_transform_item` (pool members, virtual server references, etc.)
+
+## Docker and Dependencies
+
+- keep `Dockerfile.validation` up to date with all Python packages and system tools required to run the full validation and drift suite
+- any new Python import in `tools/validate-vars`, `tools/drift-check`, or `tools/import-from-bigip` must be added to `Dockerfile.validation` and `.gitlab-ci.yml` `before_script`
+- verify the Docker image builds successfully after adding dependencies
 
 ## Commit Messages
 

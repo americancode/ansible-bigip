@@ -20,6 +20,8 @@ Declarative BIG-IP playbooks organized for GitOps-style management.
 | AFM security | [docs/security.md](docs/security.md) |
 | AWX bootstrap | [docs/awx-ha-bootstrap.md](docs/awx-ha-bootstrap.md) |
 | Drift and import | [docs/drift-import.md](docs/drift-import.md) |
+| Promotion workflows | [docs/promotion-workflows.md](docs/promotion-workflows.md) |
+| Rollback patterns | [docs/rollback-patterns.md](docs/rollback-patterns.md) |
 | CLI bootstrap | [docs/cli-bootstrap.md](docs/cli-bootstrap.md) |
 | Example models | [docs/example-models.md](docs/example-models.md) |
 | Roadmap | [ROADMAP.md](ROADMAP.md) |

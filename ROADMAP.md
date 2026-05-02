@@ -732,6 +732,15 @@ These are the first concrete tickets I would open.
 - [x] Provide JSON output for CI integration
 - [x] Document drift and import workflows
 
+### Milestone 11: Promotion and Rollback
+
+- [x] Document environment promotion flow (dev → test → prod)
+- [x] Document hotfix flow (main → test → dev back-propagation)
+- [x] Document rollback strategies: git revert, playbook re-apply, UCS restore
+- [x] Document rollback checklist for production incidents
+- [x] Document drift detection integration at promotion gates
+- [x] Document AWX job template pattern per environment
+
 ## Network Expansion Status
 
 The repo now covers route domains, static routes, SNAT translations, SNAT pools, trunks, and NATs.
