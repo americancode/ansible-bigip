@@ -196,6 +196,71 @@ This is the expected interpretation of feature status going forward.
 
 Checked-off roadmap items should only be treated as fully complete when all four layers above are true, unless the roadmap explicitly says the item is runtime-only.
 
+## Acceptance Criteria
+
+These rules define what "done" means for roadmap items.
+
+### Completion Classes
+
+- `runtime-only`
+  - playbook runtime exists
+  - validator and/or helper-tool coverage is intentionally incomplete
+  - the limitation is documented in the relevant domain docs and in this roadmap
+- `runtime+validation`
+  - runtime exists
+  - `tools/validate-vars` supports the object tree and references
+  - helper-tool lifecycle coverage is still intentionally incomplete and documented
+- `runtime+validation+helper-tools`
+  - runtime exists
+  - validator exists
+  - `tools/drift-check` and `tools/import-from-bigip` support the object family at an explicitly stated fidelity level
+- `full parity`
+  - runtime, validator, helper tools, docs, example vars, README, and roadmap are aligned
+
+### Helper-Tool Fidelity Levels
+
+- `identity-only`
+  - helper tools can detect or import object presence by identity, but do not claim meaningful field-level parity
+- `basic field drift`
+  - helper tools compare or import a limited, explicitly documented field subset
+- `model-aware`
+  - helper tools reconstruct nested structures and cross-object linkages in the repo's actual field model
+
+### Required Evidence Before Checking a Box
+
+An item must not be marked complete unless the implementation or closeout can name:
+
+- the completion class being claimed
+- the helper-tool fidelity level where applicable
+- the repo layers updated:
+  - runtime playbook files
+  - validator
+  - drift/import tooling
+  - docs
+  - example vars
+  - roadmap state
+- the validation commands that passed
+
+### Prohibited Completion Behavior
+
+Do not mark an item complete when any of the following is true:
+
+- runtime exists but delete support is missing
+- runtime exists but `prep.yml` does not actually load the declared field model
+- docs or examples describe fields the runtime does not consume
+- validator accepts a different model than the runtime uses
+- helper tools point at the wrong BIG-IP endpoints or wrong repo var keys
+- helper tools only cover parent objects while the repo models child attachments, and that limitation is not documented
+- the roadmap wording implies stronger parity than the code actually provides
+
+### When Partial Work Is Acceptable
+
+Partial work is acceptable only when the roadmap and domain docs state the limitation explicitly. In those cases:
+
+- mark the item with the correct completion class instead of treating it as full parity
+- add a follow-up backlog item for the missing layer or fidelity
+- describe the limitation in user-facing docs where operators will encounter it
+
 ## Target Repo Shape
 
 This is the recommended end-state layout.
@@ -344,6 +409,8 @@ These are binding repo maintenance rules for every feature change, including fut
 - update milestone checklists in `Issue-Sized Execution Plan` when work is completed
 - update the Implementation Audit section when new objects or playbooks are added
 - update the Not Implemented Yet list when gaps are filled
+- when marking an item complete, state its completion class (`runtime-only`, `runtime+validation`, `runtime+validation+helper-tools`, or `full parity`) in the implementation note or closeout
+- when helper tools are involved, state the fidelity level (`identity-only`, `basic field drift`, or `model-aware`) in the implementation note or closeout
 - if a playbook is intentionally kept monolithic instead of split, record the reason here
 
 ### Playbook Structure
@@ -354,6 +421,7 @@ These are binding repo maintenance rules for every feature change, including fut
 ### Validation and Commits
 
 - validate after each major change before moving to the next implementation step
+- in final closeouts, name the validation commands that actually passed
 - at the end of every implementation prompt, after changes are made and validated, print a suggested commit message
 
 ## Program Phases

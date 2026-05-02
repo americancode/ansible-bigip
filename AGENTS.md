@@ -22,6 +22,19 @@ These are binding. Do not skip any of these steps when implementing a feature.
 
 These are also binding. A feature is not complete just because syntax-check passes or because `apply.yml` has tasks.
 
+- Every implementation must declare its completion class in repo terms:
+  - `runtime-only` — playbook behavior exists, but validator and/or helper-tool lifecycle support is intentionally incomplete
+  - `runtime+validation` — playbook behavior and `tools/validate-vars` support exist, but helper-tool lifecycle support is intentionally incomplete
+  - `runtime+validation+helper-tools` — runtime, validator, drift detection, and import coverage exist
+  - `full parity` — runtime, validator, helper tools, docs, examples, README, and roadmap are all aligned
+
+- Every helper-tool change must declare its fidelity level:
+  - `identity-only` — existence/name/partition parity only
+  - `basic field drift` — a limited, explicit field subset is compared or imported
+  - `model-aware` — nested structures and cross-object linkages are reconstructed in the repo's actual field model
+
+- Do not silently upgrade a feature's claimed completion class or helper-tool fidelity. If the repo only supports `runtime-only` or `identity-only`, that limitation must remain explicit in `ROADMAP.md` and the relevant docs.
+
 - Do not mark a roadmap item complete unless the feature is operationally complete across the repo model:
   - `prep.yml` loads and classifies the data the runtime tasks actually consume
   - `tasks/apply.yml` supports create/update behavior
@@ -44,6 +57,17 @@ These are also binding. A feature is not complete just because syntax-check pass
   - keep example var files, docs, and helper tools aligned with the canonical playbook behavior
 
 - If a helper tool cannot yet support a newly added object family well, record that explicitly in `ROADMAP.md` as a remaining gap instead of silently implying full GitOps parity.
+
+- A roadmap checkbox cannot be marked complete unless the implementation note or closeout can name:
+  - the completion class
+  - the helper-tool fidelity level where applicable
+  - the exact repo layers updated
+  - the validation commands that passed
+
+- If you discover a previously checked-off item is only partial, you must:
+  - reopen or qualify the roadmap item immediately
+  - update docs that overstate the feature
+  - add a remediation item to the roadmap before doing more expansion work
 
 ### Inline Var File Documentation
 
@@ -139,6 +163,7 @@ These updates are **required after every feature change** (new object types, new
 - [ ] `tools/validate-vars` — add `TreeSpec` entry, type-specific validation in `validate_<domain>()`, duplicate checks, cross-reference validation, and field validation
 - [ ] `Makefile` — ensure `validate-ansible` target includes the affected playbook
 - [ ] run `make validate` and confirm it passes
+- [ ] record which validation commands passed in the final closeout
 
 ### Drift Detection
 
@@ -146,11 +171,13 @@ These updates are **required after every feature change** (new object types, new
 - [ ] `tools/drift-check` — add a BIG-IP REST endpoint mapping in `DriftChecker.BIGIP_ENDPOINTS`
 - [ ] `tools/drift-check` — add non-standard name fields to `DriftChecker.NAME_FIELDS` if applicable
 - [ ] `tools/drift-check` — add value drift comparisons in `_find_value_drift` for the new type's fields
+- [ ] explicitly classify the resulting drift support as `identity-only`, `basic field drift`, or `model-aware`
 
 ### Import Tooling
 
 - [ ] `tools/import-from-bigip` — add an `ImportSpec` entry in `IMPORT_SPECS` with endpoint, output directory, top-level key, and field extraction
 - [ ] `tools/import-from-bigip` — add type-specific transformation logic in `_transform_item` (pool members, virtual server references, etc.) if needed
+- [ ] explicitly classify the resulting import fidelity as `identity-only`, `basic field drift`, or `model-aware`
 
 ### Documentation
 
@@ -161,6 +188,7 @@ These updates are **required after every feature change** (new object types, new
 - [ ] `ROADMAP.md` — update Current State, Implementation Audit, backlog, milestone checklists, and Not Implemented Yet
 - [ ] verify docs do not describe superseded implementation models
 - [ ] verify example var files still match the documented and implemented field model
+- [ ] state any intentional limitations in the domain docs instead of leaving them implicit
 
 ### Docker and CI
 
