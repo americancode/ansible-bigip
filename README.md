@@ -17,6 +17,7 @@ Declarative BIG-IP playbooks organized for GitOps-style management.
 | System management | [docs/system-management.md](docs/system-management.md) |
 | LTM advanced fields | [docs/ltm-advanced.md](docs/ltm-advanced.md) |
 | GTM advanced fields | [docs/gtm-advanced.md](docs/gtm-advanced.md) |
+| AFM security | [docs/security.md](docs/security.md) |
 | AWX bootstrap | [docs/awx-ha-bootstrap.md](docs/awx-ha-bootstrap.md) |
 | CLI bootstrap | [docs/cli-bootstrap.md](docs/cli-bootstrap.md) |
 | Example models | [docs/example-models.md](docs/example-models.md) |
@@ -32,8 +33,9 @@ Canonical playbooks live under `playbooks/`. Root-level `*.yml` files are compat
 | `playbooks/system.yml` | hostname, DNS, NTP, provisioning, users |
 | `playbooks/ha.yml` | device trust, device groups, traffic groups, config sync |
 | `playbooks/ltm.yml` | monitors, profiles, nodes, pools, virtual servers |
-| `playbooks/gtm.yml` | monitors, datacenters, servers, pools, Wide IPs |
+| `playbooks/gtm.yml` | monitors, datacenters, servers, pools, Wide IPs, topology |
 | `playbooks/tls.yml` | keys, certificates, CA bundles, SSL profiles |
+| `playbooks/security.yml` | AFM address lists, port lists, firewall rules, policies |
 
 ## Validation
 

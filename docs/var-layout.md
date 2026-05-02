@@ -10,6 +10,7 @@ The repo uses split trees under `vars/` so large estates can be managed by domai
 - `vars/ltm/...`
 - `vars/gtm/...`
 - `vars/tls/...`
+- `vars/security/...`
 - `vars/common.yml` (shared provider configuration)
 
 ## Settings Inheritance

@@ -10,6 +10,7 @@ Canonical playbooks live under `playbooks/`. Root-level `*.yml` files are compat
 - `playbooks/ltm.yml`: LTM monitors, non-TLS profiles, nodes, pools, virtual servers
 - `playbooks/gtm.yml`: GTM monitors, datacenters, servers, pools, Wide IPs
 - `playbooks/tls.yml`: SSL keys, certificates, CA bundles, client SSL profiles, server SSL profiles
+- `playbooks/security.yml`: AFM address lists, port lists, firewall rules, firewall policies
 
 ## Split Layout
 
@@ -21,7 +22,7 @@ Canonical playbooks use a consistent split so the entrypoint stays small and the
 - `playbooks/<domain>/tasks/delete.yml` contains destructive tasks
 - `playbooks/<domain>/tasks/apply.yml` contains present-state create/update tasks
 
-This pattern is the default for `network`, `system`, `ha`, `tls`, `ltm`, and `gtm`. If a future playbook stays small enough that splitting it adds no value, document that choice in [ROADMAP.md](../ROADMAP.md) before keeping it monolithic.
+This pattern is the default for `network`, `system`, `ha`, `tls`, `ltm`, `gtm`, and `security`. If a future playbook stays small enough that splitting it adds no value, document that choice in [ROADMAP.md](../ROADMAP.md) before keeping it monolithic.
 
 ## Path Handling
 

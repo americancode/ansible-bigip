@@ -74,3 +74,19 @@ The network tree also shows both native-module and validated-command patterns.
 - NATs: `vars/network/nats/foundation-nats.yml`
   This uses a validated `tmsh` command workflow because the installed collection does not provide a first-class NAT module.
 - NAT VLAN references such as `external` point at `vars/network/vlans/foundation-vlans.yml`.
+
+## AFM Security Model
+
+The security playbook uses first-class var trees for address lists, port lists, rules, and policies.
+
+- Address lists: `vars/security/afm/address_lists/platform-addresses.yml`
+- Port lists: `vars/security/afm/port_lists/platform-ports.yml`
+- Firewall rules: `vars/security/afm/rules/platform-rules.yml`
+- Firewall policies: `vars/security/afm/policies/platform-policies.yml`
+
+Linkage works like this:
+
+- `afm_rules[*].source.address_lists: ["trusted-clients"]` points at `vars/security/afm/address_lists/platform-addresses.yml`
+- `afm_rules[*].destination.port_lists: ["web-ports"]` points at `vars/security/afm/port_lists/platform-ports.yml`
+- `afm_policies[*].rules: ["allow-web-internal"]` points at `vars/security/afm/rules/platform-rules.yml`
+- Rules are evaluated top-to-bottom by BIG-IP, so the `deny-all` catch-all must appear last in the policy's `rules` list

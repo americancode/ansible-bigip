@@ -1,3 +1,8 @@
+---
+# AFM port list examples for service port grouping in firewall policies.
+# Port lists are referenced by AFM firewall rules in `vars/security/afm/rules/platform-rules.yml`.
+# Supported fields: `ports` (individual port numbers), `port_ranges` (start-end format),
+# and `port_lists` (nested references to other port lists).
 afm_port_lists:
   - name: web-ports
     description: Standard web traffic ports

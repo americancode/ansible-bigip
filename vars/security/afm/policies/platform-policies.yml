@@ -1,3 +1,9 @@
+---
+# AFM firewall policy examples binding ordered rule lists.
+# Policies reference rules defined in `vars/security/afm/rules/platform-rules.yml`.
+# Rule order matters: BIG-IP evaluates rules top-to-bottom, so the deny-all catch-all
+# should appear last in the list.
+# Supported fields: `name`, `description`, and `rules` (ordered list of rule names).
 afm_policies:
   - name: platform-firewall
     description: Platform-wide firewall policy

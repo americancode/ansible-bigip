@@ -1,3 +1,11 @@
+---
+# AFM firewall rule examples defining access control behavior.
+# Rules reference address lists from `vars/security/afm/address_lists/platform-addresses.yml`
+# and port lists from `vars/security/afm/port_lists/platform-ports.yml`.
+# Rules are assembled into policies in `vars/security/afm/policies/platform-policies.yml`.
+# Supported fields: `action` (accept/drop/reject/continue), `protocol`, `source`,
+# `destination`, `logging`, and `irule`.
+# Source and destination endpoints support `address_lists`, `port_lists`, and inline `addresses`.
 afm_rules:
   - name: allow-web-internal
     description: Allow internal clients to web services
