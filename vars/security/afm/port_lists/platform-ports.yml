@@ -1,0 +1,24 @@
+afm_port_lists:
+  - name: web-ports
+    description: Standard web traffic ports
+    ports:
+      - "80"
+      - "443"
+      - "8080"
+      - "8443"
+
+  - name: management-ports
+    description: Management and monitoring ports
+    ports:
+      - "22"
+      - "161"
+      - "162"
+    port_ranges:
+      - "5666-5667"
+
+  - name: database-ports
+    description: Database access ports
+    ports:
+      - "3306"
+      - "5432"
+      - "1521"

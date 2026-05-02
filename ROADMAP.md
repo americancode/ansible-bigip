@@ -39,7 +39,7 @@ The repository already supports:
 The main remaining gaps are:
 
 - deeper HA lifecycle beyond trust, groups, traffic groups, and config sync
-- security module coverage (AFM, WAF/ASM, APM)
+- WAF/ASM and APM module coverage
 - drift detection and promotion workflows
 
 ## Current Implementation Audit
@@ -118,6 +118,15 @@ Implemented today:
   - deletion trees
   - canonical playbook entrypoint at `playbooks/gtm.yml`
   - internal split between canonical playbook wrapper, `prep.yml`, `tasks/manage.yml`, `tasks/delete.yml`, and `tasks/apply.yml`
+- `security.yml`
+  - AFM address lists (addresses, ranges, nested lists, geo locations, FQDNs)
+  - AFM port lists (ports, ranges, nested lists)
+  - AFM firewall rules (actions, protocol, source/destination endpoints)
+  - AFM firewall policies (ordered rule lists)
+  - per-directory `settings.yml` inheritance
+  - deletion trees for all object types
+  - canonical playbook entrypoint at `playbooks/security.yml`
+  - internal split between canonical playbook wrapper, `prep.yml`, `tasks/manage.yml`, `tasks/delete.yml`, and `tasks/apply.yml`
 - validation/tooling
   - YAML/schema/reference validation
   - duplicate detection
@@ -125,7 +134,8 @@ Implemented today:
 
 Not implemented yet:
 
-- security modules
+- WAF/ASM policy management
+- APM access object management
 - live drift/import/promotion tooling
 
 ## Target Repo Shape
@@ -698,6 +708,18 @@ These are the first concrete tickets I would open.
 - [x] Update `gtm.yml` apply/delete tasks for regions and topology records
 - [x] Add deletion trees for topology regions and records
 - [x] Add cross-validation: topology records reference declared regions
+
+### Milestone 9: AFM Security
+
+- [x] Add `vars/security/afm/address_lists` for AFM address lists
+- [x] Add `vars/security/afm/port_lists` for AFM port lists
+- [x] Add `vars/security/afm/rules` for AFM firewall rules
+- [x] Add `vars/security/afm/policies` for AFM firewall policies
+- [x] Add `security.yml` playbook with split task structure
+- [x] Add deletion trees for all AFM object types
+- [x] Add validation for address/port lists, rules, and policies
+- [x] Add cross-validation: policy rules reference declared rules
+- [x] Add cross-validation: rule endpoints reference declared address lists
 
 ## Network Expansion Status
 

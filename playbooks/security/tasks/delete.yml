@@ -1,0 +1,35 @@
+- name: Delete AFM firewall policies
+  bigip_firewall_rule_list:
+    provider: "{{ f5_provider }}"
+    name: "{{ item.name }}"
+    partition: "{{ item.partition | default('Common') }}"
+    state: absent
+  loop: "{{ afm_policies_delete | default([]) }}"
+  when: afm_policies_delete | default([]) | length > 0
+
+- name: Delete AFM firewall rules
+  bigip_firewall_rule:
+    provider: "{{ f5_provider }}"
+    name: "{{ item.name }}"
+    partition: "{{ item.partition | default('Common') }}"
+    state: absent
+  loop: "{{ afm_rules_delete | default([]) }}"
+  when: afm_rules_delete | default([]) | length > 0
+
+- name: Delete AFM port lists
+  bigip_firewall_port_list:
+    provider: "{{ f5_provider }}"
+    name: "{{ item.name }}"
+    partition: "{{ item.partition | default('Common') }}"
+    state: absent
+  loop: "{{ afm_port_lists_delete | default([]) }}"
+  when: afm_port_lists_delete | default([]) | length > 0
+
+- name: Delete AFM address lists
+  bigip_firewall_address_list:
+    provider: "{{ f5_provider }}"
+    name: "{{ item.name }}"
+    partition: "{{ item.partition | default('Common') }}"
+    state: absent
+  loop: "{{ afm_address_lists_delete | default([]) }}"
+  when: afm_address_lists_delete | default([]) | length > 0

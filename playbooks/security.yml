@@ -1,0 +1,21 @@
+---
+- name: Configure BIG-IP AFM security objects
+  hosts: all
+  connection: local
+  gather_facts: false
+  collections:
+    - f5networks.f5_modules
+
+  vars:
+    repo_root: "{{ playbook_dir }}/.."
+
+  vars_files:
+    - "{{ repo_root }}/vars/common.yml"
+
+  pre_tasks:
+    - name: Prepare security inputs
+      ansible.builtin.import_tasks: security/prep.yml
+
+  tasks:
+    - name: Manage AFM security objects
+      ansible.builtin.import_tasks: security/tasks/manage.yml

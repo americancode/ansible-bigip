@@ -1,0 +1,54 @@
+- name: Create AFM address lists
+  bigip_firewall_address_list:
+    provider: "{{ f5_provider }}"
+    name: "{{ item.name }}"
+    partition: "{{ item.partition | default('Common') }}"
+    description: "{{ item.description | default(omit) }}"
+    addresses: "{{ item.addresses | default(omit) }}"
+    address_ranges: "{{ item.address_ranges | default(omit) }}"
+    address_lists: "{{ item.address_lists | default(omit) }}"
+    geo_locations: "{{ item.geo_locations | default(omit) }}"
+    fqdns: "{{ item.fqdns | default(omit) }}"
+    state: present
+  loop: "{{ afm_address_lists_present | default([]) }}"
+  when: afm_address_lists_present | default([]) | length > 0
+
+- name: Create AFM port lists
+  bigip_firewall_port_list:
+    provider: "{{ f5_provider }}"
+    name: "{{ item.name }}"
+    partition: "{{ item.partition | default('Common') }}"
+    description: "{{ item.description | default(omit) }}"
+    ports: "{{ item.ports | default(omit) }}"
+    port_ranges: "{{ item.port_ranges | default(omit) }}"
+    port_lists: "{{ item.port_lists | default(omit) }}"
+    state: present
+  loop: "{{ afm_port_lists_present | default([]) }}"
+  when: afm_port_lists_present | default([]) | length > 0
+
+- name: Create AFM firewall rules
+  bigip_firewall_rule:
+    provider: "{{ f5_provider }}"
+    name: "{{ item.name }}"
+    partition: "{{ item.partition | default('Common') }}"
+    description: "{{ item.description | default(omit) }}"
+    action: "{{ item.action | default(omit) }}"
+    protocol: "{{ item.protocol | default(omit) }}"
+    source: "{{ item.source | default(omit) }}"
+    destination: "{{ item.destination | default(omit) }}"
+    logging: "{{ item.logging | default(omit) }}"
+    irule: "{{ item.irule | default(omit) }}"
+    state: present
+  loop: "{{ afm_rules_present | default([]) }}"
+  when: afm_rules_present | default([]) | length > 0
+
+- name: Create AFM firewall policies
+  bigip_firewall_rule_list:
+    provider: "{{ f5_provider }}"
+    name: "{{ item.name }}"
+    partition: "{{ item.partition | default('Common') }}"
+    description: "{{ item.description | default(omit) }}"
+    rules: "{{ item.rules | default(omit) }}"
+    state: present
+  loop: "{{ afm_policies_present | default([]) }}"
+  when: afm_policies_present | default([]) | length > 0

@@ -359,6 +359,34 @@ class Validator:
                 top_key="gtm_topology_records",
                 settings_key="gtm_topology_record_defaults",
             ),
+            TreeSpec(
+                name="afm_address_lists",
+                active_dir=VARS_DIR / "security" / "afm" / "address_lists",
+                deletion_dir=VARS_DIR / "security" / "afm" / "deletions" / "address_lists",
+                top_key="afm_address_lists",
+                settings_key="afm_address_list_defaults",
+            ),
+            TreeSpec(
+                name="afm_port_lists",
+                active_dir=VARS_DIR / "security" / "afm" / "port_lists",
+                deletion_dir=VARS_DIR / "security" / "afm" / "deletions" / "port_lists",
+                top_key="afm_port_lists",
+                settings_key="afm_port_list_defaults",
+            ),
+            TreeSpec(
+                name="afm_rules",
+                active_dir=VARS_DIR / "security" / "afm" / "rules",
+                deletion_dir=VARS_DIR / "security" / "afm" / "deletions" / "rules",
+                top_key="afm_rules",
+                settings_key="afm_rule_defaults",
+            ),
+            TreeSpec(
+                name="afm_policies",
+                active_dir=VARS_DIR / "security" / "afm" / "policies",
+                deletion_dir=VARS_DIR / "security" / "afm" / "deletions" / "policies",
+                top_key="afm_policies",
+                settings_key="afm_policy_defaults",
+            ),
         ]
 
     def run(self) -> int:
@@ -374,6 +402,7 @@ class Validator:
         self.validate_tls()
         self.validate_ltm()
         self.validate_gtm()
+        self.validate_security()
 
         if self.errors:
             for error in self.errors:
@@ -1322,6 +1351,130 @@ class Validator:
             lambda obj: ("gtm_topology_record", self._topology_record_id(obj)),
             "GTM topology record",
         )
+
+    def validate_security(self) -> None:
+        address_lists = self.objects.get("afm_address_lists", [])
+        port_lists = self.objects.get("afm_port_lists", [])
+        rules = self.objects.get("afm_rules", [])
+        policies = self.objects.get("afm_policies", [])
+
+        active_address_list_names = set()
+        for obj in address_lists:
+            self.require_fields(obj, ["name"])
+            if obj.effective_state != "absent":
+                active_address_list_names.add(self.fq_name(obj.partition, str(obj.data["name"])))
+                addresses = obj.data.get("addresses")
+                if addresses is not None and not isinstance(addresses, list):
+                    self.error(obj.relpath, f"AFM address list `{obj.data.get('name')}` `addresses` must be a list")
+                address_ranges = obj.data.get("address_ranges")
+                if address_ranges is not None and not isinstance(address_ranges, list):
+                    self.error(obj.relpath, f"AFM address list `{obj.data.get('name')}` `address_ranges` must be a list")
+                address_lists_ref = obj.data.get("address_lists")
+                if address_lists_ref is not None and not isinstance(address_lists_ref, list):
+                    self.error(obj.relpath, f"AFM address list `{obj.data.get('name')}` `address_lists` must be a list")
+                geo_locations = obj.data.get("geo_locations")
+                if geo_locations is not None and not isinstance(geo_locations, list):
+                    self.error(obj.relpath, f"AFM address list `{obj.data.get('name')}` `geo_locations` must be a list")
+                fqdns = obj.data.get("fqdns")
+                if fqdns is not None and not isinstance(fqdns, list):
+                    self.error(obj.relpath, f"AFM address list `{obj.data.get('name')}` `fqdns` must be a list")
+
+        self.check_duplicates(
+            address_lists,
+            lambda obj: ("afm_address_list", obj.partition, obj.data.get("name")),
+            "AFM address list",
+        )
+
+        active_port_list_names = set()
+        for obj in port_lists:
+            self.require_fields(obj, ["name"])
+            if obj.effective_state != "absent":
+                active_port_list_names.add(self.fq_name(obj.partition, str(obj.data["name"])))
+                ports = obj.data.get("ports")
+                if ports is not None and not isinstance(ports, list):
+                    self.error(obj.relpath, f"AFM port list `{obj.data.get('name')}` `ports` must be a list")
+                port_ranges = obj.data.get("port_ranges")
+                if port_ranges is not None and not isinstance(port_ranges, list):
+                    self.error(obj.relpath, f"AFM port list `{obj.data.get('name')}` `port_ranges` must be a list")
+                port_lists_ref = obj.data.get("port_lists")
+                if port_lists_ref is not None and not isinstance(port_lists_ref, list):
+                    self.error(obj.relpath, f"AFM port list `{obj.data.get('name')}` `port_lists` must be a list")
+
+        self.check_duplicates(
+            port_lists,
+            lambda obj: ("afm_port_list", obj.partition, obj.data.get("name")),
+            "AFM port list",
+        )
+
+        active_rule_names = set()
+        for obj in rules:
+            self.require_fields(obj, ["name"])
+            if obj.effective_state != "absent":
+                active_rule_names.add(self.fq_name(obj.partition, str(obj.data["name"])))
+                action = obj.data.get("action")
+                if action is not None and action not in ("accept", "drop", "reject", "continue"):
+                    self.error(obj.relpath, f"AFM rule `{obj.data.get('name')}` `action` must be one of accept, drop, reject, continue")
+                source = obj.data.get("source")
+                if source is not None and not isinstance(source, dict):
+                    self.error(obj.relpath, f"AFM rule `{obj.data.get('name')}` `source` must be a mapping")
+                elif source is not None:
+                    self.validate_afm_rule_endpoint(source, obj.relpath, obj.data.get("name"), "source", active_address_list_names)
+                destination = obj.data.get("destination")
+                if destination is not None and not isinstance(destination, dict):
+                    self.error(obj.relpath, f"AFM rule `{obj.data.get('name')}` `destination` must be a mapping")
+                elif destination is not None:
+                    self.validate_afm_rule_endpoint(destination, obj.relpath, obj.data.get("name"), "destination", active_address_list_names)
+
+        self.check_duplicates(
+            rules,
+            lambda obj: ("afm_rule", obj.partition, obj.data.get("name")),
+            "AFM rule",
+        )
+
+        for obj in policies:
+            self.require_fields(obj, ["name"])
+            if obj.effective_state != "absent":
+                rules_list = obj.data.get("rules")
+                if rules_list is not None:
+                    if not isinstance(rules_list, list):
+                        self.error(obj.relpath, f"AFM policy `{obj.data.get('name')}` `rules` must be a list")
+                    else:
+                        for rule_ref in rules_list:
+                            if isinstance(rule_ref, str):
+                                fq_rule = rule_ref if rule_ref.startswith("/") else self.fq_name(obj.partition, rule_ref)
+                                if fq_rule not in active_rule_names:
+                                    self.error(obj.relpath, f"AFM policy `{obj.data.get('name')}` references undefined rule `{fq_rule}`")
+
+        self.check_duplicates(
+            policies,
+            lambda obj: ("afm_policy", obj.partition, obj.data.get("name")),
+            "AFM policy",
+        )
+
+    def validate_afm_rule_endpoint(
+        self,
+        endpoint: dict[str, Any],
+        source: str,
+        rule_name: Any,
+        kind: str,
+        active_address_list_names: set[str],
+    ) -> None:
+        address_lists = endpoint.get("address_lists")
+        if address_lists is not None:
+            if not isinstance(address_lists, list):
+                self.error(source, f"AFM rule `{rule_name}` `{kind}.address_lists` must be a list")
+            else:
+                for al_ref in address_lists:
+                    if isinstance(al_ref, str):
+                        fq_al = al_ref if al_ref.startswith("/") else self.fq_name("Common", al_ref)
+                        if fq_al not in active_address_list_names:
+                            self.error(source, f"AFM rule `{rule_name}` `{kind}` references undefined address list `{fq_al}`")
+        port_lists = endpoint.get("port_lists")
+        if port_lists is not None and not isinstance(port_lists, list):
+            self.error(source, f"AFM rule `{rule_name}` `{kind}.port_lists` must be a list")
+        addresses = endpoint.get("addresses")
+        if addresses is not None and not isinstance(addresses, list):
+            self.error(source, f"AFM rule `{rule_name}` `{kind}.addresses` must be a list")
 
     @staticmethod
     def _topology_record_id(obj: LoadedObject) -> str:

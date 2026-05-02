@@ -1,0 +1,12 @@
+afm_policies:
+  - name: platform-firewall
+    description: Platform-wide firewall policy
+    rules:
+      - allow-web-internal
+      - allow-mgmt-internal
+      - deny-all
+
+  - name: dmz-firewall
+    description: DMZ zone firewall policy
+    rules:
+      - allow-web-internal

@@ -1,0 +1,31 @@
+afm_rules:
+  - name: allow-web-internal
+    description: Allow internal clients to web services
+    action: accept
+    protocol: tcp
+    source:
+      address_lists:
+        - trusted-clients
+    destination:
+      address_lists:
+        - datacenter-servers
+      port_lists:
+        - web-ports
+    logging: yes
+
+  - name: allow-mgmt-internal
+    description: Allow internal management access
+    action: accept
+    protocol: tcp
+    source:
+      address_lists:
+        - trusted-clients
+    destination:
+      port_lists:
+        - management-ports
+    logging: yes
+
+  - name: deny-all
+    description: Default deny all traffic
+    action: drop
+    logging: yes

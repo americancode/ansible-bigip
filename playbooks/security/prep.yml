@@ -1,0 +1,335 @@
+- name: Discover AFM address list fragments
+  ansible.builtin.set_fact:
+    afm_address_list_files: >-
+      {{
+        lookup(
+          'ansible.builtin.pipe',
+          "find {{ repo_root }}/vars/security/afm/address_lists -type f -name '*.yml' ! -name 'settings.yml' 2>/dev/null | sort"
+        ).splitlines() | reject('equalto', '') | list
+      }}
+    afm_address_list_deletion_files: >-
+      {{
+        lookup(
+          'ansible.builtin.pipe',
+          "find {{ repo_root }}/vars/security/afm/deletions/address_lists -type f -name '*.yml' ! -name 'settings.yml' 2>/dev/null | sort"
+        ).splitlines() | reject('equalto', '') | list
+      }}
+
+- name: Load AFM address list fragments
+  ansible.builtin.include_vars:
+    file: "{{ item }}"
+    name: afm_address_list_fragment
+  loop: "{{ afm_address_list_files }}"
+  register: afm_address_list_include_results
+
+- name: Load AFM address list deletion fragments
+  ansible.builtin.include_vars:
+    file: "{{ item }}"
+    name: afm_address_list_deletion_fragment
+  loop: "{{ afm_address_list_deletion_files }}"
+  register: afm_address_list_deletion_include_results
+
+- name: Aggregate AFM address lists with directory settings
+  ansible.builtin.set_fact:
+    afm_address_lists: "{{ afm_address_lists | default([]) + [ afm_address_list_directory_defaults | combine(item.1, recursive=True) ] }}"
+  loop: "{{ query('subelements', afm_address_list_include_results.results, 'ansible_facts.afm_address_list_fragment.afm_address_lists', {'skip_missing': True}) }}"
+  vars:
+    afm_address_list_settings_path: "{{ item.0.item | regex_replace('/[^/]+$', '/settings.yml') }}"
+    afm_address_list_directory_defaults: >-
+      {{
+        (
+          lookup('ansible.builtin.file', afm_address_list_settings_path, errors='ignore')
+          | default('{}', true)
+          | from_yaml
+        ).afm_address_list_defaults | default({})
+      }}
+
+- name: Aggregate AFM address list deletions with directory settings
+  ansible.builtin.set_fact:
+    afm_address_list_deletions: "{{ afm_address_list_deletions | default([]) + [ (afm_address_list_deletion_directory_defaults | combine(item.1, recursive=True)) | combine({'state': 'absent'}, recursive=True) ] }}"
+  loop: "{{ query('subelements', afm_address_list_deletion_include_results.results, 'ansible_facts.afm_address_list_deletion_fragment.afm_address_lists', {'skip_missing': True}) }}"
+  vars:
+    afm_address_list_deletion_settings_path: "{{ item.0.item | regex_replace('/[^/]+$', '/settings.yml') }}"
+    afm_address_list_deletion_directory_defaults: >-
+      {{
+        (
+          lookup('ansible.builtin.file', afm_address_list_deletion_settings_path, errors='ignore')
+          | default('{}', true)
+          | from_yaml
+        ).afm_address_list_defaults | default({})
+      }}
+
+- name: Discover AFM port list fragments
+  ansible.builtin.set_fact:
+    afm_port_list_files: >-
+      {{
+        lookup(
+          'ansible.builtin.pipe',
+          "find {{ repo_root }}/vars/security/afm/port_lists -type f -name '*.yml' ! -name 'settings.yml' 2>/dev/null | sort"
+        ).splitlines() | reject('equalto', '') | list
+      }}
+    afm_port_list_deletion_files: >-
+      {{
+        lookup(
+          'ansible.builtin.pipe',
+          "find {{ repo_root }}/vars/security/afm/deletions/port_lists -type f -name '*.yml' ! -name 'settings.yml' 2>/dev/null | sort"
+        ).splitlines() | reject('equalto', '') | list
+      }}
+
+- name: Load AFM port list fragments
+  ansible.builtin.include_vars:
+    file: "{{ item }}"
+    name: afm_port_list_fragment
+  loop: "{{ afm_port_list_files }}"
+  register: afm_port_list_include_results
+
+- name: Load AFM port list deletion fragments
+  ansible.builtin.include_vars:
+    file: "{{ item }}"
+    name: afm_port_list_deletion_fragment
+  loop: "{{ afm_port_list_deletion_files }}"
+  register: afm_port_list_deletion_include_results
+
+- name: Aggregate AFM port lists with directory settings
+  ansible.builtin.set_fact:
+    afm_port_lists: "{{ afm_port_lists | default([]) + [ afm_port_list_directory_defaults | combine(item.1, recursive=True) ] }}"
+  loop: "{{ query('subelements', afm_port_list_include_results.results, 'ansible_facts.afm_port_list_fragment.afm_port_lists', {'skip_missing': True}) }}"
+  vars:
+    afm_port_list_settings_path: "{{ item.0.item | regex_replace('/[^/]+$', '/settings.yml') }}"
+    afm_port_list_directory_defaults: >-
+      {{
+        (
+          lookup('ansible.builtin.file', afm_port_list_settings_path, errors='ignore')
+          | default('{}', true)
+          | from_yaml
+        ).afm_port_list_defaults | default({})
+      }}
+
+- name: Aggregate AFM port list deletions with directory settings
+  ansible.builtin.set_fact:
+    afm_port_list_deletions: "{{ afm_port_list_deletions | default([]) + [ (afm_port_list_deletion_directory_defaults | combine(item.1, recursive=True)) | combine({'state': 'absent'}, recursive=True) ] }}"
+  loop: "{{ query('subelements', afm_port_list_deletion_include_results.results, 'ansible_facts.afm_port_list_deletion_fragment.afm_port_lists', {'skip_missing': True}) }}"
+  vars:
+    afm_port_list_deletion_settings_path: "{{ item.0.item | regex_replace('/[^/]+$', '/settings.yml') }}"
+    afm_port_list_deletion_directory_defaults: >-
+      {{
+        (
+          lookup('ansible.builtin.file', afm_port_list_deletion_settings_path, errors='ignore')
+          | default('{}', true)
+          | from_yaml
+        ).afm_port_list_defaults | default({})
+      }}
+
+- name: Discover AFM rule fragments
+  ansible.builtin.set_fact:
+    afm_rule_files: >-
+      {{
+        lookup(
+          'ansible.builtin.pipe',
+          "find {{ repo_root }}/vars/security/afm/rules -type f -name '*.yml' ! -name 'settings.yml' 2>/dev/null | sort"
+        ).splitlines() | reject('equalto', '') | list
+      }}
+    afm_rule_deletion_files: >-
+      {{
+        lookup(
+          'ansible.builtin.pipe',
+          "find {{ repo_root }}/vars/security/afm/deletions/rules -type f -name '*.yml' ! -name 'settings.yml' 2>/dev/null | sort"
+        ).splitlines() | reject('equalto', '') | list
+      }}
+
+- name: Load AFM rule fragments
+  ansible.builtin.include_vars:
+    file: "{{ item }}"
+    name: afm_rule_fragment
+  loop: "{{ afm_rule_files }}"
+  register: afm_rule_include_results
+
+- name: Load AFM rule deletion fragments
+  ansible.builtin.include_vars:
+    file: "{{ item }}"
+    name: afm_rule_deletion_fragment
+  loop: "{{ afm_rule_deletion_files }}"
+  register: afm_rule_deletion_include_results
+
+- name: Aggregate AFM rules with directory settings
+  ansible.builtin.set_fact:
+    afm_rules: "{{ afm_rules | default([]) + [ afm_rule_directory_defaults | combine(item.1, recursive=True) ] }}"
+  loop: "{{ query('subelements', afm_rule_include_results.results, 'ansible_facts.afm_rule_fragment.afm_rules', {'skip_missing': True}) }}"
+  vars:
+    afm_rule_settings_path: "{{ item.0.item | regex_replace('/[^/]+$', '/settings.yml') }}"
+    afm_rule_directory_defaults: >-
+      {{
+        (
+          lookup('ansible.builtin.file', afm_rule_settings_path, errors='ignore')
+          | default('{}', true)
+          | from_yaml
+        ).afm_rule_defaults | default({})
+      }}
+
+- name: Aggregate AFM rule deletions with directory settings
+  ansible.builtin.set_fact:
+    afm_rule_deletions: "{{ afm_rule_deletions | default([]) + [ (afm_rule_deletion_directory_defaults | combine(item.1, recursive=True)) | combine({'state': 'absent'}, recursive=True) ] }}"
+  loop: "{{ query('subelements', afm_rule_deletion_include_results.results, 'ansible_facts.afm_rule_deletion_fragment.afm_rules', {'skip_missing': True}) }}"
+  vars:
+    afm_rule_deletion_settings_path: "{{ item.0.item | regex_replace('/[^/]+$', '/settings.yml') }}"
+    afm_rule_deletion_directory_defaults: >-
+      {{
+        (
+          lookup('ansible.builtin.file', afm_rule_deletion_settings_path, errors='ignore')
+          | default('{}', true)
+          | from_yaml
+        ).afm_rule_defaults | default({})
+      }}
+
+- name: Discover AFM policy fragments
+  ansible.builtin.set_fact:
+    afm_policy_files: >-
+      {{
+        lookup(
+          'ansible.builtin.pipe',
+          "find {{ repo_root }}/vars/security/afm/policies -type f -name '*.yml' ! -name 'settings.yml' 2>/dev/null | sort"
+        ).splitlines() | reject('equalto', '') | list
+      }}
+    afm_policy_deletion_files: >-
+      {{
+        lookup(
+          'ansible.builtin.pipe',
+          "find {{ repo_root }}/vars/security/afm/deletions/policies -type f -name '*.yml' ! -name 'settings.yml' 2>/dev/null | sort"
+        ).splitlines() | reject('equalto', '') | list
+      }}
+
+- name: Load AFM policy fragments
+  ansible.builtin.include_vars:
+    file: "{{ item }}"
+    name: afm_policy_fragment
+  loop: "{{ afm_policy_files }}"
+  register: afm_policy_include_results
+
+- name: Load AFM policy deletion fragments
+  ansible.builtin.include_vars:
+    file: "{{ item }}"
+    name: afm_policy_deletion_fragment
+  loop: "{{ afm_policy_deletion_files }}"
+  register: afm_policy_deletion_include_results
+
+- name: Aggregate AFM policies with directory settings
+  ansible.builtin.set_fact:
+    afm_policies: "{{ afm_policies | default([]) + [ afm_policy_directory_defaults | combine(item.1, recursive=True) ] }}"
+  loop: "{{ query('subelements', afm_policy_include_results.results, 'ansible_facts.afm_policy_fragment.afm_policies', {'skip_missing': True}) }}"
+  vars:
+    afm_policy_settings_path: "{{ item.0.item | regex_replace('/[^/]+$', '/settings.yml') }}"
+    afm_policy_directory_defaults: >-
+      {{
+        (
+          lookup('ansible.builtin.file', afm_policy_settings_path, errors='ignore')
+          | default('{}', true)
+          | from_yaml
+        ).afm_policy_defaults | default({})
+      }}
+
+- name: Aggregate AFM policy deletions with directory settings
+  ansible.builtin.set_fact:
+    afm_policy_deletions: "{{ afm_policy_deletions | default([]) + [ (afm_policy_deletion_directory_defaults | combine(item.1, recursive=True)) | combine({'state': 'absent'}, recursive=True) ] }}"
+  loop: "{{ query('subelements', afm_policy_deletion_include_results.results, 'ansible_facts.afm_policy_deletion_fragment.afm_policies', {'skip_missing': True}) }}"
+  vars:
+    afm_policy_deletion_settings_path: "{{ item.0.item | regex_replace('/[^/]+$', '/settings.yml') }}"
+    afm_policy_deletion_directory_defaults: >-
+      {{
+        (
+          lookup('ansible.builtin.file', afm_policy_deletion_settings_path, errors='ignore')
+          | default('{}', true)
+          | from_yaml
+        ).afm_policy_defaults | default({})
+      }}
+
+- name: Classify AFM address list operations
+  ansible.builtin.set_fact:
+    afm_address_lists_delete: >-
+      {{
+        ((afm_address_lists | default([])) + (afm_address_list_deletions | default([])))
+        | selectattr('state', 'defined')
+        | selectattr('state', 'equalto', 'absent')
+        | list
+      }}
+    afm_address_lists_present: >-
+      {{
+        (afm_address_lists | default([]))
+        | rejectattr('state', 'defined')
+        | list
+        +
+        (
+          (afm_address_lists | default([]))
+          | selectattr('state', 'defined')
+          | rejectattr('state', 'equalto', 'absent')
+          | list
+        )
+      }}
+
+- name: Classify AFM port list operations
+  ansible.builtin.set_fact:
+    afm_port_lists_delete: >-
+      {{
+        ((afm_port_lists | default([])) + (afm_port_list_deletions | default([])))
+        | selectattr('state', 'defined')
+        | selectattr('state', 'equalto', 'absent')
+        | list
+      }}
+    afm_port_lists_present: >-
+      {{
+        (afm_port_lists | default([]))
+        | rejectattr('state', 'defined')
+        | list
+        +
+        (
+          (afm_port_lists | default([]))
+          | selectattr('state', 'defined')
+          | rejectattr('state', 'equalto', 'absent')
+          | list
+        )
+      }}
+
+- name: Classify AFM rule operations
+  ansible.builtin.set_fact:
+    afm_rules_delete: >-
+      {{
+        ((afm_rules | default([])) + (afm_rule_deletions | default([])))
+        | selectattr('state', 'defined')
+        | selectattr('state', 'equalto', 'absent')
+        | list
+      }}
+    afm_rules_present: >-
+      {{
+        (afm_rules | default([]))
+        | rejectattr('state', 'defined')
+        | list
+        +
+        (
+          (afm_rules | default([]))
+          | selectattr('state', 'defined')
+          | rejectattr('state', 'equalto', 'absent')
+          | list
+        )
+      }}
+
+- name: Classify AFM policy operations
+  ansible.builtin.set_fact:
+    afm_policies_delete: >-
+      {{
+        ((afm_policies | default([])) + (afm_policy_deletions | default([])))
+        | selectattr('state', 'defined')
+        | selectattr('state', 'equalto', 'absent')
+        | list
+      }}
+    afm_policies_present: >-
+      {{
+        (afm_policies | default([]))
+        | rejectattr('state', 'defined')
+        | list
+        +
+        (
+          (afm_policies | default([]))
+          | selectattr('state', 'defined')
+          | rejectattr('state', 'equalto', 'absent')
+          | list
+        )
+      }}

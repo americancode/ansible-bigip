@@ -1,0 +1,21 @@
+afm_address_lists:
+  - name: trusted-clients
+    description: Trusted client IP addresses
+    addresses:
+      - 10.0.1.0/24
+      - 10.0.2.0/24
+      - 192.168.100.0/24
+
+  - name: blocked-sources
+    description: Known malicious sources
+    addresses:
+      - 203.0.113.0/24
+      - 198.51.100.50
+
+  - name: datacenter-servers
+    description: Backend server pool addresses
+    address_ranges:
+      - 10.10.1.1-10.10.1.50
+    addresses:
+      - 10.10.2.100
+      - 10.10.2.101

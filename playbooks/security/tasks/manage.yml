@@ -1,0 +1,19 @@
+- name: Apply AFM objects
+  ansible.builtin.import_tasks: apply.yml
+
+- name: Delete AFM objects
+  ansible.builtin.import_tasks: delete.yml
+
+- name: Save BIG-IP configuration
+  bigip_config:
+    provider: "{{ f5_provider }}"
+    save: true
+  when: >-
+    (afm_address_lists_present | default([]) | length > 0) or
+    (afm_port_lists_present | default([]) | length > 0) or
+    (afm_rules_present | default([]) | length > 0) or
+    (afm_policies_present | default([]) | length > 0) or
+    (afm_address_lists_delete | default([]) | length > 0) or
+    (afm_port_lists_delete | default([]) | length > 0) or
+    (afm_rules_delete | default([]) | length > 0) or
+    (afm_policies_delete | default([]) | length > 0)

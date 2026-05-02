@@ -1,0 +1,151 @@
+# AFM Security Playbook
+
+## Overview
+
+`security.yml` manages BIG-IP Advanced Firewall Manager (AFM) objects through a declarative, split-var-tree model. It covers address lists, port lists, firewall rules, and firewall policies.
+
+## Playbook Structure
+
+```
+security.yml                        # Root wrapper entrypoint
+playbooks/security/
+├── prep.yml                        # Discovery, include_vars, defaults loading, aggregation
+└── tasks/
+    ├── manage.yml                  # Task ordering + config save
+    ├── apply.yml                   # state: present tasks
+    └── delete.yml                  # state: absent tasks
+```
+
+## Var Tree
+
+```
+vars/security/afm/
+├── address_lists/                  # AFM address list objects
+│   ├── settings.yml                # Directory defaults
+│   └── platform-addresses.yml      # Example address lists
+├── port_lists/                     # AFM port list objects
+│   ├── settings.yml
+│   └── platform-ports.yml          # Example port lists
+├── rules/                          # AFM firewall rule objects
+│   ├── settings.yml
+│   └── platform-rules.yml          # Example rules
+├── policies/                       # AFM firewall policy objects
+│   ├── settings.yml
+│   └── platform-policies.yml       # Example policies
+└── deletions/                      # Explicit deletion trees
+    ├── address_lists/
+    ├── port_lists/
+    ├── rules/
+    └── policies/
+```
+
+## Object Types
+
+### Address Lists
+
+Managed by `bigip_firewall_address_list`. Fields:
+
+| Field | Type | Required | Description |
+|---|---|---|---|
+| `name` | string | yes | Address list name |
+| `partition` | string | no | Partition (default: `Common`) |
+| `description` | string | no | Human-readable description |
+| `addresses` | list | no | Individual IPs or CIDR networks |
+| `address_ranges` | list | no | IP ranges formatted as `start-end` |
+| `address_lists` | list | no | Nested address list references |
+| `geo_locations` | list | no | Geolocation entries (`country`, `region`) |
+| `fqdns` | list | no | Fully qualified domain names |
+
+### Port Lists
+
+Managed by `bigip_firewall_port_list`. Fields:
+
+| Field | Type | Required | Description |
+|---|---|---|---|
+| `name` | string | yes | Port list name |
+| `partition` | string | no | Partition (default: `Common`) |
+| `description` | string | no | Human-readable description |
+| `ports` | list | no | Individual port numbers |
+| `port_ranges` | list | no | Port ranges formatted as `start-end` |
+| `port_lists` | list | no | Nested port list references |
+
+### Firewall Rules
+
+Managed by `bigip_firewall_rule`. Fields:
+
+| Field | Type | Required | Description |
+|---|---|---|---|
+| `name` | string | yes | Rule name |
+| `partition` | string | no | Partition (default: `Common`) |
+| `description` | string | no | Human-readable description |
+| `action` | string | no | `accept`, `drop`, `reject`, or `continue` |
+| `protocol` | string | no | Protocol (e.g., `tcp`, `udp`) |
+| `source` | dict | no | Source endpoint definition |
+| `destination` | dict | no | Destination endpoint definition |
+| `logging` | string/bool | no | Enable logging |
+| `irule` | string | no | Associated iRule |
+
+#### Rule Endpoints
+
+Both `source` and `destination` support the same nested structure:
+
+| Field | Type | Description |
+|---|---|---|
+| `address_lists` | list | References to AFM address lists |
+| `port_lists` | list | References to AFM port lists |
+| `addresses` | list | Inline IP addresses or CIDRs |
+
+Endpoint references to address lists resolve within the `Common` partition by default. Use fully qualified names (`/Partition/name`) for cross-partition references.
+
+### Firewall Policies
+
+Managed by `bigip_firewall_rule_list`. Fields:
+
+| Field | Type | Required | Description |
+|---|---|---|---|
+| `name` | string | yes | Policy name |
+| `partition` | string | no | Partition (default: `Common`) |
+| `description` | string | no | Human-readable description |
+| `rules` | list | no | Ordered list of rule names |
+
+Rule references in policies resolve within the same partition by default. Use fully qualified names for cross-partition references.
+
+## Authoring Patterns
+
+### Directory Defaults
+
+Each object tree supports a `settings.yml` with directory-level defaults:
+
+```yaml
+# vars/security/afm/address_lists/settings.yml
+afm_address_list_defaults:
+  partition: Common
+```
+
+Object-level values override directory defaults.
+
+### Deletion Trees
+
+Place objects under `vars/security/afm/deletions/<type>/` with `state: absent` to remove them:
+
+```yaml
+# vars/security/afm/deletions/address_lists/legacy-addresses.yml
+afm_address_lists:
+  - name: legacy-blocked
+    state: absent
+```
+
+## Dependency Order
+
+Objects are applied and deleted in this order:
+
+1. **Address lists** (foundation, referenced by rules)
+2. **Port lists** (foundation, referenced by rules)
+3. **Firewall rules** (reference address/port lists)
+4. **Firewall policies** (reference rules)
+
+Deletion runs in reverse order to respect dependencies.
+
+## Config Save
+
+The playbook includes a `bigip_config` save step that runs when any AFM objects are created or deleted.
