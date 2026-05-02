@@ -153,7 +153,9 @@ ltm_virtual_servers:
 
 ## Drift Detection
 
-`tools/drift-check` compares live BIG-IP ASM policies against declared WAF policy var trees using the `asm/policies` endpoint.
+`tools/drift-check` currently compares declared WAF policies against live ASM policies using the `asm/policies` endpoint.
+
+WAF server technologies are runtime-managed by `playbooks/security.yml`, but they are not yet included in drift detection because the helper tooling does not yet walk the per-policy server-technology subcollection accurately enough to reconstruct the repo model.
 
 ## Import
 
@@ -162,3 +164,5 @@ ltm_virtual_servers:
 ```sh
 F5_HOST=bigip.example.com F5_PASSWORD=secret python3 tools/import-from-bigip --out imported/ --types waf_policies
 ```
+
+WAF server technologies are not yet imported by `tools/import-from-bigip` for the same reason: the repo models them as per-policy attachments, and the helper tooling still needs model-accurate subcollection handling before that import path can be trusted.

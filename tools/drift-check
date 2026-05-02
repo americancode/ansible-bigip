@@ -158,7 +158,7 @@ class VarTreeLoader:
         self._load_simple_tree("network_routes", VARS_DIR / "network" / "routes", "bigip_routes")
         self._load_simple_tree("network_route_domains", VARS_DIR / "network" / "route_domains", "bigip_route_domains")
         self._load_simple_tree("network_trunks", VARS_DIR / "network" / "trunks", "bigip_trunks")
-        self._load_simple_tree("network_snats", VARS_DIR / "network" / "snats", "bigip_snats")
+        self._load_simple_tree("network_snats", VARS_DIR / "network" / "snats", "bigip_snat_pools")
         self._load_simple_tree("network_nats", VARS_DIR / "network" / "nats", "bigip_nats")
         self._load_simple_tree("afm_address_lists", VARS_DIR / "security" / "afm" / "address_lists", "afm_address_lists")
         self._load_simple_tree("afm_port_lists", VARS_DIR / "security" / "afm" / "port_lists", "afm_port_lists")
@@ -219,15 +219,14 @@ class DriftChecker:
         "network_self_ips": "net/self",
         "network_routes": "net/route",
         "network_route_domains": "net/route-domain",
-        "network_trunks": "net/tunnel/tunnel",
-        "network_snats": "ltm/snat",
+        "network_trunks": "net/trunk",
+        "network_snats": "ltm/snatpool",
         "network_nats": "ltm/nat",
         "afm_address_lists": "security/firewall/address-list",
         "afm_port_lists": "security/firewall/port-list",
         "afm_rules": "security/firewall/rule",
         "afm_policies": "security/firewall/rule-list",
         "waf_policies": "asm/policies",
-        "waf_server_technologies": "asm/policies",
         "apm_acls": "access/policy/acl",
         "apm_auth_servers": "auth/remote-server",
         "apm_sso_configs": "apm/sso",
@@ -235,7 +234,6 @@ class DriftChecker:
         "apm_access_profiles": "access/profile",
         "apm_per_session_policies": "access/per-session-policy",
         "apm_macros": "access/macro",
-        "apm_policy_nodes": "access/profile",
         "tls_keys": "sys/crypto/key",
         "tls_certificates": "sys/crypto/cert",
         "tls_ca_bundles": "sys/crypto/ca-bundle",

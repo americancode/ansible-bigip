@@ -361,7 +361,7 @@ The `security.yml` playbook handles this ordering automatically.
 - Resources: type-specific field validation (address_spaces for network_access, items for webtops)
 - Policy nodes: cross-reference validation against declared auth servers and SSO configs
 - ACLs: type validation, entry structure validation
-- Access profiles: duplicate detection and structural checks
+- Access profiles: duplicate detection, field typing, and references to declared per-session policies and repo-managed access-policy/SSO objects where applicable
 - Per-session policies: node structure validation (name, type required)
 - Macros: node structure validation (name, type required)
 - No duplicate objects within the same partition
@@ -371,11 +371,13 @@ The `security.yml` playbook handles this ordering automatically.
 `tools/drift-check` compares live BIG-IP APM state against declared var trees:
 - ACLs via `access/policy/acl` endpoint
 - Auth servers via `auth/remote-server` endpoint
-- SSO configs via `apm/sso/kerberos` endpoint
+- SSO configs via `apm/sso` endpoint
 - Resources via `apm/resource` endpoint
 - Access profiles via `access/profile` endpoint
 - Per-session policies via `access/per-session-policy` endpoint
 - Macros via `access/macro` endpoint
+
+APM policy nodes are runtime-managed by `playbooks/security.yml`, but they are not yet part of drift detection because the helper tooling still needs model-accurate handling of access-policy items and nested properties.
 
 ## Import
 
@@ -384,6 +386,8 @@ The `security.yml` playbook handles this ordering automatically.
 ```sh
 F5_HOST=bigip.example.com F5_PASSWORD=secret python3 tools/import-from-bigip --out imported/ --types apm_acls apm_auth_servers apm_sso_configs apm_resources apm_access_profiles apm_per_session_policies apm_macros
 ```
+
+APM policy nodes are not yet imported. The repo models them as policy items attached to parent access policies, and `tools/import-from-bigip` still needs policy-item extraction that can reconstruct those attachments faithfully.
 
 ## Related Docs
 

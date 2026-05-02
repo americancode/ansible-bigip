@@ -1763,21 +1763,61 @@ class Validator:
             "APM resource",
         )
 
+        active_access_policy_names = set()
+        for obj in policy_nodes:
+            if obj.effective_state == "absent":
+                continue
+            policy_name = obj.data.get("policy")
+            if policy_name:
+                active_access_policy_names.add(self.fq_name(obj.partition, str(policy_name)))
+
+        active_per_session_policy_names = set()
+        for obj in per_session_policies:
+            if obj.effective_state == "absent":
+                continue
+            policy_name = obj.data.get("name")
+            if policy_name:
+                active_per_session_policy_names.add(self.fq_name(obj.partition, str(policy_name)))
+
         for obj in access_profiles:
             self.require_fields(obj, ["name"])
             if obj.effective_state == "absent":
                 continue
-            log_level = obj.data.get("log_level")
-            if log_level is not None and log_level not in ("debug", "info", "notice", "warning", "error", "emergency", "alert", "crit"):
-                self.error(obj.relpath, f"APM access profile `{obj.data.get('name')}` `log_level` must be one of debug, info, notice, warning, error, emergency, alert, crit")
-            allow_platforms = obj.data.get("allow_platforms")
-            if allow_platforms is not None:
-                if not isinstance(allow_platforms, list):
-                    self.error(obj.relpath, f"APM access profile `{obj.data.get('name')}` `allow_platforms` must be a list")
-                else:
-                    for idx, platform in enumerate(allow_platforms):
-                        if not isinstance(platform, str):
-                            self.error(obj.relpath, f"APM access profile `{obj.data.get('name')}` `allow_platforms[{idx}]` must be a string")
+            for field in ("default_access_policy", "default_per_session_policy", "sso_configuration", "domain"):
+                value = obj.data.get(field)
+                if value is not None and not isinstance(value, str):
+                    self.error(obj.relpath, f"APM access profile `{obj.data.get('name')}` `{field}` must be a string")
+
+            for field in ("agent_cap", "cookie_fallback"):
+                value = obj.data.get(field)
+                if value is not None and not isinstance(value, bool):
+                    self.error(obj.relpath, f"APM access profile `{obj.data.get('name')}` `{field}` must be a boolean")
+
+            for field in ("session_timeout", "idle_timeout", "max_sessions"):
+                value = obj.data.get(field)
+                if value is not None:
+                    if not isinstance(value, int):
+                        self.error(obj.relpath, f"APM access profile `{obj.data.get('name')}` `{field}` must be an integer")
+                    elif value < 0:
+                        self.error(obj.relpath, f"APM access profile `{obj.data.get('name')}` `{field}` must be zero or greater")
+
+            access_policy_ref = obj.data.get("default_access_policy")
+            if isinstance(access_policy_ref, str) and access_policy_ref and not access_policy_ref.startswith("/"):
+                fq_access_policy = self.fq_name(obj.partition, access_policy_ref)
+                if fq_access_policy not in active_access_policy_names:
+                    self.error(obj.relpath, f"APM access profile `{obj.data.get('name')}` references undefined access policy `{fq_access_policy}`")
+
+            per_session_ref = obj.data.get("default_per_session_policy")
+            if isinstance(per_session_ref, str) and per_session_ref and not per_session_ref.startswith("/"):
+                fq_per_session = self.fq_name(obj.partition, per_session_ref)
+                if fq_per_session not in active_per_session_policy_names:
+                    self.error(obj.relpath, f"APM access profile `{obj.data.get('name')}` references undefined per-session policy `{fq_per_session}`")
+
+            sso_ref = obj.data.get("sso_configuration")
+            if isinstance(sso_ref, str) and sso_ref and not sso_ref.startswith("/"):
+                fq_sso = self.fq_name(obj.partition, sso_ref)
+                if fq_sso not in active_sso_names:
+                    self.error(obj.relpath, f"APM access profile `{obj.data.get('name')}` references undefined SSO config `{fq_sso}`")
 
         self.check_duplicates(
             access_profiles,

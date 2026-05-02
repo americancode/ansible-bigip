@@ -284,7 +284,7 @@ IMPORT_SPECS: dict[str, ImportSpec] = {
         },
     ),
     "network_trunks": ImportSpec(
-        endpoint="net/tunnel/tunnel",
+        endpoint="net/trunk",
         top_key="bigip_trunks",
         output_dir="network/trunks",
         extract={
@@ -293,8 +293,8 @@ IMPORT_SPECS: dict[str, ImportSpec] = {
         },
     ),
     "network_snats": ImportSpec(
-        endpoint="ltm/snat",
-        top_key="bigip_snats",
+        endpoint="ltm/snatpool",
+        top_key="bigip_snat_pools",
         output_dir="network/snats",
         extract={
             "name": "name",
@@ -462,24 +462,6 @@ IMPORT_SPECS: dict[str, ImportSpec] = {
             "description": "description",
         },
     ),
-    "waf_server_technologies": ImportSpec(
-        endpoint="asm/policies",
-        top_key="waf_server_technologies",
-        output_dir="security/waf/server_technologies",
-        extract={
-            "name": "name",
-            "policy_name": "policy_name",
-        },
-    ),
-    "apm_policy_nodes": ImportSpec(
-        endpoint="access/profile",
-        top_key="apm_policy_nodes",
-        output_dir="security/apm/policy_nodes",
-        extract={
-            "name": "name",
-            "policy": "policy",
-        },
-    ),
 }
 
 SUPPORTED_TYPES = set(IMPORT_SPECS.keys())
@@ -570,6 +552,10 @@ class Importer:
             self._transform_monitor(item, obj, spec)
         elif spec.top_key == "network_vlans":
             self._transform_vlan(item, obj)
+        elif spec.top_key == "network_trunks":
+            self._transform_trunk(item, obj)
+        elif spec.top_key == "bigip_snat_pools":
+            self._transform_snat_pool(item, obj)
 
         return obj if obj.get("name") else None
 
@@ -746,6 +732,31 @@ class Importer:
                     obj["interfaces"] = iface_list
             except Exception:
                 pass
+
+    def _transform_trunk(self, item: dict, obj: dict) -> None:
+        interfaces = item.get("interfacesReference", {}).get("link", "")
+        if interfaces:
+            try:
+                iface_data = self.conn.get_all(interfaces.split("/mgmt/tm/")[-1])
+                members = []
+                for iface in iface_data:
+                    name = iface.get("name", "")
+                    if name:
+                        members.append(name.split("/")[-1] if "/" in name else name)
+                if members:
+                    obj["interfaces"] = members
+            except Exception:
+                pass
+
+    def _transform_snat_pool(self, item: dict, obj: dict) -> None:
+        members = item.get("members")
+        if isinstance(members, list):
+            normalized_members = []
+            for member in members:
+                if isinstance(member, str) and member:
+                    normalized_members.append(member.split("/")[-1] if "/" in member else member)
+            if normalized_members:
+                obj["members"] = normalized_members
 
 
 def main() -> int:

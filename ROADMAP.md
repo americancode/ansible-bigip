@@ -151,7 +151,7 @@ Implemented today:
   - APM SSO configurations (Kerberos, form-based, HTTP Basic, NTLM, SAML, OAuth, Citrix, domain-join)
   - APM resources (network access, webtop, remote desktop, portal access)
   - APM policy nodes (VPE flow nodes with auth/SSO/resource references)
-  - APM access profiles (runtime support present; validator alignment still pending)
+  - APM access profiles
   - APM per-session policies (session-level authentication flows)
   - APM macros (reusable VPE building blocks)
   - per-directory `settings.yml` inheritance
@@ -167,8 +167,10 @@ Implemented today:
   - `tools/import-from-bigip` for brownfield import
   - CI-ready JSON output for dashboards
   - LTM, GTM, network, AFM, WAF, APM, and TLS object type support
-  - partial newer-object coverage added for network route domains, trunks, SNATs, NATs, GTM topology, TLS CA bundles/client SSL/server SSL, WAF server technologies, and APM policy nodes/SSO configs
-  - exhaustive parity still requires verified endpoint/key mappings and model-accurate extraction
+  - corrected helper-tool mappings for trunks and SNAT pools
+  - partial newer-object coverage added for network route domains, NATs, GTM topology, TLS CA bundles/client SSL/server SSL, and APM SSO configs
+  - WAF server technologies, APM policy nodes, system objects, HA objects, and SNAT translations remain runtime-managed but not yet helper-tool-managed
+  - exhaustive parity still requires model-accurate extraction and richer field-level comparisons
 
 Not implemented yet:
 
@@ -870,11 +872,11 @@ These are the first concrete tickets I would open.
 
 - [ ] Treat correction of previously checked-off but partially implemented items as higher priority than adding new feature coverage
 - [ ] Audit each checked-off roadmap item against runtime, validation, drift/import tooling, docs, and example vars
-- [ ] Correct network helper-tool mappings for trunks and SNAT pools
+- [x] Correct network helper-tool mappings for trunks and SNAT pools
 - [ ] Correct newer helper-tool mappings for WAF server technologies and APM policy nodes
 - [ ] Align runtime, validator, docs, and examples for any feature where the declared field model drifted
 - [ ] Decide whether `system` and `ha` should gain drift/import support now or be explicitly documented as runtime-only for the current phase
-- [ ] Align APM access-profile validation with the current runtime field model
+- [x] Align APM access-profile validation with the current runtime field model
 - [ ] Reconcile the roadmap, README, and docs whenever a checked-off item is found to be only partially complete
 
 ## Network Expansion Status

@@ -55,6 +55,7 @@ The tool reports drift in three categories:
 | `ltm_virtual_servers` | `/mgmt/tm/ltm/virtual` |
 | `ltm_monitors` | `/mgmt/tm/ltm/monitor` |
 | `ltm_profiles` | `/mgmt/tm/ltm/profile` |
+| `ltm_persistence_profiles` | `/mgmt/tm/ltm/persistence` |
 | `ltm_irules` | `/mgmt/tm/ltm/rule` |
 | `ltm_data_groups` | `/mgmt/tm/ltm/data-group` |
 | `ltm_policies` | `/mgmt/tm/ltm/policy` |
@@ -62,16 +63,44 @@ The tool reports drift in three categories:
 | `gtm_servers` | `/mgmt/tm/gtm/server` |
 | `gtm_pools` | `/mgmt/tm/gtm/pool` |
 | `gtm_wide_ips` | `/mgmt/tm/gtm/wideip` |
+| `gtm_topology_regions` | `/mgmt/tm/gtm/region` |
+| `gtm_topology_records` | `/mgmt/tm/gtm/topology` |
 | `gtm_monitors` | `/mgmt/tm/gtm/monitor` |
 | `network_vlans` | `/mgmt/tm/net/vlan` |
+| `network_trunks` | `/mgmt/tm/net/trunk` |
 | `network_self_ips` | `/mgmt/tm/net/self` |
 | `network_routes` | `/mgmt/tm/net/route` |
+| `network_route_domains` | `/mgmt/tm/net/route-domain` |
+| `network_snats` | `/mgmt/tm/ltm/snatpool` |
+| `network_nats` | `/mgmt/tm/ltm/nat` |
 | `afm_address_lists` | `/mgmt/tm/security/firewall/address-list` |
 | `afm_port_lists` | `/mgmt/tm/security/firewall/port-list` |
 | `afm_rules` | `/mgmt/tm/security/firewall/rule` |
 | `afm_policies` | `/mgmt/tm/security/firewall/rule-list` |
+| `waf_policies` | `/mgmt/tm/asm/policies` |
+| `apm_acls` | `/mgmt/tm/access/policy/acl` |
+| `apm_auth_servers` | `/mgmt/tm/auth/remote-server` |
+| `apm_sso_configs` | `/mgmt/tm/apm/sso` |
+| `apm_resources` | `/mgmt/tm/apm/resource` |
+| `apm_access_profiles` | `/mgmt/tm/access/profile` |
+| `apm_per_session_policies` | `/mgmt/tm/access/per-session-policy` |
+| `apm_macros` | `/mgmt/tm/access/macro` |
 | `tls_keys` | `/mgmt/tm/sys/crypto/key` |
 | `tls_certificates` | `/mgmt/tm/sys/crypto/cert` |
+| `tls_ca_bundles` | `/mgmt/tm/sys/crypto/ca-bundle` |
+| `tls_client_ssl_profiles` | `/mgmt/tm/ltm/profile/client-ssl` |
+| `tls_server_ssl_profiles` | `/mgmt/tm/ltm/profile/server-ssl` |
+
+### Current Boundaries
+
+Runtime playbook coverage is broader than helper-tool coverage. The following object families are still runtime-managed only and are not yet handled accurately enough for drift/import:
+
+- `system` and `ha` domain objects
+- WAF server technologies
+- APM policy nodes
+- SNAT translations under `vars/network/snat_translations`
+
+For several newer supported families, drift/import is present but still not full-fidelity. Treat generated output as a starting point for review, not as an authoritative round-trip export of every field.
 
 ## Import from BIG-IP
 
@@ -122,6 +151,7 @@ imported/
 - Partitions other than `Common` are preserved with an explicit `partition` field.
 - Pool members and virtual server profiles/policies/iRules are fetched via sub-queries and included in the generated YAML.
 - TLS private key content is not exported (metadata only); keys must be re-encrypted with Ansible Vault.
+- `network_snats` refers to SNAT pools under `vars/network/snats/`, not SNAT translation addresses under `vars/network/snat_translations/`.
 
 ### Post-Import Workflow
 
