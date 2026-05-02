@@ -19,6 +19,23 @@ VARS_DIR = ROOT / "vars"
 from filter_plugins.bigip_var_filters import normalize_gtm_pool, normalize_ltm_pool
 
 
+class AnsibleVarLoader(yaml.SafeLoader):
+    pass
+
+
+def construct_ansible_tag(loader: AnsibleVarLoader, tag_suffix: str, node: yaml.Node) -> Any:
+    if isinstance(node, yaml.ScalarNode):
+        return loader.construct_scalar(node)
+    if isinstance(node, yaml.SequenceNode):
+        return loader.construct_sequence(node)
+    if isinstance(node, yaml.MappingNode):
+        return loader.construct_mapping(node)
+    raise TypeError(f"Unsupported YAML node type: {type(node)!r}")
+
+
+AnsibleVarLoader.add_multi_constructor("!", construct_ansible_tag)
+
+
 @dataclass(frozen=True)
 class TreeSpec:
     name: str
@@ -1176,7 +1193,7 @@ class Validator:
     def load_yaml(self, path: Path) -> Any:
         try:
             with path.open("r", encoding="utf-8") as handle:
-                return yaml.safe_load(handle) or {}
+                return yaml.load(handle, Loader=AnsibleVarLoader) or {}
         except yaml.YAMLError as exc:
             self.error(path, f"failed to parse YAML: {exc}")
             return {}

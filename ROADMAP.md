@@ -36,7 +36,7 @@ The main remaining gaps are:
 - deeper HA lifecycle beyond trust, groups, traffic groups, and config sync
 - deeper LTM object coverage beyond pools/nodes/virtuals/monitors
 - deeper GTM object coverage beyond datacenters/servers/pools/Wide IPs/monitors
-- TLS/certificate management
+- NATs and trunks
 - security module coverage
 - drift detection and promotion workflows
 
@@ -525,11 +525,13 @@ This is the practical next sequence for the current repo.
 5. [x] Add `ha.yml` for trust/sync/failover
 6. [x] Add `tls.yml` for certs and SSL profiles
 7. [ ] Add NAT and trunk support to complete network expansion
-8. [ ] Add hybrid readability shortcuts:
+8. [x] Add hybrid readability shortcuts:
    - [x] `pool_defaults`
    - [x] `member_defaults`
    - [x] `monitor_sets`
    - [x] subdirectory maintenance defaults via `settings.yml` object defaults
+9. [ ] Add optional LTM virtual resolution
+10. [x] Define TLS secret handling approach
 
 ## Issue-Sized Execution Plan
 
@@ -574,7 +576,7 @@ These are the first concrete tickets I would open.
 
 - [x] Add `tls.yml`
 - [x] Add certificate, key, and SSL profile trees
-- [ ] Define secret handling approach
+- [x] Define secret handling approach
 
 ## Network Expansion Status
 
@@ -584,14 +586,24 @@ Remaining network gap:
 
 - NAT object management does not have a first-class module in the installed `f5networks.f5_modules` collection, so this roadmap item remains open until that strategy is defined alongside trunk support.
 
+## TLS Secret Handling Status
+
+The repo now supports inline Ansible Vault content in offline validation and documents Ansible Vault as the default secret-handling approach for TLS private keys.
+
+Recommended convention:
+
+- store TLS object metadata in the normal `vars/tls/*` trees
+- encrypt `content` values inline with `!vault`
+- keep private keys encrypted at rest in Git
+- optionally encrypt certificates and CA bundles when local policy requires it
+
 ## Decisions To Make Early
 
 These choices affect almost every later phase.
 
 - whether `system` should remain a separate domain from `network`
 - whether LTM should stay in one playbook or split into `ltm-shared.yml` and `ltm-virtuals.yml`
-- how secrets are stored:
-  - Ansible Vault
+- whether Ansible Vault remains the standard secret mechanism long-term or is replaced by:
   - SOPS
   - external secret manager
 - how CI gets device-adjacent test coverage:

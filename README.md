@@ -75,13 +75,29 @@ This runs:
 - `python3 tools/validate-vars`
 - `ansible-playbook --syntax-check` for all top-level playbooks
 
+The validator accepts Ansible-specific YAML tags such as inline `!vault`, so encrypted TLS material can stay in the same var trees without breaking offline checks.
+
 ## TLS Notes
 
 The TLS examples use inline `content` fields for keys, certificates, and CA bundles.
+For real environments:
+
+- keep object metadata in Git as normal YAML
+- encrypt private key `content` with Ansible Vault
+- use Vault for certificate or CA bundle `content` when those artifacts are not meant to be stored in plaintext
+
 Replace the placeholder PEM blocks in:
 
 - `vars/tls/keys/*.yml`
 - `vars/tls/certificates/*.yml`
 - `vars/tls/ca_bundles/*.yml`
 
-with real material before applying to a device.
+with real material before applying to a device. The recommended format is inline Vault content:
+
+```yaml
+content: !vault |
+  $ANSIBLE_VAULT;1.1;AES256
+  ...
+```
+
+See [docs/tls-secrets.md](/Users/nathanielchurchill/source/ansible-bigip/docs/tls-secrets.md) for the repo convention.

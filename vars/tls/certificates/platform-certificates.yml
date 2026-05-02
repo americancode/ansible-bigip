@@ -1,4 +1,5 @@
 ---
+# Certificates may remain plaintext when policy allows, or use inline `!vault` like private keys.
 tls_certificates:
   - name: "wildcard_platform_example_com"
     content: |

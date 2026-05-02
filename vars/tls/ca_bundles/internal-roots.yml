@@ -1,4 +1,5 @@
 ---
+# CA bundles may also use inline `!vault` when local policy requires encryption at rest.
 tls_ca_bundles:
   - name: "internal_root_bundle"
     content: |

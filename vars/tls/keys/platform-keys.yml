@@ -1,4 +1,9 @@
 ---
+# Replace the placeholder PEM block with inline Ansible Vault content in real environments.
+# Example:
+# content: !vault |
+#   $ANSIBLE_VAULT;1.1;AES256
+#   ...
 tls_keys:
   - name: "wildcard_platform_example_com"
     content: |
