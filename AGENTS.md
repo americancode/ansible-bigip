@@ -18,6 +18,33 @@ This repository manages F5 BIG-IP through declarative Ansible playbooks organize
 
 These are binding. Do not skip any of these steps when implementing a feature.
 
+## Implementation Integrity Rules
+
+These are also binding. A feature is not complete just because syntax-check passes or because `apply.yml` has tasks.
+
+- Do not mark a roadmap item complete unless the feature is operationally complete across the repo model:
+  - `prep.yml` loads and classifies the data the runtime tasks actually consume
+  - `tasks/apply.yml` supports create/update behavior
+  - `tasks/delete.yml` supports reverse-order deletion behavior
+  - `tasks/manage.yml` preserves repo-standard ordering and config save behavior
+  - `tools/validate-vars` validates the tree and its references
+  - `tools/drift-check` and `tools/import-from-bigip` are updated when the repo expects GitOps lifecycle coverage for that object family
+  - docs and example var files describe the same field model that the runtime tasks actually use
+
+- Do not claim “feature coverage” for an object family if only one half exists.
+  Examples of incomplete work that must not be described as complete:
+  - create/update exists but delete is missing
+  - var examples describe fields that the playbook does not consume
+  - validator accepts a structure that runtime tasks never read
+  - docs describe an older model (for example import bundles) while runtime has moved to first-class object management
+
+- Preserve repo-wide contracts when adding a new domain or refactoring an existing one:
+  - use the repo-wide `provider` variable from `vars/common.yml`
+  - keep `tasks/manage.yml` as delete-first then apply-second unless ROADMAP explicitly documents an exception
+  - keep example var files, docs, and helper tools aligned with the canonical playbook behavior
+
+- If a helper tool cannot yet support a newly added object family well, record that explicitly in `ROADMAP.md` as a remaining gap instead of silently implying full GitOps parity.
+
 ### Inline Var File Documentation
 
 Every example var file must begin with a YAML comment block that documents:
@@ -61,6 +88,18 @@ When a new playbook is added or an existing playbook gains new object coverage:
 
 - add a row to the quick links table pointing to the new `docs/<domain>.md` (or update the existing row)
 - add or update a row in the playbooks table with the domain name and object coverage
+- verify any renamed or consolidated docs still have valid README quick links
+
+### Bootstrap and Setup Documentation
+
+When changing the bootstrap story, onboarding flow, or target-selection model:
+
+- update the relevant setup docs under `docs/` such as:
+  - `docs/cli-bootstrap.md`
+  - `docs/awx-ha-bootstrap.md`
+  - `docs/awx-operation.md`
+  - `docs/system-management.md`
+- if the change affects first-run or brand-new appliance setup, record any remaining documentation gaps in `ROADMAP.md` instead of assuming existing bootstrap docs are sufficient
 
 ### Empty Directories
 
@@ -86,6 +125,8 @@ These updates are **required after every feature change** (new object types, new
 - [ ] `playbooks/<domain>/tasks/apply.yml` — `state: present` tasks for new object types
 - [ ] `playbooks/<domain>/tasks/delete.yml` — `state: absent` tasks for new object types (reverse dependency order)
 - [ ] `playbooks/<domain>/tasks/manage.yml` — update `bigip_config` save conditions to include new present/delete variables
+- [ ] confirm any nested example data structures are flattened or transformed in `prep.yml` if runtime tasks require flattened loops
+- [ ] confirm example field names match the fields actually consumed by runtime tasks
 
 ### Var Trees (when adding a new object type)
 
@@ -118,6 +159,8 @@ These updates are **required after every feature change** (new object types, new
 - [ ] `docs/var-layout.md` — add new var trees to the domain trees list
 - [ ] `README.md` — update quick links table and playbooks table
 - [ ] `ROADMAP.md` — update Current State, Implementation Audit, backlog, milestone checklists, and Not Implemented Yet
+- [ ] verify docs do not describe superseded implementation models
+- [ ] verify example var files still match the documented and implemented field model
 
 ### Docker and CI
 
