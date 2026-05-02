@@ -38,17 +38,12 @@ The repository already supports:
 
 The main remaining gaps are:
 
-- top-priority structural remediation from recent feature/refactor review:
-  - align `security.yml` runtime provider usage with the repo-wide `provider` contract from `vars/common.yml`
-  - restore repo-wide delete-before-apply ordering in `playbooks/security/tasks/manage.yml`
-  - reconcile `ROADMAP.md` Current State and remaining-gap sections with the actual implemented security and drift/import feature set
-  - repair broken README quick links and doc references introduced by the docs refactor
+- finish helper-tool parity for the newest object trees where runtime playbook support now exists but drift/import coverage is not yet exhaustive
 - deeper HA lifecycle (connection mirroring, failover metadata, automated testing)
 - UCS backup/export workflow
 - certificate rotation automation
 - auth provider integration for system users
 - login banner management
-- drift detection and promotion workflows
 
 ## Current Implementation Audit
 
@@ -676,19 +671,20 @@ This is the practical next sequence for the current repo.
  13. [x] Add virtual server VLAN filtering, metadata, and log profiles
  14. [x] Add GTM topology regions and topology records
  15. [x] Add WAF/ASM policies and server technologies to security playbook
- 16. [x] Add APM ACLs, network access, and policy imports to security playbook
+ 16. [x] Add APM ACLs and tmsh-driven resource objects to security playbook
  17. [x] Add APM auth servers, SSO configs, and policy nodes (tmsh-driven)
- 18. [x] Add APM access profiles, per-session policies, and macros
+18. [x] Add APM access profiles, per-session policies, and macros
+19. [ ] Complete exhaustive drift/import parity for every newest object tree
 
 ## Extended Backlog
 
 These are valuable enhancements identified during implementation:
 
-19. [ ] Deeper HA lifecycle management (connection mirroring, failover metadata, automated failover testing)
-20. [ ] UCS backup/export workflow for configuration snapshots
-21. [ ] Certificate rotation automation with renewal detection
-22. [ ] Auth provider integration for system users (LDAP/AD/RADIUS for BIG-IP admin auth)
-23. [ ] Login banner management for system compliance
+20. [ ] Deeper HA lifecycle management (connection mirroring, failover metadata, automated failover testing)
+21. [ ] UCS backup/export workflow for configuration snapshots
+22. [ ] Certificate rotation automation with renewal detection
+23. [ ] Auth provider integration for system users (LDAP/AD/RADIUS for BIG-IP admin auth)
+24. [ ] Login banner management for system compliance
 
 ## Issue-Sized Execution Plan
 
@@ -798,12 +794,11 @@ These are the first concrete tickets I would open.
 ### Milestone 13: APM Access Policy Manager
 
 - [x] Add `vars/security/apm/acls` for APM ACLs (L4/L7)
-- [x] Add `vars/security/apm/network_access` for Network Access resources
-- [x] Add `vars/security/apm/policies` for APM policy imports
+- [x] Add `vars/security/apm/resources` for tmsh-driven APM resources
 - [x] Extend `security.yml` playbook with APM apply/delete tasks
 - [x] Add deletion trees for all APM object types
-- [x] Add validation for APM ACLs, network access, and policy imports
-- [x] Add APM endpoints to drift detection (`access/policy/acl`, `access/profile/network-access`)
+- [x] Add validation for APM ACLs and resource objects
+- [x] Add APM endpoints to drift detection (`access/policy/acl`, `apm/resource`)
 - [x] Add APM import specs for brownfield import
 - [x] Add `docs/apm.md` with object reference and authoring patterns
 - [x] Update `docs/security.md` to include APM coverage
