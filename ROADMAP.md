@@ -17,6 +17,7 @@ Target outcome:
 The repository already supports:
 
 - declarative `network`, `ltm`, and `gtm` playbooks
+- canonical playbooks organized under `playbooks/` with root-level wrapper entrypoints
 - split var trees for scale
 - per-directory `settings.yml` inheritance
 - object-level partition overrides with `Common` fallback
@@ -56,6 +57,8 @@ Implemented today:
   - NATs via validated `tmsh` workflow
   - deletion trees
   - per-directory `settings.yml`
+  - canonical playbook entrypoint at `playbooks/network.yml`
+  - internal split between canonical playbook wrapper, `prep.yml`, and `tasks/manage.yml`
 - `system.yml`
   - hostname
   - DNS
@@ -63,18 +66,21 @@ Implemented today:
   - provisioning
   - users
   - config save
+  - canonical playbook entrypoint at `playbooks/system.yml`
 - `ha.yml`
   - device trust
   - device groups
   - device group members
   - traffic groups
   - config sync actions
+  - canonical playbook entrypoint at `playbooks/ha.yml`
 - `tls.yml`
   - SSL keys
   - certificates
   - CA bundles
   - client SSL profiles
   - server SSL profiles
+  - canonical playbook entrypoint at `playbooks/tls.yml`
 - `ltm.yml`
   - custom LTM monitors
   - first-class nodes
@@ -83,6 +89,8 @@ Implemented today:
   - per-object and per-directory partition handling
   - enabled/disabled semantics where supported
   - deletion trees
+  - canonical playbook entrypoint at `playbooks/ltm.yml`
+  - internal split between canonical playbook wrapper, prep tasks, and management tasks
 - `gtm.yml`
   - custom GTM monitors
   - first-class datacenters
@@ -94,6 +102,8 @@ Implemented today:
   - per-object and per-directory partition handling
   - enabled/disabled semantics where supported
   - deletion trees
+  - canonical playbook entrypoint at `playbooks/gtm.yml`
+  - internal split between canonical playbook wrapper, prep tasks, and management tasks
 - validation/tooling
   - YAML/schema/reference validation
   - duplicate detection
@@ -119,6 +129,22 @@ This is the recommended end-state layout.
 ├── ha.yml
 ├── security.yml
 ├── tls.yml
+├── playbooks/
+│   ├── network.yml
+│   ├── ltm.yml
+│   ├── gtm.yml
+│   ├── system.yml
+│   ├── ha.yml
+│   ├── tls.yml
+│   ├── network/
+│   │   ├── prep.yml
+│   │   └── tasks/
+│   ├── ltm/
+│   │   ├── prep.yml
+│   │   └── tasks/
+│   └── gtm/
+│       ├── prep.yml
+│       └── tasks/
 ├── tools/
 ├── docs/
 └── vars/
@@ -197,8 +223,11 @@ This is the recommended end-state layout.
 These are binding repo maintenance rules for every feature change, including future AI agents working in this repository.
 
 - Update `ROADMAP.md` current state, backlog items, and milestone checklists when scope changes.
+- Keep canonical playbooks under `playbooks/` and keep root-level wrapper playbooks working during transitions.
+- For large domains, keep discovery/default aggregation in `playbooks/<domain>/prep.yml` and object operations in `playbooks/<domain>/tasks/`.
 - Update example var files when a feature adds or changes an authoring pattern.
 - Update docs alongside code so linkages and reference strings are explained where operators read them.
+- If an empty directory must be kept intentionally, include a `.gitkeep`.
 - Validate after each major change before moving to the next implementation step.
 - Include a suggested commit name only after the implementation and validation are complete.
 

@@ -1,0 +1,20 @@
+---
+- name: Configure BIG-IP network objects
+  hosts: localhost
+  gather_facts: false
+  collections:
+    - f5networks.f5_modules
+
+  vars:
+    repo_root: "{{ playbook_dir }}/.."
+
+  vars_files:
+    - "{{ repo_root }}/vars/common.yml"
+
+  pre_tasks:
+    - name: Prepare network inputs
+      ansible.builtin.import_tasks: network/prep.yml
+
+  tasks:
+    - name: Manage network objects
+      ansible.builtin.import_tasks: network/tasks/manage.yml

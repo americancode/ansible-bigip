@@ -9,17 +9,30 @@ These are binding maintenance rules for anyone changing this repository, includi
 - keep `ROADMAP.md` in sync with actual implementation state and remaining backlog items
 - update docs and example var files whenever a feature changes authoring patterns or references
 - explain cross-file linkages and reference strings inline where operators will read them
+- if an empty directory must exist intentionally, keep it with a `.gitkeep`
 - validate after each major change before moving to the next implementation step
 - print or suggest a commit name only after implementation and validation are complete
 
 ## Playbooks
 
-- `network.yml`: VLANs, trunks, route domains, self IPs, static routes, SNAT translations, SNAT pools, and NATs
-- `system.yml`: base system settings like hostname, DNS, NTP, provisioning, users
-- `ha.yml`: device trust, device groups, traffic groups, config sync actions
-- `ltm.yml`: LTM monitors, nodes, pools, virtual servers
-- `gtm.yml`: GTM monitors, datacenters, servers, pools, Wide IPs
-- `tls.yml`: SSL keys, certificates, CA bundles, client SSL profiles, server SSL profiles
+Canonical playbooks live under `playbooks/`. Root-level `*.yml` files remain as compatibility wrappers that import the canonical playbooks.
+
+- `playbooks/network.yml`: VLANs, trunks, route domains, self IPs, static routes, SNAT translations, SNAT pools, and NATs
+- `playbooks/system.yml`: base system settings like hostname, DNS, NTP, provisioning, users
+- `playbooks/ha.yml`: device trust, device groups, traffic groups, config sync actions
+- `playbooks/ltm.yml`: LTM monitors, nodes, pools, virtual servers
+- `playbooks/gtm.yml`: GTM monitors, datacenters, servers, pools, Wide IPs
+- `playbooks/tls.yml`: SSL keys, certificates, CA bundles, client SSL profiles, server SSL profiles
+
+## Playbook Layout
+
+The larger domains are split internally so the top-level playbook stays readable:
+
+- `playbooks/network.yml`, `playbooks/ltm.yml`, and `playbooks/gtm.yml` are canonical entrypoints
+- `playbooks/<domain>/prep.yml` contains fragment discovery, `include_vars`, defaults loading, and aggregation logic
+- `playbooks/<domain>/tasks/manage.yml` contains the actual create/delete/apply tasks
+
+Path handling inside canonical playbooks is anchored from `playbook_dir`, so moving playbooks under `playbooks/` does not break references to `vars/`.
 
 ## Var Layout
 
@@ -87,7 +100,7 @@ make validate
 This runs:
 
 - `python3 tools/validate-vars`
-- `ansible-playbook --syntax-check` for all top-level playbooks
+- `ansible-playbook --syntax-check` for all canonical playbooks under `playbooks/`
 
 The validator accepts Ansible-specific YAML tags such as inline `!vault`, so encrypted TLS material can stay in the same var trees without breaking offline checks.
 

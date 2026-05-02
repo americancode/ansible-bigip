@@ -1,0 +1,521 @@
+---
+- name: Configure BIG-IP base system settings
+  hosts: localhost
+  gather_facts: false
+  collections:
+    - f5networks.f5_modules
+
+  vars:
+    repo_root: "{{ playbook_dir }}/.."
+
+  vars_files:
+    - "{{ playbook_dir }}/../vars/common.yml"
+
+  pre_tasks:
+    - name: Discover system hostname fragments
+      ansible.builtin.set_fact:
+        system_hostname_files: >-
+          {{
+            lookup(
+              'ansible.builtin.pipe',
+              "find {{ repo_root }}/vars/system/hostname -type f -name '*.yml' ! -name 'settings.yml' 2>/dev/null | sort"
+            ).splitlines() | reject('equalto', '') | list
+          }}
+
+    - name: Load system hostname fragments
+      ansible.builtin.include_vars:
+        file: "{{ item }}"
+        name: system_hostname_fragment
+      loop: "{{ system_hostname_files }}"
+      register: system_hostname_include_results
+
+    - name: Aggregate system hostnames with directory settings
+      ansible.builtin.set_fact:
+        system_hostnames: "{{ system_hostnames | default([]) + [ system_hostname_directory_defaults | combine(item.1, recursive=True) ] }}"
+      loop: "{{ query('subelements', system_hostname_include_results.results, 'ansible_facts.system_hostname_fragment.system_hostnames', {'skip_missing': True}) }}"
+      vars:
+        system_hostname_settings_path: "{{ item.0.item | regex_replace('/[^/]+$', '/settings.yml') }}"
+        system_hostname_directory_defaults: >-
+          {{
+            (
+              lookup('ansible.builtin.file', system_hostname_settings_path, errors='ignore')
+              | default('{}', true)
+              | from_yaml
+            ).system_hostname_defaults | default({})
+          }}
+
+    - name: Discover system DNS fragments
+      ansible.builtin.set_fact:
+        system_dns_files: >-
+          {{
+            lookup(
+              'ansible.builtin.pipe',
+              "find {{ repo_root }}/vars/system/dns -type f -name '*.yml' ! -name 'settings.yml' 2>/dev/null | sort"
+            ).splitlines() | reject('equalto', '') | list
+          }}
+        system_dns_deletion_files: >-
+          {{
+            lookup(
+              'ansible.builtin.pipe',
+              "find {{ repo_root }}/vars/system/deletions/dns -type f -name '*.yml' ! -name 'settings.yml' 2>/dev/null | sort"
+            ).splitlines() | reject('equalto', '') | list
+          }}
+
+    - name: Load system DNS fragments
+      ansible.builtin.include_vars:
+        file: "{{ item }}"
+        name: system_dns_fragment
+      loop: "{{ system_dns_files }}"
+      register: system_dns_include_results
+
+    - name: Load system DNS deletion fragments
+      ansible.builtin.include_vars:
+        file: "{{ item }}"
+        name: system_dns_deletion_fragment
+      loop: "{{ system_dns_deletion_files }}"
+      register: system_dns_deletion_include_results
+
+    - name: Aggregate system DNS with directory settings
+      ansible.builtin.set_fact:
+        system_dns: "{{ system_dns | default([]) + [ system_dns_directory_defaults | combine(item.1, recursive=True) ] }}"
+      loop: "{{ query('subelements', system_dns_include_results.results, 'ansible_facts.system_dns_fragment.system_dns', {'skip_missing': True}) }}"
+      vars:
+        system_dns_settings_path: "{{ item.0.item | regex_replace('/[^/]+$', '/settings.yml') }}"
+        system_dns_directory_defaults: >-
+          {{
+            (
+              lookup('ansible.builtin.file', system_dns_settings_path, errors='ignore')
+              | default('{}', true)
+              | from_yaml
+            ).system_dns_defaults | default({})
+          }}
+
+    - name: Aggregate system DNS deletions with directory settings
+      ansible.builtin.set_fact:
+        system_dns_deletions: "{{ system_dns_deletions | default([]) + [ (system_dns_deletion_directory_defaults | combine(item.1, recursive=True)) | combine({'state': 'absent'}, recursive=True) ] }}"
+      loop: "{{ query('subelements', system_dns_deletion_include_results.results, 'ansible_facts.system_dns_deletion_fragment.system_dns', {'skip_missing': True}) }}"
+      vars:
+        system_dns_deletion_settings_path: "{{ item.0.item | regex_replace('/[^/]+$', '/settings.yml') }}"
+        system_dns_deletion_directory_defaults: >-
+          {{
+            (
+              lookup('ansible.builtin.file', system_dns_deletion_settings_path, errors='ignore')
+              | default('{}', true)
+              | from_yaml
+            ).system_dns_defaults | default({})
+          }}
+
+    - name: Discover system NTP fragments
+      ansible.builtin.set_fact:
+        system_ntp_files: >-
+          {{
+            lookup(
+              'ansible.builtin.pipe',
+              "find {{ repo_root }}/vars/system/ntp -type f -name '*.yml' ! -name 'settings.yml' 2>/dev/null | sort"
+            ).splitlines() | reject('equalto', '') | list
+          }}
+        system_ntp_deletion_files: >-
+          {{
+            lookup(
+              'ansible.builtin.pipe',
+              "find {{ repo_root }}/vars/system/deletions/ntp -type f -name '*.yml' ! -name 'settings.yml' 2>/dev/null | sort"
+            ).splitlines() | reject('equalto', '') | list
+          }}
+
+    - name: Load system NTP fragments
+      ansible.builtin.include_vars:
+        file: "{{ item }}"
+        name: system_ntp_fragment
+      loop: "{{ system_ntp_files }}"
+      register: system_ntp_include_results
+
+    - name: Load system NTP deletion fragments
+      ansible.builtin.include_vars:
+        file: "{{ item }}"
+        name: system_ntp_deletion_fragment
+      loop: "{{ system_ntp_deletion_files }}"
+      register: system_ntp_deletion_include_results
+
+    - name: Aggregate system NTP with directory settings
+      ansible.builtin.set_fact:
+        system_ntp: "{{ system_ntp | default([]) + [ system_ntp_directory_defaults | combine(item.1, recursive=True) ] }}"
+      loop: "{{ query('subelements', system_ntp_include_results.results, 'ansible_facts.system_ntp_fragment.system_ntp', {'skip_missing': True}) }}"
+      vars:
+        system_ntp_settings_path: "{{ item.0.item | regex_replace('/[^/]+$', '/settings.yml') }}"
+        system_ntp_directory_defaults: >-
+          {{
+            (
+              lookup('ansible.builtin.file', system_ntp_settings_path, errors='ignore')
+              | default('{}', true)
+              | from_yaml
+            ).system_ntp_defaults | default({})
+          }}
+
+    - name: Aggregate system NTP deletions with directory settings
+      ansible.builtin.set_fact:
+        system_ntp_deletions: "{{ system_ntp_deletions | default([]) + [ (system_ntp_deletion_directory_defaults | combine(item.1, recursive=True)) | combine({'state': 'absent'}, recursive=True) ] }}"
+      loop: "{{ query('subelements', system_ntp_deletion_include_results.results, 'ansible_facts.system_ntp_deletion_fragment.system_ntp', {'skip_missing': True}) }}"
+      vars:
+        system_ntp_deletion_settings_path: "{{ item.0.item | regex_replace('/[^/]+$', '/settings.yml') }}"
+        system_ntp_deletion_directory_defaults: >-
+          {{
+            (
+              lookup('ansible.builtin.file', system_ntp_deletion_settings_path, errors='ignore')
+              | default('{}', true)
+              | from_yaml
+            ).system_ntp_defaults | default({})
+          }}
+
+    - name: Discover system provisioning fragments
+      ansible.builtin.set_fact:
+        system_provisioning_files: >-
+          {{
+            lookup(
+              'ansible.builtin.pipe',
+              "find {{ repo_root }}/vars/system/provisioning -type f -name '*.yml' ! -name 'settings.yml' 2>/dev/null | sort"
+            ).splitlines() | reject('equalto', '') | list
+          }}
+        system_provisioning_deletion_files: >-
+          {{
+            lookup(
+              'ansible.builtin.pipe',
+              "find {{ repo_root }}/vars/system/deletions/provisioning -type f -name '*.yml' ! -name 'settings.yml' 2>/dev/null | sort"
+            ).splitlines() | reject('equalto', '') | list
+          }}
+
+    - name: Load system provisioning fragments
+      ansible.builtin.include_vars:
+        file: "{{ item }}"
+        name: system_provisioning_fragment
+      loop: "{{ system_provisioning_files }}"
+      register: system_provisioning_include_results
+
+    - name: Load system provisioning deletion fragments
+      ansible.builtin.include_vars:
+        file: "{{ item }}"
+        name: system_provisioning_deletion_fragment
+      loop: "{{ system_provisioning_deletion_files }}"
+      register: system_provisioning_deletion_include_results
+
+    - name: Aggregate system provisioning with directory settings
+      ansible.builtin.set_fact:
+        system_provisioning: "{{ system_provisioning | default([]) + [ system_provisioning_directory_defaults | combine(item.1, recursive=True) ] }}"
+      loop: "{{ query('subelements', system_provisioning_include_results.results, 'ansible_facts.system_provisioning_fragment.system_provisioning', {'skip_missing': True}) }}"
+      vars:
+        system_provisioning_settings_path: "{{ item.0.item | regex_replace('/[^/]+$', '/settings.yml') }}"
+        system_provisioning_directory_defaults: >-
+          {{
+            (
+              lookup('ansible.builtin.file', system_provisioning_settings_path, errors='ignore')
+              | default('{}', true)
+              | from_yaml
+            ).system_provisioning_defaults | default({})
+          }}
+
+    - name: Aggregate system provisioning deletions with directory settings
+      ansible.builtin.set_fact:
+        system_provisioning_deletions: "{{ system_provisioning_deletions | default([]) + [ (system_provisioning_deletion_directory_defaults | combine(item.1, recursive=True)) | combine({'state': 'absent'}, recursive=True) ] }}"
+      loop: "{{ query('subelements', system_provisioning_deletion_include_results.results, 'ansible_facts.system_provisioning_deletion_fragment.system_provisioning', {'skip_missing': True}) }}"
+      vars:
+        system_provisioning_deletion_settings_path: "{{ item.0.item | regex_replace('/[^/]+$', '/settings.yml') }}"
+        system_provisioning_deletion_directory_defaults: >-
+          {{
+            (
+              lookup('ansible.builtin.file', system_provisioning_deletion_settings_path, errors='ignore')
+              | default('{}', true)
+              | from_yaml
+            ).system_provisioning_defaults | default({})
+          }}
+
+    - name: Discover system user fragments
+      ansible.builtin.set_fact:
+        system_user_files: >-
+          {{
+            lookup(
+              'ansible.builtin.pipe',
+              "find {{ repo_root }}/vars/system/users -type f -name '*.yml' ! -name 'settings.yml' 2>/dev/null | sort"
+            ).splitlines() | reject('equalto', '') | list
+          }}
+        system_user_deletion_files: >-
+          {{
+            lookup(
+              'ansible.builtin.pipe',
+              "find {{ repo_root }}/vars/system/deletions/users -type f -name '*.yml' ! -name 'settings.yml' 2>/dev/null | sort"
+            ).splitlines() | reject('equalto', '') | list
+          }}
+
+    - name: Load system user fragments
+      ansible.builtin.include_vars:
+        file: "{{ item }}"
+        name: system_user_fragment
+      loop: "{{ system_user_files }}"
+      register: system_user_include_results
+
+    - name: Load system user deletion fragments
+      ansible.builtin.include_vars:
+        file: "{{ item }}"
+        name: system_user_deletion_fragment
+      loop: "{{ system_user_deletion_files }}"
+      register: system_user_deletion_include_results
+
+    - name: Aggregate system users with directory settings
+      ansible.builtin.set_fact:
+        system_users: "{{ system_users | default([]) + [ system_user_directory_defaults | combine(item.1, recursive=True) ] }}"
+      loop: "{{ query('subelements', system_user_include_results.results, 'ansible_facts.system_user_fragment.system_users', {'skip_missing': True}) }}"
+      vars:
+        system_user_settings_path: "{{ item.0.item | regex_replace('/[^/]+$', '/settings.yml') }}"
+        system_user_directory_defaults: >-
+          {{
+            (
+              lookup('ansible.builtin.file', system_user_settings_path, errors='ignore')
+              | default('{}', true)
+              | from_yaml
+            ).system_user_defaults | default({})
+          }}
+
+    - name: Aggregate system user deletions with directory settings
+      ansible.builtin.set_fact:
+        system_user_deletions: "{{ system_user_deletions | default([]) + [ (system_user_deletion_directory_defaults | combine(item.1, recursive=True)) | combine({'state': 'absent'}, recursive=True) ] }}"
+      loop: "{{ query('subelements', system_user_deletion_include_results.results, 'ansible_facts.system_user_deletion_fragment.system_users', {'skip_missing': True}) }}"
+      vars:
+        system_user_deletion_settings_path: "{{ item.0.item | regex_replace('/[^/]+$', '/settings.yml') }}"
+        system_user_deletion_directory_defaults: >-
+          {{
+            (
+              lookup('ansible.builtin.file', system_user_deletion_settings_path, errors='ignore')
+              | default('{}', true)
+              | from_yaml
+            ).system_user_defaults | default({})
+          }}
+
+    - name: Discover system config fragments
+      ansible.builtin.set_fact:
+        system_config_files: >-
+          {{
+            lookup(
+              'ansible.builtin.pipe',
+              "find {{ repo_root }}/vars/system/config -type f -name '*.yml' ! -name 'settings.yml' 2>/dev/null | sort"
+            ).splitlines() | reject('equalto', '') | list
+          }}
+
+    - name: Load system config fragments
+      ansible.builtin.include_vars:
+        file: "{{ item }}"
+        name: system_config_fragment
+      loop: "{{ system_config_files }}"
+      register: system_config_include_results
+
+    - name: Aggregate system config with directory settings
+      ansible.builtin.set_fact:
+        system_config: "{{ system_config | default([]) + [ system_config_directory_defaults | combine(item.1, recursive=True) ] }}"
+      loop: "{{ query('subelements', system_config_include_results.results, 'ansible_facts.system_config_fragment.system_config', {'skip_missing': True}) }}"
+      vars:
+        system_config_settings_path: "{{ item.0.item | regex_replace('/[^/]+$', '/settings.yml') }}"
+        system_config_directory_defaults: >-
+          {{
+            (
+              lookup('ansible.builtin.file', system_config_settings_path, errors='ignore')
+              | default('{}', true)
+              | from_yaml
+            ).system_config_defaults | default({})
+          }}
+
+    - name: Classify system DNS operations
+      ansible.builtin.set_fact:
+        system_dns_delete: >-
+          {{
+            ((system_dns | default([])) + (system_dns_deletions | default([])))
+            | selectattr('state', 'defined')
+            | selectattr('state', 'equalto', 'absent')
+            | list
+          }}
+        system_dns_present: >-
+          {{
+            (system_dns | default([]))
+            | rejectattr('state', 'defined')
+            | list
+            +
+            (
+              (system_dns | default([]))
+              | selectattr('state', 'defined')
+              | rejectattr('state', 'equalto', 'absent')
+              | list
+            )
+          }}
+
+    - name: Classify system NTP operations
+      ansible.builtin.set_fact:
+        system_ntp_delete: >-
+          {{
+            ((system_ntp | default([])) + (system_ntp_deletions | default([])))
+            | selectattr('state', 'defined')
+            | selectattr('state', 'equalto', 'absent')
+            | list
+          }}
+        system_ntp_present: >-
+          {{
+            (system_ntp | default([]))
+            | rejectattr('state', 'defined')
+            | list
+            +
+            (
+              (system_ntp | default([]))
+              | selectattr('state', 'defined')
+              | rejectattr('state', 'equalto', 'absent')
+              | list
+            )
+          }}
+
+    - name: Classify system provisioning operations
+      ansible.builtin.set_fact:
+        system_provisioning_delete: >-
+          {{
+            ((system_provisioning | default([])) + (system_provisioning_deletions | default([])))
+            | selectattr('state', 'defined')
+            | selectattr('state', 'equalto', 'absent')
+            | list
+          }}
+        system_provisioning_present: >-
+          {{
+            (system_provisioning | default([]))
+            | rejectattr('state', 'defined')
+            | list
+            +
+            (
+              (system_provisioning | default([]))
+              | selectattr('state', 'defined')
+              | rejectattr('state', 'equalto', 'absent')
+              | list
+            )
+          }}
+
+    - name: Classify system user operations
+      ansible.builtin.set_fact:
+        system_users_delete: >-
+          {{
+            ((system_users | default([])) + (system_user_deletions | default([])))
+            | selectattr('state', 'defined')
+            | selectattr('state', 'equalto', 'absent')
+            | list
+          }}
+        system_users_present: >-
+          {{
+            (system_users | default([]))
+            | rejectattr('state', 'defined')
+            | list
+            +
+            (
+              (system_users | default([]))
+              | selectattr('state', 'defined')
+              | rejectattr('state', 'equalto', 'absent')
+              | list
+            )
+          }}
+
+  tasks:
+    - name: Configure hostname
+      f5networks.f5_modules.bigip_hostname:
+        provider: "{{ provider }}"
+        hostname: "{{ item.hostname }}"
+      loop: "{{ system_hostnames | default([]) }}"
+      loop_control:
+        label: "{{ item.hostname }}"
+
+    - name: Remove DNS settings
+      f5networks.f5_modules.bigip_device_dns:
+        provider: "{{ provider }}"
+        name_servers: "{{ item.name_servers | default(omit) }}"
+        search: "{{ item.search | default(omit) }}"
+        cache: "{{ item.cache | default(omit) }}"
+        ip_version: "{{ item.ip_version | default(omit) }}"
+        state: absent
+      loop: "{{ system_dns_delete | default([]) }}"
+      loop_control:
+        label: "{{ item.name_servers | default(item.search | default(['dns'])) | join(',') }}"
+
+    - name: Configure DNS settings
+      f5networks.f5_modules.bigip_device_dns:
+        provider: "{{ provider }}"
+        name_servers: "{{ item.name_servers | default(omit) }}"
+        search: "{{ item.search | default(omit) }}"
+        cache: "{{ item.cache | default(omit) }}"
+        ip_version: "{{ item.ip_version | default(omit) }}"
+        state: "{{ item.state | default('present') }}"
+      loop: "{{ system_dns_present | default([]) }}"
+      loop_control:
+        label: "{{ item.name_servers | default(item.search | default(['dns'])) | join(',') }}"
+
+    - name: Remove NTP settings
+      f5networks.f5_modules.bigip_device_ntp:
+        provider: "{{ provider }}"
+        ntp_servers: "{{ item.ntp_servers | default(omit) }}"
+        timezone: "{{ item.timezone | default(omit) }}"
+        state: absent
+      loop: "{{ system_ntp_delete | default([]) }}"
+      loop_control:
+        label: "{{ item.timezone | default(item.ntp_servers | default(['ntp']) | join(',')) }}"
+
+    - name: Configure NTP settings
+      f5networks.f5_modules.bigip_device_ntp:
+        provider: "{{ provider }}"
+        ntp_servers: "{{ item.ntp_servers | default(omit) }}"
+        timezone: "{{ item.timezone | default(omit) }}"
+        state: "{{ item.state | default('present') }}"
+      loop: "{{ system_ntp_present | default([]) }}"
+      loop_control:
+        label: "{{ item.timezone | default(item.ntp_servers | default(['ntp']) | join(',')) }}"
+
+    - name: Deprovision BIG-IP modules
+      f5networks.f5_modules.bigip_provision:
+        provider: "{{ provider }}"
+        module: "{{ item.module }}"
+        memory: "{{ item.memory | default(omit) }}"
+        state: absent
+      loop: "{{ system_provisioning_delete | default([]) }}"
+      loop_control:
+        label: "{{ item.module }}"
+
+    - name: Provision BIG-IP modules
+      f5networks.f5_modules.bigip_provision:
+        provider: "{{ provider }}"
+        module: "{{ item.module }}"
+        level: "{{ item.level | default(omit) }}"
+        memory: "{{ item.memory | default(omit) }}"
+        state: "{{ item.state | default('present') }}"
+      loop: "{{ system_provisioning_present | default([]) }}"
+      loop_control:
+        label: "{{ item.module }}"
+
+    - name: Remove local users
+      f5networks.f5_modules.bigip_user:
+        provider: "{{ provider }}"
+        username_credential: "{{ item.name }}"
+        partition: "{{ item.partition | default('Common') }}"
+        state: absent
+      loop: "{{ system_users_delete | default([]) }}"
+      loop_control:
+        label: "{{ item.name }}"
+
+    - name: Configure local users
+      f5networks.f5_modules.bigip_user:
+        provider: "{{ provider }}"
+        username_credential: "{{ item.name }}"
+        partition: "{{ item.partition | default('Common') }}"
+        full_name: "{{ item.full_name | default(omit) }}"
+        partition_access: "{{ item.partition_access | default(omit) }}"
+        password_credential: "{{ item.password_credential | default(omit) }}"
+        shell: "{{ item.shell | default(omit) }}"
+        update_password: "{{ item.update_password | default(omit) }}"
+        state: "{{ item.state | default('present') }}"
+      loop: "{{ system_users_present | default([]) }}"
+      loop_control:
+        label: "{{ item.name }}"
+
+    - name: Save BIG-IP running config
+      f5networks.f5_modules.bigip_config:
+        provider: "{{ provider }}"
+        save: "{{ item.save | default(true) }}"
+      loop: "{{ system_config | default([]) }}"
+      loop_control:
+        label: "save={{ item.save | default(true) }}"
+      when: item.save | default(true)

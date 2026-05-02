@@ -1,0 +1,20 @@
+---
+- name: Configure BIG-IP DNS/GTM objects
+  hosts: localhost
+  gather_facts: false
+  collections:
+    - f5networks.f5_modules
+
+  vars:
+    repo_root: "{{ playbook_dir }}/.."
+
+  vars_files:
+    - "{{ repo_root }}/vars/common.yml"
+
+  pre_tasks:
+    - name: Prepare GTM inputs
+      ansible.builtin.import_tasks: gtm/prep.yml
+
+  tasks:
+    - name: Manage GTM objects
+      ansible.builtin.import_tasks: gtm/tasks/manage.yml

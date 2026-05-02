@@ -1,0 +1,20 @@
+---
+- name: Configure BIG-IP LTM objects
+  hosts: localhost
+  gather_facts: false
+  collections:
+    - f5networks.f5_modules
+
+  vars:
+    repo_root: "{{ playbook_dir }}/.."
+
+  vars_files:
+    - "{{ repo_root }}/vars/common.yml"
+
+  pre_tasks:
+    - name: Prepare LTM inputs
+      ansible.builtin.import_tasks: ltm/prep.yml
+
+  tasks:
+    - name: Manage LTM objects
+      ansible.builtin.import_tasks: ltm/tasks/manage.yml
