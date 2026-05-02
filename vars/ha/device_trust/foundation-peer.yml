@@ -1,4 +1,9 @@
 ---
+# HA bootstrap example.
+# Run `playbooks/ha.yml` against one designated device in the pair, typically the sync-owner or
+# bootstrap device for this HA domain.
+# This object is authored from the current target device's perspective:
+# it tells the BIG-IP addressed by `F5_HOST` to establish trust with the peer below.
 ha_device_trusts:
   - peer_server: "192.0.2.20"
     peer_hostname: "bigip-west.example.com"

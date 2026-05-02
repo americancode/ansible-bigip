@@ -1,4 +1,8 @@
 ---
+# Device-group membership example.
+# The current execution target is still one designated device in the HA pair.
+# Both member names are listed because they belong to the same sync-failover group, not because
+# the playbook should be launched against both peers.
 ha_device_group_members:
   - device_group: "dg_platform_sync_failover"
     name: "bigip-east.example.com"

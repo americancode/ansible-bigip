@@ -1,4 +1,7 @@
 ---
+# Shared HA device-group example.
+# This is pair-level config, but the playbook should still be run against one designated device in
+# the sync domain rather than both peers in routine operations.
 ha_device_groups:
   - name: "dg_platform_sync_failover"
     type: "sync-failover"

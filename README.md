@@ -94,6 +94,55 @@ Supported deletion patterns:
 
 Deletion trees are the preferred destructive workflow because they make review clearer.
 
+## AWX and HA Operation
+
+This repository talks to one BIG-IP management endpoint per run.
+
+- the playbooks use the `provider` object in [vars/common.yml](/Users/nathanielchurchill/source/ansible-bigip/vars/common.yml)
+- `provider.server` is usually injected through `F5_HOST`
+- if `F5_HOST` points at one BIG-IP, only that BIG-IP is directly configured by that job
+
+For a normal BIG-IP sync-failover pair, most shared configuration should be applied to one designated device in the HA domain and then replicated through config sync.
+
+Safe default operating rule:
+
+- for `playbooks/network.yml`, `playbooks/ltm.yml`, and `playbooks/tls.yml`, target one sync-owner device per HA pair
+- use `playbooks/ha.yml` to establish or change trust, device groups, members, traffic groups, and config sync actions
+- do not target both peers in the same HA pair for routine shared-config jobs unless you explicitly mean to
+
+The HA example vars under `vars/ha/...` are written with that same perspective:
+
+- `device_trust` examples are authored from the current target device toward its peer
+- `device_groups`, `device_group_members`, and `traffic_groups` describe shared HA state, but are still meant to be applied from one designated device in the sync domain
+- `configsync_actions.sync_device_to_group: true` means "push from the device currently addressed by `F5_HOST`"
+
+Recommended AWX pattern:
+
+- create one inventory per environment, for example `prod-bigip`
+- represent each HA sync domain with one execution target host, not one host per appliance for normal shared-config jobs
+- store the management endpoint in a host var such as `f5_host`
+- inject `F5_HOST`, `F5_USERNAME`, and `F5_PASSWORD` through the AWX credential or job template environment
+
+Example inventory host vars:
+
+```yaml
+f5_host: bigip-east.example.com
+f5_pair_name: east-prod-pair
+f5_role: sync_owner
+f5_dc: east
+```
+
+Example AWX template split:
+
+- `BIG-IP HA Bootstrap` -> `playbooks/ha.yml`
+- `BIG-IP Network Apply` -> `playbooks/network.yml`
+- `BIG-IP LTM Apply` -> `playbooks/ltm.yml`
+- `BIG-IP TLS Apply` -> `playbooks/tls.yml`
+- `BIG-IP System Apply` -> `playbooks/system.yml`
+- `BIG-IP GTM Apply` -> `playbooks/gtm.yml`
+
+Operationally, treat each datacenter HA pair as its own execution boundary. If you need to update two datacenters, run one job per pair rather than one job per appliance.
+
 ## Validation
 
 Run local validation with:

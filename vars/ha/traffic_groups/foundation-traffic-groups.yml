@@ -1,4 +1,8 @@
 ---
+# Traffic-group example for a two-device HA pair.
+# `ha_order` is the failover preference list shared by the pair.
+# This remains a single-target apply in AWX: run `playbooks/ha.yml` against one designated device
+# in the sync domain and let BIG-IP replicate the shared HA state.
 ha_traffic_groups:
   - name: "traffic-group-apps"
     partition: "Common"

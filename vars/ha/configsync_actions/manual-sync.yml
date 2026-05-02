@@ -1,4 +1,7 @@
 ---
+# Manual sync example.
+# `sync_device_to_group: true` means "push from the BIG-IP currently addressed by `F5_HOST` into
+# this device group". That is why the README recommends one sync-owner execution target per pair.
 ha_configsync_actions:
   - device_group: "dg_platform_sync_failover"
     sync_device_to_group: true
