@@ -50,3 +50,30 @@
     state: absent
   loop: "{{ waf_policies_delete | default([]) }}"
   when: waf_policies_delete | default([]) | length > 0
+
+- name: Delete APM policy imports
+  bigip_apm_policy_import:
+    provider: "{{ f5_provider }}"
+    name: "{{ item.name }}"
+    partition: "{{ item.partition | default('Common') }}"
+    state: absent
+  loop: "{{ apm_policies_delete | default([]) }}"
+  when: apm_policies_delete | default([]) | length > 0
+
+- name: Delete APM network access resources
+  bigip_apm_network_access:
+    provider: "{{ f5_provider }}"
+    name: "{{ item.name }}"
+    partition: "{{ item.partition | default('Common') }}"
+    state: absent
+  loop: "{{ apm_network_access_delete | default([]) }}"
+  when: apm_network_access_delete | default([]) | length > 0
+
+- name: Delete APM ACLs
+  bigip_apm_acl:
+    provider: "{{ f5_provider }}"
+    name: "{{ item.name }}"
+    partition: "{{ item.partition | default('Common') }}"
+    state: absent
+  loop: "{{ apm_acls_delete | default([]) }}"
+  when: apm_acls_delete | default([]) | length > 0

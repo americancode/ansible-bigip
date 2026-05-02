@@ -1,0 +1,37 @@
+---
+# APM ACL examples for L4 and L7 access control in APM policies.
+# ACLs can be referenced by APM network access resources in `vars/security/apm/network_access/`.
+# Supported fields: `name`, `partition`, `acl_order`, `type` (l4 or l7), `entries` (action plus type-specific fields),
+# and `state`.
+#
+# L4 entry fields: `action`, `dst_addr`, `dst_port`, `src_addr`, `src_port`, `src_mask`, `protocol`.
+# L7 entry fields: `action`, `host_name`, `paths`, `scheme`, `path_match`, `path_match_case`, `log`.
+apm_acls:
+  - name: vpn-l4-acl
+    acl_order: 10
+    type: l4
+    entries:
+      - action: allow
+        dst_addr: 10.0.1.0/24
+        dst_port: "443"
+        protocol: tcp
+      - action: deny
+        dst_addr: 192.168.100.0/24
+        dst_port: "*"
+        protocol: all
+
+  - name: vpn-l7-acl
+    acl_order: 20
+    type: l7
+    entries:
+      - action: allow
+        host_name: app.example.com
+        paths: /api,/health
+        scheme: https
+        path_match: true
+        path_match_case: false
+      - action: deny
+        host_name: internal.example.com
+        paths: /admin
+        scheme: any
+        log: packet

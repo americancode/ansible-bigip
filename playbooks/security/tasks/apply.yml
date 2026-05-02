@@ -72,3 +72,45 @@
     state: present
   loop: "{{ waf_server_technologies_present | default([]) }}"
   when: waf_server_technologies_present | default([]) | length > 0
+
+- name: Create APM ACLs
+  bigip_apm_acl:
+    provider: "{{ f5_provider }}"
+    name: "{{ item.name }}"
+    partition: "{{ item.partition | default('Common') }}"
+    acl_order: "{{ item.acl_order | default(omit) }}"
+    type: "{{ item.type | default(omit) }}"
+    entries: "{{ item.entries | default(omit) }}"
+    state: present
+  loop: "{{ apm_acls_present | default([]) }}"
+  when: apm_acls_present | default([]) | length > 0
+
+- name: Create APM network access resources
+  bigip_apm_network_access:
+    provider: "{{ f5_provider }}"
+    name: "{{ item.name }}"
+    partition: "{{ item.partition | default('Common') }}"
+    ip_version: "{{ item.ip_version | default(omit) }}"
+    split_tunnel: "{{ item.split_tunnel | default(omit) }}"
+    snat_pool: "{{ item.snat_pool | default(omit) }}"
+    ipv4_address_space: "{{ item.ipv4_address_space | default(omit) }}"
+    excluded_ipv4_adresses: "{{ item.excluded_ipv4_adresses | default(omit) }}"
+    ipv4_lease_pool: "{{ item.ipv4_lease_pool | default(omit) }}"
+    allow_local_subnet: "{{ item.allow_local_subnet | default(omit) }}"
+    allow_local_dns: "{{ item.allow_local_dns | default(omit) }}"
+    state: present
+  loop: "{{ apm_network_access_present | default([]) }}"
+  when: apm_network_access_present | default([]) | length > 0
+
+- name: Import APM policies
+  bigip_apm_policy_import:
+    provider: "{{ f5_provider }}"
+    name: "{{ item.name }}"
+    partition: "{{ item.partition | default('Common') }}"
+    source: "{{ item.source }}"
+    type: "{{ item.type | default(omit) }}"
+    force: "{{ item.force | default(omit) }}"
+    reuse_objects: "{{ item.reuse_objects | default(omit) }}"
+    state: present
+  loop: "{{ apm_policies_present | default([]) }}"
+  when: apm_policies_present | default([]) | length > 0

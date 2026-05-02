@@ -1,0 +1,5 @@
+---
+# APM policy import settings.
+# Policy imports reference local tar.gz files exported from BIG-IP VPE.
+apm_policy_defaults:
+  partition: Common

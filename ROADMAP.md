@@ -39,7 +39,6 @@ The repository already supports:
 The main remaining gaps are:
 
 - deeper HA lifecycle beyond trust, groups, traffic groups, and config sync
-- APM module coverage
 - drift detection and promotion workflows
 
 ## Current Implementation Audit
@@ -125,6 +124,9 @@ Implemented today:
   - AFM firewall policies (ordered rule lists)
   - WAF/ASM policies (built-in templates, active/apply flags)
   - WAF server technologies (parent policy references)
+  - APM ACLs (L4/L7 entries, actions, host/path/scheme matching)
+  - APM network access (split tunnel, address spaces, lease pools)
+  - APM policy imports (tar.gz source, access_policy/access_profile types)
   - per-directory `settings.yml` inheritance
   - deletion trees for all object types
   - canonical playbook entrypoint at `playbooks/security.yml`
@@ -137,11 +139,11 @@ Implemented today:
   - `tools/drift-check` for live-vs-Git comparison
   - `tools/import-from-bigip` for brownfield import
   - CI-ready JSON output for dashboards
-  - LTM, GTM, network, AFM, WAF, and TLS object type support
+  - LTM, GTM, network, AFM, WAF, APM, and TLS object type support
 
 Not implemented yet:
 
-- APM access object management
+- (none — all core BIG-IP modules covered)
 
 ## Target Repo Shape
 
@@ -650,6 +652,7 @@ This is the practical next sequence for the current repo.
  13. [x] Add virtual server VLAN filtering, metadata, and log profiles
  14. [x] Add GTM topology regions and topology records
  15. [x] Add WAF/ASM policies and server technologies to security playbook
+ 16. [x] Add APM ACLs, network access, and policy imports to security playbook
 
 ## Issue-Sized Execution Plan
 
@@ -755,6 +758,19 @@ These are the first concrete tickets I would open.
 - [x] Add WAF endpoint to drift detection (`asm/policies`)
 - [x] Add WAF import spec for brownfield import
 - [x] Add `docs/waf.md` with object reference and authoring patterns
+
+### Milestone 13: APM Access Policy Manager
+
+- [x] Add `vars/security/apm/acls` for APM ACLs (L4/L7)
+- [x] Add `vars/security/apm/network_access` for Network Access resources
+- [x] Add `vars/security/apm/policies` for APM policy imports
+- [x] Extend `security.yml` playbook with APM apply/delete tasks
+- [x] Add deletion trees for all APM object types
+- [x] Add validation for APM ACLs, network access, and policy imports
+- [x] Add APM endpoints to drift detection (`access/policy/acl`, `access/profile/network-access`)
+- [x] Add APM import specs for brownfield import
+- [x] Add `docs/apm.md` with object reference and authoring patterns
+- [x] Update `docs/security.md` to include APM coverage
 
 ## Network Expansion Status
 

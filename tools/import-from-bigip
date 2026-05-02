@@ -291,6 +291,24 @@ IMPORT_SPECS: dict[str, ImportSpec] = {
             "description": "description",
         },
     ),
+    "apm_acls": ImportSpec(
+        endpoint="access/policy/acl",
+        top_key="apm_acls",
+        output_dir="security/apm/acls",
+        extract={
+            "name": "name",
+            "description": "description",
+        },
+    ),
+    "apm_network_access": ImportSpec(
+        endpoint="access/profile/network-access",
+        top_key="apm_network_access",
+        output_dir="security/apm/network_access",
+        extract={
+            "name": "name",
+            "description": "description",
+        },
+    ),
     "tls_keys": ImportSpec(
         endpoint="sys/crypto/key",
         top_key="tls_keys",

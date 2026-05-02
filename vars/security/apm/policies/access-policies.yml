@@ -1,0 +1,14 @@
+---
+# APM policy import examples.
+# Policies are exported from BIG-IP VPE as tar.gz files and imported declaratively.
+# The source file path must exist on the Ansible control host.
+# Supported fields: `name`, `partition`, `source` (local tar.gz path), `type` (access_policy or omitted for profile),
+# `force`, `reuse_objects`, and `state`.
+apm_policies:
+  - name: remote-access-policy
+    source: /opt/apm-policies/remote-access-policy.tar.gz
+    type: access_policy
+    reuse_objects: true
+
+  - name: sso-profile
+    source: /opt/apm-policies/sso-profile.tar.gz

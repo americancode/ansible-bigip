@@ -15,9 +15,15 @@
     (afm_policies_present | default([]) | length > 0) or
     (waf_policies_present | default([]) | length > 0) or
     (waf_server_technologies_present | default([]) | length > 0) or
+    (apm_acls_present | default([]) | length > 0) or
+    (apm_network_access_present | default([]) | length > 0) or
+    (apm_policies_present | default([]) | length > 0) or
     (afm_address_lists_delete | default([]) | length > 0) or
     (afm_port_lists_delete | default([]) | length > 0) or
     (afm_rules_delete | default([]) | length > 0) or
     (afm_policies_delete | default([]) | length > 0) or
     (waf_policies_delete | default([]) | length > 0) or
-    (waf_server_technologies_delete | default([]) | length > 0)
+    (waf_server_technologies_delete | default([]) | length > 0) or
+    (apm_acls_delete | default([]) | length > 0) or
+    (apm_network_access_delete | default([]) | length > 0) or
+    (apm_policies_delete | default([]) | length > 0)

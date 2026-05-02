@@ -1,8 +1,8 @@
-# Security Playbook (AFM + WAF)
+# Security Playbook (AFM + WAF + APM)
 
 ## Overview
 
-`security.yml` manages BIG-IP Advanced Firewall Manager (AFM) and Web Application Firewall (WAF/ASM) objects through a declarative, split-var-tree model. AFM coverage includes address lists, port lists, firewall rules, and firewall policies. WAF coverage includes ASM policies and server technologies. See [docs/waf.md](waf.md) for WAF-specific details.
+`security.yml` manages BIG-IP Advanced Firewall Manager (AFM), Web Application Firewall (WAF/ASM), and Access Policy Manager (APM) objects through a declarative, split-var-tree model. AFM coverage includes address lists, port lists, firewall rules, and firewall policies. WAF coverage includes ASM policies and server technologies. APM coverage includes ACLs, network access resources, and policy imports. See [docs/waf.md](waf.md) for WAF-specific details and [docs/apm.md](apm.md) for APM-specific details.
 
 ## Playbook Structure
 
@@ -38,16 +38,30 @@ vars/security/
 │       ├── port_lists/
 │       ├── rules/
 │       └── policies/
-└── waf/
-    ├── policies/                       # WAF/ASM policy objects
+├── waf/
+│   ├── policies/                       # WAF/ASM policy objects
+│   │   ├── settings.yml
+│   │   └── vm-applications.yml         # Example policies
+│   ├── server_technologies/            # Server technology objects
+│   │   ├── settings.yml
+│   │   └── vm-applications.yml         # Example server technologies
+│   └── deletions/                      # Explicit deletion trees
+│       ├── policies/
+│       └── server_technologies/
+└── apm/
+    ├── acls/                           # APM ACL objects (L4/L7)
     │   ├── settings.yml
-    │   └── vm-applications.yml         # Example policies
-    ├── server_technologies/            # Server technology objects
+    │   └── vpn-acls.yml                # Example ACLs
+    ├── network_access/                 # Network Access resource objects
     │   ├── settings.yml
-    │   └── vm-applications.yml         # Example server technologies
+    │   └── remote-access.yml           # Example VPN configurations
+    ├── policies/                       # APM policy import objects
+    │   ├── settings.yml
+    │   └── access-policies.yml         # Example policy imports
     └── deletions/                      # Explicit deletion trees
-        ├── policies/
-        └── server_technologies/
+        ├── acls/
+        ├── network_access/
+        └── policies/
 ```
 
 ## Object Types
@@ -156,9 +170,12 @@ Objects are applied and deleted in this order:
 4. **AFM firewall policies** (reference rules)
 5. **WAF policies** (standalone policy definitions)
 6. **WAF server technologies** (reference policies)
+7. **APM ACLs** (standalone access control entries)
+8. **APM network access** (VPN resource configuration)
+9. **APM policy imports** (depend on ACLs and network access being available)
 
 Deletion runs in reverse order to respect dependencies.
 
 ## Config Save
 
-The playbook includes a `bigip_config` save step that runs when any AFM or WAF objects are created or deleted.
+The playbook includes a `bigip_config` save step that runs when any AFM, WAF, or APM objects are created or deleted.

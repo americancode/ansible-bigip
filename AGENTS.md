@@ -53,13 +53,14 @@ Update existing `docs/` files when an existing domain changes:
 - `docs/var-layout.md` — add new var trees to the domain trees list
 - `docs/example-models.md` — add a section explaining the new domain's authoring model and cross-file linkages
 - `docs/hybrid-authoring.md` — update if a new hybrid pattern is introduced
+- `docs/security.md` — update when AFM, WAF, or APM object types are added or changed
 
 ### README.md Updates
 
-When a new playbook is added:
+When a new playbook is added or an existing playbook gains new object coverage:
 
-- add a row to the quick links table pointing to the new `docs/<domain>.md`
-- add a row to the playbooks table with the domain name and object coverage
+- add a row to the quick links table pointing to the new `docs/<domain>.md` (or update the existing row)
+- add or update a row in the playbooks table with the domain name and object coverage
 
 ### Empty Directories
 
@@ -74,6 +75,56 @@ If an empty directory must exist intentionally (e.g., a deletions tree with no e
 - update the Not Implemented Yet list when gaps are filled
 - if a playbook is intentionally kept monolithic instead of split, record the reason in ROADMAP.md
 
+## Mandatory Post-Change Checklist
+
+These updates are **required after every feature change** (new object types, new fields, new var trees, new playbooks). Do not skip any item.
+
+### Playbooks (when adding or modifying a domain)
+
+- [ ] `playbooks/<domain>.yml` or root wrapper — add or update entrypoint
+- [ ] `playbooks/<domain>/prep.yml` — discovery, `include_vars`, defaults loading, aggregation for new var trees
+- [ ] `playbooks/<domain>/tasks/apply.yml` — `state: present` tasks for new object types
+- [ ] `playbooks/<domain>/tasks/delete.yml` — `state: absent` tasks for new object types (reverse dependency order)
+- [ ] `playbooks/<domain>/tasks/manage.yml` — update `bigip_config` save conditions to include new present/delete variables
+
+### Var Trees (when adding a new object type)
+
+- [ ] `vars/<domain>/<type>/` — create directory with example var file and `settings.yml`
+- [ ] `vars/<domain>/deletions/<type>/` — create directory with `.gitkeep`
+- [ ] Every example var file must have the inline YAML comment header (purpose, cross-file linkages, supported fields)
+
+### Validation
+
+- [ ] `tools/validate-vars` — add `TreeSpec` entry, type-specific validation in `validate_<domain>()`, duplicate checks, cross-reference validation, and field validation
+- [ ] `Makefile` — ensure `validate-ansible` target includes the affected playbook
+- [ ] run `make validate` and confirm it passes
+
+### Drift Detection
+
+- [ ] `tools/drift-check` — add a `load` entry in `VarTreeLoader.load()` for the new var tree directory
+- [ ] `tools/drift-check` — add a BIG-IP REST endpoint mapping in `DriftChecker.BIGIP_ENDPOINTS`
+- [ ] `tools/drift-check` — add non-standard name fields to `DriftChecker.NAME_FIELDS` if applicable
+- [ ] `tools/drift-check` — add value drift comparisons in `_find_value_drift` for the new type's fields
+
+### Import Tooling
+
+- [ ] `tools/import-from-bigip` — add an `ImportSpec` entry in `IMPORT_SPECS` with endpoint, output directory, top-level key, and field extraction
+- [ ] `tools/import-from-bigip` — add type-specific transformation logic in `_transform_item` (pool members, virtual server references, etc.) if needed
+
+### Documentation
+
+- [ ] `docs/<domain>.md` — create for new domains, update for existing domains with changed object types
+- [ ] `docs/playbook-structure.md` — add new playbooks to the playbook list
+- [ ] `docs/var-layout.md` — add new var trees to the domain trees list
+- [ ] `README.md` — update quick links table and playbooks table
+- [ ] `ROADMAP.md` — update Current State, Implementation Audit, backlog, milestone checklists, and Not Implemented Yet
+
+### Docker and CI
+
+- [ ] `Dockerfile.validation` — add any new Python packages or system tools required by new imports in validation/drift/import scripts
+- [ ] `.gitlab-ci.yml` — update `before_script` if new Python packages were added
+- [ ] verify `docker build -f Dockerfile.validation .` succeeds
+
 ## Playbook Structure
 
 - keep canonical playbooks under `playbooks/` and keep root-level wrapper playbooks working during transitions
@@ -84,32 +135,6 @@ If an empty directory must exist intentionally (e.g., a deletions tree with no e
   - `playbooks/<domain>/tasks/delete.yml` — destructive tasks
   - `playbooks/<domain>/tasks/apply.yml` — present-state tasks
 - if a future playbook stays small enough that splitting adds no value, document the reason in ROADMAP.md
-
-## Validation
-
-- run `make validate` after each major change before moving to the next step
-- validation must pass before any playbook execution
-- on every feature change (new object types, new fields, new var trees):
-  - update `tools/validate-vars` with TreeSpec entries, type-specific validation, duplicate checks, and field validation
-  - update `Makefile` validate-ansible target to include new playbooks
-- never introduce a new var tree without corresponding validation coverage
-
-## Drift Detection
-
-- on every feature change, update `tools/drift-check`:
-  - add a `load` entry in `VarTreeLoader.load()` for new var tree directories
-  - add a BIG-IP REST endpoint mapping in `DriftChecker.BIGIP_ENDPOINTS`
-  - add non-standard name fields to `DriftChecker.NAME_FIELDS` if applicable
-  - add value drift comparisons in `_find_value_drift` for the new type's fields
-- on every feature change, update `tools/import-from-bigip`:
-  - add an `ImportSpec` entry in `IMPORT_SPECS` with endpoint, output directory, top-level key, and field extraction
-  - add type-specific transformation logic in `_transform_item` (pool members, virtual server references, etc.)
-
-## Docker and Dependencies
-
-- keep `Dockerfile.validation` up to date with all Python packages and system tools required to run the full validation and drift suite
-- any new Python import in `tools/validate-vars`, `tools/drift-check`, or `tools/import-from-bigip` must be added to `Dockerfile.validation` and `.gitlab-ci.yml` `before_script`
-- verify the Docker image builds successfully after adding dependencies
 
 ## Commit Messages
 

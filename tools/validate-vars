@@ -401,6 +401,27 @@ class Validator:
                 top_key="waf_server_technologies",
                 settings_key="waf_server_technology_defaults",
             ),
+            TreeSpec(
+                name="apm_acls",
+                active_dir=VARS_DIR / "security" / "apm" / "acls",
+                deletion_dir=VARS_DIR / "security" / "apm" / "deletions" / "acls",
+                top_key="apm_acls",
+                settings_key="apm_acl_defaults",
+            ),
+            TreeSpec(
+                name="apm_network_access",
+                active_dir=VARS_DIR / "security" / "apm" / "network_access",
+                deletion_dir=VARS_DIR / "security" / "apm" / "deletions" / "network_access",
+                top_key="apm_network_access",
+                settings_key="apm_network_access_defaults",
+            ),
+            TreeSpec(
+                name="apm_policies",
+                active_dir=VARS_DIR / "security" / "apm" / "policies",
+                deletion_dir=VARS_DIR / "security" / "apm" / "deletions" / "policies",
+                top_key="apm_policies",
+                settings_key="apm_policy_defaults",
+            ),
         ]
 
     def run(self) -> int:
@@ -418,6 +439,7 @@ class Validator:
         self.validate_gtm()
         self.validate_security()
         self.validate_waf()
+        self.validate_apm()
 
         if self.errors:
             for error in self.errors:
@@ -1535,6 +1557,80 @@ class Validator:
             server_technologies,
             lambda obj: ("waf_server_technology", obj.data.get("policy_name"), obj.data.get("name")),
             "WAF server technology",
+        )
+
+    def validate_apm(self) -> None:
+        acls = self.objects.get("apm_acls", [])
+        network_access = self.objects.get("apm_network_access", [])
+        policies = self.objects.get("apm_policies", [])
+
+        for obj in acls:
+            self.require_fields(obj, ["name"])
+            if obj.effective_state == "absent":
+                continue
+            acl_type = obj.data.get("type")
+            if acl_type is not None and acl_type not in ("l4", "l7"):
+                self.error(obj.relpath, f"APM ACL `{obj.data.get('name')}` `type` must be `l4` or `l7`")
+            entries = obj.data.get("entries")
+            if entries is not None:
+                if not isinstance(entries, list):
+                    self.error(obj.relpath, f"APM ACL `{obj.data.get('name')}` `entries` must be a list")
+                else:
+                    for idx, entry in enumerate(entries):
+                        if not isinstance(entry, dict):
+                            self.error(obj.relpath, f"APM ACL `{obj.data.get('name')}` entry {idx} must be a mapping")
+                            continue
+                        if "action" not in entry:
+                            self.error(obj.relpath, f"APM ACL `{obj.data.get('name')}` entry {idx} must define `action`")
+
+        self.check_duplicates(
+            acls,
+            lambda obj: ("apm_acl", obj.partition, obj.data.get("name")),
+            "APM ACL",
+        )
+
+        for obj in network_access:
+            self.require_fields(obj, ["name"])
+            if obj.effective_state == "absent":
+                continue
+            ip_version = obj.data.get("ip_version")
+            if ip_version is not None and ip_version not in ("ipv4", "ipv6"):
+                self.error(obj.relpath, f"APM network access `{obj.data.get('name')}` `ip_version` must be `ipv4` or `ipv6`")
+            for space_field in ("ipv4_address_space", "excluded_ipv4_adresses"):
+                space = obj.data.get(space_field)
+                if space is not None:
+                    if not isinstance(space, list):
+                        self.error(obj.relpath, f"APM network access `{obj.data.get('name')}` `{space_field}` must be a list")
+                    else:
+                        for idx, subnet_entry in enumerate(space):
+                            if not isinstance(subnet_entry, dict) or "subnet" not in subnet_entry:
+                                self.error(obj.relpath, f"APM network access `{obj.data.get('name')}` `{space_field}` entry {idx} must define `subnet`")
+
+        self.check_duplicates(
+            network_access,
+            lambda obj: ("apm_network_access", obj.partition, obj.data.get("name")),
+            "APM network access",
+        )
+
+        for obj in policies:
+            self.require_fields(obj, ["name"])
+            if obj.effective_state == "absent":
+                continue
+            self.require_fields(obj, ["source"])
+            policy_type = obj.data.get("type")
+            if policy_type is not None and policy_type not in ("access_policy", "access_profile"):
+                self.error(obj.relpath, f"APM policy `{obj.data.get('name')}` `type` must be `access_policy` or `access_profile`")
+            force = obj.data.get("force")
+            if force is not None and not isinstance(force, bool):
+                self.error(obj.relpath, f"APM policy `{obj.data.get('name')}` `force` must be a boolean")
+            reuse = obj.data.get("reuse_objects")
+            if reuse is not None and not isinstance(reuse, bool):
+                self.error(obj.relpath, f"APM policy `{obj.data.get('name')}` `reuse_objects` must be a boolean")
+
+        self.check_duplicates(
+            policies,
+            lambda obj: ("apm_policy", obj.partition, obj.data.get("name")),
+            "APM policy",
         )
 
     @staticmethod
