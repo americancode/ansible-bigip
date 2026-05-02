@@ -14,7 +14,7 @@ These are binding maintenance rules for anyone changing this repository, includi
 
 ## Playbooks
 
-- `network.yml`: VLANs, route domains, self IPs, static routes, SNAT translations, and SNAT pools
+- `network.yml`: VLANs, trunks, route domains, self IPs, static routes, SNAT translations, SNAT pools, and NATs
 - `system.yml`: base system settings like hostname, DNS, NTP, provisioning, users
 - `ha.yml`: device trust, device groups, traffic groups, config sync actions
 - `ltm.yml`: LTM monitors, nodes, pools, virtual servers
@@ -47,6 +47,7 @@ The network examples include:
 - local and floating self IP patterns
 - route-domain-scoped routing
 - reusable SNAT translations and SNAT pools
+- trunk examples plus NAT examples using a validated `tmsh` command workflow because the installed collection does not provide a first-class NAT module
 
 ## Hybrid Model
 

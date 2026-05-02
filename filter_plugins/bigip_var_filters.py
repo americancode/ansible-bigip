@@ -9,6 +9,10 @@ def _fq_name(partition, name):
     return f"/{partition or 'Common'}/{name}"
 
 
+def _quote_tmsh(value):
+    return '"' + str(value).replace("\\", "\\\\").replace('"', '\\"') + '"'
+
+
 def _expand_monitor_list(monitors, monitor_sets):
     if not monitors:
         return monitors
@@ -64,6 +68,53 @@ def _resolve_gtm_members(members, pool_partition, ltm_virtual_servers):
     return resolved_members
 
 
+def build_nat_tmsh_command(action, nat):
+    if not isinstance(nat, dict):
+        return None
+
+    partition = nat.get("partition", "Common")
+    name = nat.get("name")
+    if not name:
+        return None
+    fq_name = _fq_name(partition, name)
+
+    if action == "show":
+        return f"list ltm nat {fq_name} one-line"
+    if action == "delete":
+        return f"delete ltm nat {fq_name}"
+
+    verb = "create" if action == "create" else "modify"
+    parts = [verb, "ltm", "nat", fq_name]
+
+    if nat.get("originating_address") not in (None, ""):
+        parts.extend(["originating-address", str(nat["originating_address"])])
+    if nat.get("translation_address") not in (None, ""):
+        parts.extend(["translation-address", str(nat["translation_address"])])
+    if nat.get("traffic_group") not in (None, ""):
+        parts.extend(["traffic-group", str(nat["traffic_group"])])
+    if nat.get("auto_lasthop") not in (None, ""):
+        parts.extend(["auto-lasthop", str(nat["auto_lasthop"])])
+    if nat.get("description") not in (None, ""):
+        parts.extend(["description", _quote_tmsh(nat["description"])])
+    if nat.get("enabled") is not None:
+        parts.append("enabled" if bool(nat["enabled"]) else "disabled")
+    if nat.get("arp") is not None:
+        parts.append("arp" if bool(nat["arp"]) else "no-arp")
+
+    vlans = nat.get("vlans")
+    if isinstance(vlans, list):
+        if vlans:
+            parts.extend(["vlans", "replace-all-with", "{", " ".join(vlans), "}"])
+            if nat.get("vlans_enabled") is not None:
+                parts.append("vlans-enabled" if bool(nat["vlans_enabled"]) else "vlans-disabled")
+        else:
+            parts.extend(["vlans", "none"])
+    elif nat.get("vlans_default"):
+        parts.extend(["vlans", "default"])
+
+    return " ".join(parts)
+
+
 def normalize_ltm_pool(pool, pool_defaults=None, member_defaults=None, monitor_sets=None):
     if not isinstance(pool, dict):
         return pool
@@ -110,4 +161,5 @@ class FilterModule(object):
             "normalize_gtm_pool": normalize_gtm_pool,
             "expand_monitor_list": _expand_monitor_list,
             "resolve_gtm_members": _resolve_gtm_members,
+            "build_nat_tmsh_command": build_nat_tmsh_command,
         }

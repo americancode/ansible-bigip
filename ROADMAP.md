@@ -36,7 +36,6 @@ The main remaining gaps are:
 - deeper HA lifecycle beyond trust, groups, traffic groups, and config sync
 - deeper LTM object coverage beyond pools/nodes/virtuals/monitors
 - deeper GTM object coverage beyond datacenters/servers/pools/Wide IPs/monitors
-- NATs and trunks
 - security module coverage
 - drift detection and promotion workflows
 
@@ -48,11 +47,13 @@ Implemented today:
 
 - `network.yml`
   - VLANs
+  - trunks
   - route domains
   - self IPs
   - static routes
   - SNAT translations
   - SNAT pools
+  - NATs via validated `tmsh` workflow
   - deletion trees
   - per-directory `settings.yml`
 - `system.yml`
@@ -100,7 +101,6 @@ Implemented today:
 
 Not implemented yet:
 
-- NATs and trunks
 - LTM profiles, persistence, policies, iRules, data groups
 - GTM topology and regions
 - security modules
@@ -128,6 +128,7 @@ This is the recommended end-state layout.
     │   ├── self_ips/
     │   ├── routes/
     │   ├── route_domains/
+    │   ├── trunks/
     │   ├── snats/
     │   ├── nats/
     │   └── deletions/
@@ -535,7 +536,7 @@ This is the practical next sequence for the current repo.
 4. [x] Add `system.yml` for base platform settings
 5. [x] Add `ha.yml` for trust/sync/failover
 6. [x] Add `tls.yml` for certs and SSL profiles
-7. [ ] Add NAT and trunk support to complete network expansion
+7. [x] Add NAT and trunk support to complete network expansion
 8. [x] Add hybrid readability shortcuts:
    - [x] `pool_defaults`
    - [x] `member_defaults`
@@ -591,11 +592,11 @@ These are the first concrete tickets I would open.
 
 ## Network Expansion Status
 
-The repo now covers route domains, static routes, SNAT translations, and SNAT pools.
+The repo now covers route domains, static routes, SNAT translations, SNAT pools, trunks, and NATs.
 
-Remaining network gap:
+Implementation note:
 
-- NAT object management does not have a first-class module in the installed `f5networks.f5_modules` collection, so this roadmap item remains open until that strategy is defined alongside trunk support.
+- NAT object management uses a validated `tmsh` command workflow because the installed `f5networks.f5_modules` collection does not provide a first-class NAT module.
 
 ## TLS Secret Handling Status
 

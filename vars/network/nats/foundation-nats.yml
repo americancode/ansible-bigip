@@ -1,0 +1,18 @@
+---
+# NAT example managed through a validated `tmsh` command workflow because the installed
+# `f5networks.f5_modules` collection does not provide a first-class NAT module.
+# Magic linkage:
+# - `vlans` entries refer to VLAN objects in `vars/network/vlans/foundation-vlans.yml`
+# - `traffic_group` refers to a standard BIG-IP traffic group object
+bigip_nats:
+  - name: "nat_legacy_outbound_app1"
+    originating_address: "10.201.40.50"
+    translation_address: "203.0.113.50"
+    traffic_group: "/Common/traffic-group-1"
+    vlans:
+      - "external"
+    vlans_enabled: true
+    auto_lasthop: "default"
+    arp: true
+    enabled: true
+    description: "Legacy one-to-one NAT for outbound application traffic"

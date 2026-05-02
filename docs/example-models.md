@@ -61,3 +61,13 @@ Alias-based custom or convenience references work like this:
 - `platform_https` in `vars/gtm/wide_ips/global-platform/settings.yml` expands to `/Common/mon_gtm_platform_https`
 
 Use the inline comments in the example var files when you want the shortest path from a reference string to the related object file.
+
+## Network Expansion Examples
+
+The network tree also shows both native-module and validated-command patterns.
+
+- Trunks: `vars/network/trunks/foundation-trunks.yml`
+  This uses the native `bigip_trunk` module and is the preferred model for link aggregation.
+- NATs: `vars/network/nats/foundation-nats.yml`
+  This uses a validated `tmsh` command workflow because the installed collection does not provide a first-class NAT module.
+- NAT VLAN references such as `external` point at `vars/network/vlans/foundation-vlans.yml`.

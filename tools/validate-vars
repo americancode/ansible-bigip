@@ -188,6 +188,20 @@ class Validator:
                 settings_key="network_snat_pool_defaults",
             ),
             TreeSpec(
+                name="network_trunks",
+                active_dir=VARS_DIR / "network" / "trunks",
+                deletion_dir=VARS_DIR / "network" / "deletions" / "trunks",
+                top_key="bigip_trunks",
+                settings_key="network_trunk_defaults",
+            ),
+            TreeSpec(
+                name="network_nats",
+                active_dir=VARS_DIR / "network" / "nats",
+                deletion_dir=VARS_DIR / "network" / "deletions" / "nats",
+                top_key="bigip_nats",
+                settings_key="network_nat_defaults",
+            ),
+            TreeSpec(
                 name="system_hostnames",
                 active_dir=VARS_DIR / "system" / "hostname",
                 deletion_dir=VARS_DIR / "system" / "deletions" / "hostname",
@@ -420,6 +434,8 @@ class Validator:
         routes = self.objects.get("network_routes", [])
         snat_translations = self.objects.get("network_snat_translations", [])
         snat_pools = self.objects.get("network_snat_pools", [])
+        trunks = self.objects.get("network_trunks", [])
+        nats = self.objects.get("network_nats", [])
 
         active_vlan_names = set()
 
@@ -536,6 +552,35 @@ class Validator:
                 elif route_domain not in active_route_domain_ids:
                     self.error(obj.relpath, f"static route `{obj.data.get('name')}` references undefined route domain `{route_domain}`")
 
+        for obj in trunks:
+            self.require_fields(obj, ["name"])
+            if obj.effective_state == "absent":
+                continue
+            interfaces = obj.data.get("interfaces")
+            if not isinstance(interfaces, list) or not interfaces:
+                self.error(obj.relpath, f"trunk `{obj.data.get('name')}` must define a non-empty `interfaces` list")
+            if obj.data.get("lacp_enabled") is False and obj.data.get("lacp_mode") not in (None, ""):
+                self.error(obj.relpath, f"trunk `{obj.data.get('name')}` sets `lacp_mode` while `lacp_enabled` is false")
+            if obj.data.get("lacp_enabled") is False and obj.data.get("lacp_timeout") not in (None, ""):
+                self.error(obj.relpath, f"trunk `{obj.data.get('name')}` sets `lacp_timeout` while `lacp_enabled` is false")
+
+        for obj in nats:
+            self.require_fields(obj, ["name"])
+            if obj.effective_state == "absent":
+                continue
+            self.require_fields(obj, ["originating_address", "translation_address"])
+            nat_vlans = obj.data.get("vlans")
+            if nat_vlans is not None and not isinstance(nat_vlans, list):
+                self.error(obj.relpath, f"NAT `{obj.data.get('name')}` `vlans` must be a list")
+            for vlan in nat_vlans or []:
+                self.validate_named_or_fq_reference(
+                    obj.relpath,
+                    vlan,
+                    obj.partition,
+                    active_vlan_names,
+                    "NAT VLAN",
+                )
+
         self.check_duplicates(vlans, lambda obj: ("vlan", obj.partition, obj.data.get("name")), "VLAN")
         self.check_duplicates(route_domains, lambda obj: ("route_domain", obj.partition, obj.data.get("name")), "route domain")
         self.check_duplicates(
@@ -551,6 +596,8 @@ class Validator:
             "SNAT translation",
         )
         self.check_duplicates(snat_pools, lambda obj: ("snat_pool", obj.partition, obj.data.get("name")), "SNAT pool")
+        self.check_duplicates(trunks, lambda obj: ("trunk", obj.data.get("name")), "trunk")
+        self.check_duplicates(nats, lambda obj: ("nat", obj.partition, obj.data.get("name")), "NAT")
 
     def validate_system(self) -> None:
         hostnames = self.objects.get("system_hostnames", [])
