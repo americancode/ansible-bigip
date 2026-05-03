@@ -144,6 +144,22 @@ def build_management_ip_tmsh_command(management):
     return f"modify sys management-ip {address}"
 
 
+def build_login_banner_tmsh_command(action, banner):
+    if not isinstance(banner, dict):
+        return None
+
+    if action == "delete":
+        return "modify sys global-settings gui-security-banner disabled"
+
+    parts = ["modify", "sys", "global-settings"]
+    enabled = banner.get("enabled")
+    if enabled is not None:
+        parts.extend(["gui-security-banner", "enabled" if bool(enabled) else "disabled"])
+    if banner.get("text") not in (None, ""):
+        parts.extend(["gui-security-banner-text", _quote_tmsh(banner["text"])])
+    return " ".join(parts)
+
+
 def normalize_ltm_pool(pool, pool_defaults=None, member_defaults=None, monitor_sets=None):
     if not isinstance(pool, dict):
         return pool
@@ -193,4 +209,5 @@ class FilterModule(object):
             "build_nat_tmsh_command": build_nat_tmsh_command,
             "build_management_route_tmsh_command": build_management_route_tmsh_command,
             "build_management_ip_tmsh_command": build_management_ip_tmsh_command,
+            "build_login_banner_tmsh_command": build_login_banner_tmsh_command,
         }

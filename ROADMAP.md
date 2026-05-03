@@ -16,7 +16,7 @@ The repo already manages the main BIG-IP runtime domains through canonical playb
 
 - `bootstrap` for day-0 licensing and first management reachability
 - `network` for VLANs, trunks, route domains, self IPs, routes, SNAT translations, SNAT pools, and NATs
-- `system` for hostname, DNS, NTP/timezone, provisioning, users, management-plane admin authentication, and config save
+- `system` for hostname, DNS, NTP/timezone, provisioning, users, management-plane admin authentication, login banners, and config save
 - `ha` for device connectivity, trust, sync groups, HA groups, traffic groups, and config sync actions
 - `ltm` for monitors, profiles, nodes, pools, virtual servers, persistence, iRules, data groups, and policies
 - `gtm` for monitors, datacenters, servers, pools, Wide IPs, regions, and topology records
@@ -108,18 +108,15 @@ Do not call work complete when any of the following is true:
 
 These are the highest-value open items.
 
-1. System compliance surface
-   - login banner management
-
-2. Helper-tool maturity decisions for `system` and `ha`
+1. Helper-tool maturity decisions for `system` and `ha`
    - either add drift/import coverage
    - or keep them explicitly documented as `runtime+validation` for the current phase
 
-3. Configuration snapshot and recovery workflows
+2. Configuration snapshot and recovery workflows
    - UCS backup/export workflow
    - explicit operational guidance for snapshot use in change and rollback paths
 
-4. Certificate lifecycle automation
+3. Certificate lifecycle automation
    - certificate rotation workflows
    - renewal/expiry detection
 
@@ -127,22 +124,19 @@ These are the highest-value open items.
 
 These are the concrete remaining backlog items.
 
-1. Login banner management for system compliance
-   - completion target: `runtime+validation`
-
-2. Decide the helper-tool lifecycle target for `system` and `ha`
+1. Decide the helper-tool lifecycle target for `system` and `ha`
    - either implement drift/import support
    - or document them as intentional `runtime+validation` boundaries in long-term steady state
 
-3. UCS backup/export workflow for configuration snapshots
+2. UCS backup/export workflow for configuration snapshots
    - priority: lower than management-plane auth, compliance, and current repo-boundary decisions
    - completion target: `runtime+validation`
 
-4. Certificate rotation automation with renewal detection
+3. Certificate rotation automation with renewal detection
    - priority: lower than management-plane auth, compliance, and current repo-boundary decisions
    - completion target: `runtime+validation+helper-tools` where practical
 
-5. Future deeper helper-tool fidelity
+4. Future deeper helper-tool fidelity
    - if needed, promote selected object families from `basic field drift` toward `model-aware`
    - only pursue this when the operational value is clear
 

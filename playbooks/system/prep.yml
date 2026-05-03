@@ -518,6 +518,67 @@
         ).system_auth_radius_defaults | default({})
       }}
 
+- name: Discover system login banner fragments
+  ansible.builtin.set_fact:
+    system_login_banner_files: >-
+      {{
+        lookup(
+          'ansible.builtin.pipe',
+          "find {{ repo_root }}/vars/system/login_banners -type f -name '*.yml' ! -name 'settings.yml' 2>/dev/null | sort"
+        ).splitlines() | reject('equalto', '') | list
+      }}
+    system_login_banner_deletion_files: >-
+      {{
+        lookup(
+          'ansible.builtin.pipe',
+          "find {{ repo_root }}/vars/system/deletions/login_banners -type f -name '*.yml' ! -name 'settings.yml' 2>/dev/null | sort"
+        ).splitlines() | reject('equalto', '') | list
+      }}
+
+- name: Load system login banner fragments
+  ansible.builtin.include_vars:
+    file: "{{ item }}"
+    name: system_login_banner_fragment
+  loop: "{{ system_login_banner_files }}"
+  register: system_login_banner_include_results
+
+- name: Load system login banner deletion fragments
+  ansible.builtin.include_vars:
+    file: "{{ item }}"
+    name: system_login_banner_deletion_fragment
+  loop: "{{ system_login_banner_deletion_files }}"
+  register: system_login_banner_deletion_include_results
+
+- name: Aggregate system login banners with directory settings
+  ansible.builtin.set_fact:
+    system_login_banners: "{{ system_login_banners | default([]) + [ system_login_banner_directory_defaults | combine(item.1, recursive=True) ] }}"
+  loop: "{{ query('subelements', system_login_banner_include_results.results, 'ansible_facts.system_login_banner_fragment.system_login_banners', {'skip_missing': True}) }}"
+  vars:
+    system_login_banner_settings_path: "{{ item.0.item | regex_replace('/[^/]+$', '/settings.yml') }}"
+    system_login_banner_directory_defaults: >-
+      {{
+        (
+          lookup('ansible.builtin.file', system_login_banner_settings_path, errors='ignore')
+          | default('{}', true)
+          | from_yaml
+        ).system_login_banner_defaults | default({})
+      }}
+
+- name: Aggregate system login banner deletions with directory settings
+  ansible.builtin.set_fact:
+    system_login_banner_deletions: "{{ system_login_banner_deletions | default([]) + [ (system_login_banner_deletion_directory_defaults | combine(item.1, recursive=True)) | combine({'state': 'absent'}, recursive=True) ] }}"
+  loop: "{{ query('subelements', system_login_banner_deletion_include_results.results, 'ansible_facts.system_login_banner_deletion_fragment.system_login_banners', {'skip_missing': True}) }}"
+  vars:
+    system_login_banner_deletion_settings_path: "{{ item.0.item | regex_replace('/[^/]+$', '/settings.yml') }}"
+    system_login_banner_deletion_directory_defaults: >-
+      {{
+        (
+          lookup('ansible.builtin.file', system_login_banner_deletion_settings_path, errors='ignore')
+          | default('{}', true)
+          | from_yaml
+        ).system_login_banner_defaults | default({})
+      }}
+
 - name: Discover system config fragments
   ansible.builtin.set_fact:
     system_config_files: >-
@@ -728,6 +789,29 @@
         +
         (
           (system_auth_radius | default([]))
+          | selectattr('state', 'defined')
+          | rejectattr('state', 'equalto', 'absent')
+          | list
+        )
+      }}
+
+- name: Classify system login banner operations
+  ansible.builtin.set_fact:
+    system_login_banner_delete: >-
+      {{
+        ((system_login_banners | default([])) + (system_login_banner_deletions | default([])))
+        | selectattr('state', 'defined')
+        | selectattr('state', 'equalto', 'absent')
+        | list
+      }}
+    system_login_banner_present: >-
+      {{
+        (system_login_banners | default([]))
+        | rejectattr('state', 'defined')
+        | list
+        +
+        (
+          (system_login_banners | default([]))
           | selectattr('state', 'defined')
           | rejectattr('state', 'equalto', 'absent')
           | list

@@ -129,6 +129,16 @@
   loop_control:
     label: "{{ item.name | default('radius-auth') }}"
 
+- name: Configure system login banner
+  f5networks.f5_modules.bigip_command:
+    provider: "{{ provider }}"
+    commands:
+      - "{{ item | build_login_banner_tmsh_command('modify') }}"
+    warn: false
+  loop: "{{ system_login_banner_present | default([]) }}"
+  loop_control:
+    label: "{{ item.name | default('login-banner') }}"
+
 - name: Save BIG-IP running config
   f5networks.f5_modules.bigip_config:
     provider: "{{ provider }}"

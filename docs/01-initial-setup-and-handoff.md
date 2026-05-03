@@ -111,6 +111,7 @@ This is where the day-1/day-2 device baseline begins:
 - provisioning
 - local users
 - optional centralized admin auth providers for BIG-IP operator login
+- optional login banner compliance messaging
 - config save behavior
 
 Author those objects in:
@@ -121,6 +122,7 @@ Author those objects in:
 - `vars/system/provisioning/`
 - `vars/system/users/`
 - `vars/system/auth/`
+- `vars/system/login_banners/`
 - `vars/system/config/`
 
 Important boundary:

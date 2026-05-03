@@ -1,0 +1,7 @@
+---
+# Default settings for BIG-IP management-plane login banner objects.
+# Objects in `vars/system/login_banners/*.yml` are consumed by `playbooks/system.yml` and configure
+# the BIG-IP GUI security banner through `sys global-settings`.
+# Supported fields: `enabled`, `text`, and optional `name` for repo-side labeling.
+system_login_banner_defaults:
+  enabled: true

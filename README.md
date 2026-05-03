@@ -63,7 +63,7 @@ Canonical playbooks live under `playbooks/`. Root-level `*.yml` files are compat
 |---|---|
 | `playbooks/network.yml` | VLANs, trunks, route domains, self IPs, routes, SNATs, NATs |
 | `playbooks/bootstrap.yml` | device licensing and initial management IP/default-route bootstrap |
-| `playbooks/system.yml` | hostname, DNS, NTP, provisioning, users, management-plane admin auth |
+| `playbooks/system.yml` | hostname, DNS, NTP, provisioning, users, management-plane admin auth, login banners |
 | `playbooks/ha.yml` | device connectivity, device trust, device groups, HA groups, traffic groups, config sync |
 | `playbooks/ltm.yml` | monitors, profiles, nodes, pools, virtual servers |
 | `playbooks/gtm.yml` | monitors, datacenters, servers, pools, Wide IPs, topology |
@@ -74,7 +74,6 @@ Canonical playbooks live under `playbooks/`. Root-level `*.yml` files are compat
 
 The main remaining roadmap items are:
 
-- login banner management
 - deciding whether `system` and `ha` should gain full drift/import support
 - lower-priority lifecycle work such as UCS backup/export and certificate rotation automation
 

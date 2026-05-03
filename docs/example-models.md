@@ -120,6 +120,19 @@ Linkage works like this:
 - only one of `system_auth_ldap[*].use_for_auth`, `system_auth_tacacs[*].use_for_auth`, or `system_auth_radius[*].use_for_auth` should be `true` for the current BIG-IP target
 - this system-auth layer controls how operators log in to BIG-IP itself; it is separate from APM end-user identity under `vars/security/apm/`
 
+## System Compliance Banner Model
+
+The system login-banner tree is intentionally simple and device-scoped.
+
+- Login banner: `vars/system/login_banners/foundation-login-banner.yml`
+
+Linkage works like this:
+
+- `system_login_banners[*]` is consumed directly by `playbooks/system.yml`
+- it does not point at other repo-managed objects
+- it applies to the BIG-IP currently targeted by `f5_host`
+- a deletion entry disables the GUI login banner rather than deleting a named child object
+
 ## AFM Security Model
 
 The security playbook uses first-class var trees for address lists, port lists, rules, and policies.

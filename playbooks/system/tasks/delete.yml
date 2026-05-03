@@ -75,3 +75,13 @@
   loop: "{{ system_auth_ldap_delete | default([]) }}"
   loop_control:
     label: "{{ item.name }}"
+
+- name: Disable system login banner
+  f5networks.f5_modules.bigip_command:
+    provider: "{{ provider }}"
+    commands:
+      - "{{ item | build_login_banner_tmsh_command('delete') }}"
+    warn: false
+  loop: "{{ system_login_banner_delete | default([]) }}"
+  loop_control:
+    label: "{{ item.name | default('login-banner') }}"

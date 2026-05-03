@@ -1,6 +1,6 @@
 # System Management
 
-The `playbooks/system.yml` playbook manages base BIG-IP device settings after the device is already reachable through a stable management endpoint: hostname, DNS, NTP, module provisioning, local users, management-plane admin authentication providers, and config persistence.
+The `playbooks/system.yml` playbook manages base BIG-IP device settings after the device is already reachable through a stable management endpoint: hostname, DNS, NTP, module provisioning, local users, management-plane admin authentication providers, login banner compliance messaging, and config persistence.
 
 For day-0 licensing and the first management IP/default route, use [02-bootstrap-playbook.md](02-bootstrap-playbook.md) and `playbooks/bootstrap.yml` first.
 
@@ -174,6 +174,23 @@ The `servers` list points at objects defined in `vars/system/auth/radius_servers
 
 Common fields: `servers`, `retries`, `service_type`, `accounting_bug`, `fallback_to_local`, `use_for_auth`.
 
+### Login Banner
+
+Location: `vars/system/login_banners/`
+
+This manages the BIG-IP GUI security banner shown before administrator login. It is device-scoped and normally only one active declaration should exist for a target BIG-IP.
+
+```yaml
+system_login_banners:
+  - name: "authorized-use-banner"
+    enabled: true
+    text: |
+      WARNING: This system is for authorized use only.
+      Activity may be monitored, recorded, and subject to audit.
+```
+
+Supported fields: `enabled`, `text`, and optional `name` for repo-side labeling. A deletion entry or `state: absent` disables the banner.
+
 ### Config Save
 
 Location: `vars/system/config/`
@@ -195,7 +212,8 @@ This runs `bigip_config` to save the running config. It is the last task in the 
 4. Provisioning
 5. Users
 6. Management-plane auth providers
-7. Config save
+7. Login banner
+8. Config save
 
 ## Partition and Naming Conventions
 
@@ -210,4 +228,4 @@ For environments with multiple HA pairs, system settings are typically applied p
 
 ## Deletion
 
-Users and management-plane auth objects can be removed with `state: absent` or the matching `vars/system/deletions/...` tree. DNS and NTP objects use a present-state model where the last declaration wins. See [deletion-workflows.md](deletion-workflows.md).
+Users, management-plane auth objects, and login banners can be removed with `state: absent` or the matching `vars/system/deletions/...` tree. DNS and NTP objects use a present-state model where the last declaration wins. See [deletion-workflows.md](deletion-workflows.md).

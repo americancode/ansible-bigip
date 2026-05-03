@@ -64,6 +64,7 @@ The system var tree includes both basic device settings and management-plane adm
 - `vars/system/auth/tacacs/` for TACACS+ admin auth
 - `vars/system/auth/radius_servers/` for reusable RADIUS server objects
 - `vars/system/auth/radius/` for the RADIUS auth profile that references those server objects
+- `vars/system/login_banners/` for device-scoped GUI login banner compliance text
 
 ## Hybrid Authoring
 

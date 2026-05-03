@@ -293,6 +293,13 @@ class Validator:
                 settings_key="system_auth_radius_defaults",
             ),
             TreeSpec(
+                name="system_login_banners",
+                active_dir=VARS_DIR / "system" / "login_banners",
+                deletion_dir=VARS_DIR / "system" / "deletions" / "login_banners",
+                top_key="system_login_banners",
+                settings_key="system_login_banner_defaults",
+            ),
+            TreeSpec(
                 name="system_config",
                 active_dir=VARS_DIR / "system" / "config",
                 deletion_dir=VARS_DIR / "system" / "deletions" / "config",
@@ -864,6 +871,7 @@ class Validator:
         auth_tacacs = self.objects.get("system_auth_tacacs", [])
         auth_radius_servers = self.objects.get("system_auth_radius_servers", [])
         auth_radius = self.objects.get("system_auth_radius", [])
+        login_banners = self.objects.get("system_login_banners", [])
         config = self.objects.get("system_config", [])
 
         for obj in hostnames:
@@ -1112,6 +1120,23 @@ class Validator:
                 conflicting_obj.relpath,
                 f"only one management-plane auth source can set `use_for_auth: true` on a target BIG-IP; found {active_types}",
             )
+
+        active_login_banners = [obj for obj in login_banners if obj.effective_state != "absent"]
+        if len(active_login_banners) > 1:
+            self.error(
+                active_login_banners[1].relpath,
+                "system login banner is device-scoped and supports only one active declaration per target BIG-IP",
+            )
+
+        for obj in login_banners:
+            enabled = obj.data.get("enabled")
+            if enabled is not None and not isinstance(enabled, bool):
+                self.error(obj.relpath, "system login banner `enabled` must be a boolean")
+            if obj.effective_state != "absent" and obj.data.get("enabled", True) and obj.data.get("text") in (None, ""):
+                self.error(obj.relpath, "system login banner with `enabled: true` must define non-empty `text`")
+            text = obj.data.get("text")
+            if text is not None and not isinstance(text, str):
+                self.error(obj.relpath, "system login banner `text` must be a string")
 
         for obj in config:
             if "save" in obj.data and not isinstance(obj.data.get("save"), bool):
