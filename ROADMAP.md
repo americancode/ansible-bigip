@@ -39,6 +39,7 @@ The repo also has first-class helper tooling:
 - `tools/drift-check` for live-vs-Git comparison
 - `tools/import-from-bigip` for brownfield import
 - Python-backed prep/compiler helpers under `filter_plugins/bigip_filters/`, with `filter_plugins/bigip_var_filters.py` kept as the Ansible filter entrypoint
+- shared prep snippets under `playbooks/shared/prep/` for fragment discovery, settings-aware aggregation, and present/delete classification across the standard domains
 
 ## Capability Boundaries
 
@@ -116,9 +117,9 @@ These are the highest-value open items.
 
 1. Finish the repo-wide prep refactor into shared Python-backed helpers
    - the split filter/helper module structure is in place
-   - some intent compilation, layered settings resolution, and LTM/GTM classification work already uses Python-backed helpers
-   - repeated discovery, tree loading, settings aggregation, and classification patterns still remain in playbook YAML across multiple domains
-   - this refactor is intended to apply everywhere it makes sense across all canonical playbooks and domains, not only `ltm` and `gtm`
+   - shared prep snippets now cover fragment discovery, settings-aware aggregation, and present/delete classification across `bootstrap`, `network`, `system`, `ha`, `tls`, and `security`
+   - the remaining scope is the more specialized LTM/GTM prep logic that still has domain-specific loader/build behavior beyond the shared helper layer
+   - this refactor still applies everywhere it makes sense across canonical playbooks, but the open work is now concentrated in the specialized canonical and intent-heavy domains
 
 2. Helper-tool maturity decisions for `system` and `ha`
    - either add drift/import coverage
@@ -137,9 +138,9 @@ These are the highest-value open items.
 These are the concrete remaining backlog items.
 
 1. Finish refactoring repeated prep loading, discovery, settings aggregation, and classification logic into shared Python-backed helpers while keeping `prep.yml` as the orchestration layer
-   - this is a repo-wide refactor target for every canonical playbook/domain where the pattern exists
-   - do not treat it as an `ltm`/`gtm`-only cleanup
-   - compiler and normalization logic should move first where reuse and validator sharing are highest
+   - the shared prep helper layer is now established under `playbooks/shared/prep/`
+   - most standard fragment-loading domains already use it
+   - the remaining work is to push the same architecture deeper into the specialized LTM/GTM prep flows where canonical loading, lookup building, and intent compilation still require custom YAML
    - top-level `prep.yml` and focused prep snippets should remain the readable orchestration layer
 
 2. Decide the helper-tool lifecycle target for `system` and `ha`
@@ -192,6 +193,7 @@ These are binding repo maintenance rules for every feature change, including fut
 - keep canonical playbooks under `playbooks/` and keep root-level wrapper playbooks working during transitions
 - default to the split canonical playbook model: keep discovery/default aggregation in `playbooks/<domain>/prep.yml`, keep `tasks/manage.yml` as the ordering wrapper, and separate destructive tasks into `tasks/delete.yml` from present-state tasks in `tasks/apply.yml`
 - when prep logic becomes large, keep top-level `prep.yml` as a documented orchestrator and split discovery/loading/classification/compiler flows into focused `playbooks/<domain>/prep/*.yml` snippets
+- when the same prep mechanics are repeated across domains, prefer shared snippets under `playbooks/shared/prep/` backed by shared Python helpers instead of duplicating the pattern in each domain
 
 ### Validation and Commits
 

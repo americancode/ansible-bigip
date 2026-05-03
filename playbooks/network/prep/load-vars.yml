@@ -1,488 +1,103 @@
-- name: Discover VLAN fragments
-  ansible.builtin.set_fact:
-    vlan_files: >-
-      {{
-        lookup(
-          'ansible.builtin.pipe',
-          "find {{ repo_root }}/vars/network/vlans -type f -name '*.yml' ! -name 'settings.yml' 2>/dev/null | sort"
-        ).splitlines() | reject('equalto', '') | list
-      }}
-    vlan_deletion_files: >-
-      {{
-        lookup(
-          'ansible.builtin.pipe',
-          "find {{ repo_root }}/vars/network/deletions/vlans -type f -name '*.yml' ! -name 'settings.yml' 2>/dev/null | sort"
-        ).splitlines() | reject('equalto', '') | list
-      }}
-
-- name: Load VLAN fragments
-  ansible.builtin.include_vars:
-    file: "{{ item }}"
-    name: vlan_fragment
-  loop: "{{ vlan_files }}"
-  register: vlan_include_results
-
-- name: Load VLAN deletion fragments
-  ansible.builtin.include_vars:
-    file: "{{ item }}"
-    name: vlan_deletion_fragment
-  loop: "{{ vlan_deletion_files }}"
-  register: vlan_deletion_include_results
-
-- name: Aggregate VLANs with directory settings
-  ansible.builtin.set_fact:
-    bigip_vlans: "{{ bigip_vlans | default([]) + [ vlan_directory_defaults | combine(item.1, recursive=True) ] }}"
-  loop: "{{ query('subelements', vlan_include_results.results, 'ansible_facts.vlan_fragment.bigip_vlans', {'skip_missing': True}) }}"
+- name: Load VLAN fragments into bigip_vlans/bigip_vlan_deletions
+  ansible.builtin.import_tasks: "{{ playbook_dir }}/shared/prep/load-fragment-tree.yml"
   vars:
-    vlan_settings_path: "{{ item.0.item | regex_replace('/[^/]+$', '/settings.yml') }}"
-    vlan_directory_defaults: >-
-      {{
-        (
-          lookup('ansible.builtin.file', vlan_settings_path, errors='ignore')
-          | default('{}', true)
-          | from_yaml
-        ).network_vlan_defaults | default({})
-      }}
+    fragment_label: VLAN
+    source_root: "{{ repo_root }}/vars/network/vlans"
+    deletion_root: "{{ repo_root }}/vars/network/deletions/vlans"
+    fragment_var_name: vlan_fragment
+    fragment_deletion_var_name: vlan_deletion_fragment
+    collection_key: bigip_vlans
+    defaults_key: network_vlan_defaults
+    aggregate_var: bigip_vlans
+    deletion_aggregate_var: bigip_vlan_deletions
 
-- name: Aggregate VLAN deletions with directory settings
-  ansible.builtin.set_fact:
-    bigip_vlan_deletions: "{{ bigip_vlan_deletions | default([]) + [ (vlan_deletion_directory_defaults | combine(item.1, recursive=True)) | combine({'state': 'absent'}, recursive=True) ] }}"
-  loop: "{{ query('subelements', vlan_deletion_include_results.results, 'ansible_facts.vlan_deletion_fragment.bigip_vlans', {'skip_missing': True}) }}"
+- name: Load route domain fragments into bigip_route_domains/bigip_route_domain_deletions
+  ansible.builtin.import_tasks: "{{ playbook_dir }}/shared/prep/load-fragment-tree.yml"
   vars:
-    vlan_deletion_settings_path: "{{ item.0.item | regex_replace('/[^/]+$', '/settings.yml') }}"
-    vlan_deletion_directory_defaults: >-
-      {{
-        (
-          lookup('ansible.builtin.file', vlan_deletion_settings_path, errors='ignore')
-          | default('{}', true)
-          | from_yaml
-        ).network_vlan_defaults | default({})
-      }}
+    fragment_label: route domain
+    source_root: "{{ repo_root }}/vars/network/route_domains"
+    deletion_root: "{{ repo_root }}/vars/network/deletions/route_domains"
+    fragment_var_name: route_domain_fragment
+    fragment_deletion_var_name: route_domain_deletion_fragment
+    collection_key: bigip_route_domains
+    defaults_key: network_route_domain_defaults
+    aggregate_var: bigip_route_domains
+    deletion_aggregate_var: bigip_route_domain_deletions
 
-- name: Discover route domain fragments
-  ansible.builtin.set_fact:
-    route_domain_files: >-
-      {{
-        lookup(
-          'ansible.builtin.pipe',
-          "find {{ repo_root }}/vars/network/route_domains -type f -name '*.yml' ! -name 'settings.yml' 2>/dev/null | sort"
-        ).splitlines() | reject('equalto', '') | list
-      }}
-    route_domain_deletion_files: >-
-      {{
-        lookup(
-          'ansible.builtin.pipe',
-          "find {{ repo_root }}/vars/network/deletions/route_domains -type f -name '*.yml' ! -name 'settings.yml' 2>/dev/null | sort"
-        ).splitlines() | reject('equalto', '') | list
-      }}
-
-- name: Load route domain fragments
-  ansible.builtin.include_vars:
-    file: "{{ item }}"
-    name: route_domain_fragment
-  loop: "{{ route_domain_files }}"
-  register: route_domain_include_results
-
-- name: Load route domain deletion fragments
-  ansible.builtin.include_vars:
-    file: "{{ item }}"
-    name: route_domain_deletion_fragment
-  loop: "{{ route_domain_deletion_files }}"
-  register: route_domain_deletion_include_results
-
-- name: Aggregate route domains with directory settings
-  ansible.builtin.set_fact:
-    bigip_route_domains: "{{ bigip_route_domains | default([]) + [ route_domain_directory_defaults | combine(item.1, recursive=True) ] }}"
-  loop: "{{ query('subelements', route_domain_include_results.results, 'ansible_facts.route_domain_fragment.bigip_route_domains', {'skip_missing': True}) }}"
+- name: Load self IP fragments into bigip_self_ips/bigip_self_ip_deletions
+  ansible.builtin.import_tasks: "{{ playbook_dir }}/shared/prep/load-fragment-tree.yml"
   vars:
-    route_domain_settings_path: "{{ item.0.item | regex_replace('/[^/]+$', '/settings.yml') }}"
-    route_domain_directory_defaults: >-
-      {{
-        (
-          lookup('ansible.builtin.file', route_domain_settings_path, errors='ignore')
-          | default('{}', true)
-          | from_yaml
-        ).network_route_domain_defaults | default({})
-      }}
+    fragment_label: self IP
+    source_root: "{{ repo_root }}/vars/network/self_ips"
+    deletion_root: "{{ repo_root }}/vars/network/deletions/self_ips"
+    fragment_var_name: self_ip_fragment
+    fragment_deletion_var_name: self_ip_deletion_fragment
+    collection_key: bigip_self_ips
+    defaults_key: network_self_ip_defaults
+    aggregate_var: bigip_self_ips
+    deletion_aggregate_var: bigip_self_ip_deletions
 
-- name: Aggregate route domain deletions with directory settings
-  ansible.builtin.set_fact:
-    bigip_route_domain_deletions: "{{ bigip_route_domain_deletions | default([]) + [ (route_domain_deletion_directory_defaults | combine(item.1, recursive=True)) | combine({'state': 'absent'}, recursive=True) ] }}"
-  loop: "{{ query('subelements', route_domain_deletion_include_results.results, 'ansible_facts.route_domain_deletion_fragment.bigip_route_domains', {'skip_missing': True}) }}"
+- name: Load static route fragments into bigip_static_routes/bigip_static_route_deletions
+  ansible.builtin.import_tasks: "{{ playbook_dir }}/shared/prep/load-fragment-tree.yml"
   vars:
-    route_domain_deletion_settings_path: "{{ item.0.item | regex_replace('/[^/]+$', '/settings.yml') }}"
-    route_domain_deletion_directory_defaults: >-
-      {{
-        (
-          lookup('ansible.builtin.file', route_domain_deletion_settings_path, errors='ignore')
-          | default('{}', true)
-          | from_yaml
-        ).network_route_domain_defaults | default({})
-      }}
+    fragment_label: static route
+    source_root: "{{ repo_root }}/vars/network/routes"
+    deletion_root: "{{ repo_root }}/vars/network/deletions/routes"
+    fragment_var_name: static_route_fragment
+    fragment_deletion_var_name: static_route_deletion_fragment
+    collection_key: bigip_static_routes
+    defaults_key: network_static_route_defaults
+    aggregate_var: bigip_static_routes
+    deletion_aggregate_var: bigip_static_route_deletions
 
-- name: Discover self IP fragments
-  ansible.builtin.set_fact:
-    self_ip_files: >-
-      {{
-        lookup(
-          'ansible.builtin.pipe',
-          "find {{ repo_root }}/vars/network/self_ips -type f -name '*.yml' ! -name 'settings.yml' 2>/dev/null | sort"
-        ).splitlines() | reject('equalto', '') | list
-      }}
-    self_ip_deletion_files: >-
-      {{
-        lookup(
-          'ansible.builtin.pipe',
-          "find {{ repo_root }}/vars/network/deletions/self_ips -type f -name '*.yml' ! -name 'settings.yml' 2>/dev/null | sort"
-        ).splitlines() | reject('equalto', '') | list
-      }}
-
-- name: Load self IP fragments
-  ansible.builtin.include_vars:
-    file: "{{ item }}"
-    name: self_ip_fragment
-  loop: "{{ self_ip_files }}"
-  register: self_ip_include_results
-
-- name: Load self IP deletion fragments
-  ansible.builtin.include_vars:
-    file: "{{ item }}"
-    name: self_ip_deletion_fragment
-  loop: "{{ self_ip_deletion_files }}"
-  register: self_ip_deletion_include_results
-
-- name: Aggregate self IPs with directory settings
-  ansible.builtin.set_fact:
-    bigip_self_ips: "{{ bigip_self_ips | default([]) + [ self_ip_directory_defaults | combine(item.1, recursive=True) ] }}"
-  loop: "{{ query('subelements', self_ip_include_results.results, 'ansible_facts.self_ip_fragment.bigip_self_ips', {'skip_missing': True}) }}"
+- name: Load SNAT translation fragments into bigip_snat_translations/bigip_snat_translation_deletions
+  ansible.builtin.import_tasks: "{{ playbook_dir }}/shared/prep/load-fragment-tree.yml"
   vars:
-    self_ip_settings_path: "{{ item.0.item | regex_replace('/[^/]+$', '/settings.yml') }}"
-    self_ip_directory_defaults: >-
-      {{
-        (
-          lookup('ansible.builtin.file', self_ip_settings_path, errors='ignore')
-          | default('{}', true)
-          | from_yaml
-        ).network_self_ip_defaults | default({})
-      }}
+    fragment_label: SNAT translation
+    source_root: "{{ repo_root }}/vars/network/snat_translations"
+    deletion_root: "{{ repo_root }}/vars/network/deletions/snat_translations"
+    fragment_var_name: snat_translation_fragment
+    fragment_deletion_var_name: snat_translation_deletion_fragment
+    collection_key: bigip_snat_translations
+    defaults_key: network_snat_translation_defaults
+    aggregate_var: bigip_snat_translations
+    deletion_aggregate_var: bigip_snat_translation_deletions
 
-- name: Aggregate self IP deletions with directory settings
-  ansible.builtin.set_fact:
-    bigip_self_ip_deletions: "{{ bigip_self_ip_deletions | default([]) + [ (self_ip_deletion_directory_defaults | combine(item.1, recursive=True)) | combine({'state': 'absent'}, recursive=True) ] }}"
-  loop: "{{ query('subelements', self_ip_deletion_include_results.results, 'ansible_facts.self_ip_deletion_fragment.bigip_self_ips', {'skip_missing': True}) }}"
+- name: Load SNAT pool fragments into bigip_snat_pools/bigip_snat_pool_deletions
+  ansible.builtin.import_tasks: "{{ playbook_dir }}/shared/prep/load-fragment-tree.yml"
   vars:
-    self_ip_deletion_settings_path: "{{ item.0.item | regex_replace('/[^/]+$', '/settings.yml') }}"
-    self_ip_deletion_directory_defaults: >-
-      {{
-        (
-          lookup('ansible.builtin.file', self_ip_deletion_settings_path, errors='ignore')
-          | default('{}', true)
-          | from_yaml
-        ).network_self_ip_defaults | default({})
-      }}
+    fragment_label: SNAT pool
+    source_root: "{{ repo_root }}/vars/network/snats"
+    deletion_root: "{{ repo_root }}/vars/network/deletions/snats"
+    fragment_var_name: snat_pool_fragment
+    fragment_deletion_var_name: snat_pool_deletion_fragment
+    collection_key: bigip_snat_pools
+    defaults_key: network_snat_pool_defaults
+    aggregate_var: bigip_snat_pools
+    deletion_aggregate_var: bigip_snat_pool_deletions
 
-- name: Discover static route fragments
-  ansible.builtin.set_fact:
-    static_route_files: >-
-      {{
-        lookup(
-          'ansible.builtin.pipe',
-          "find {{ repo_root }}/vars/network/routes -type f -name '*.yml' ! -name 'settings.yml' 2>/dev/null | sort"
-        ).splitlines() | reject('equalto', '') | list
-      }}
-    static_route_deletion_files: >-
-      {{
-        lookup(
-          'ansible.builtin.pipe',
-          "find {{ repo_root }}/vars/network/deletions/routes -type f -name '*.yml' ! -name 'settings.yml' 2>/dev/null | sort"
-        ).splitlines() | reject('equalto', '') | list
-      }}
-
-- name: Load static route fragments
-  ansible.builtin.include_vars:
-    file: "{{ item }}"
-    name: static_route_fragment
-  loop: "{{ static_route_files }}"
-  register: static_route_include_results
-
-- name: Load static route deletion fragments
-  ansible.builtin.include_vars:
-    file: "{{ item }}"
-    name: static_route_deletion_fragment
-  loop: "{{ static_route_deletion_files }}"
-  register: static_route_deletion_include_results
-
-- name: Aggregate static routes with directory settings
-  ansible.builtin.set_fact:
-    bigip_static_routes: "{{ bigip_static_routes | default([]) + [ static_route_directory_defaults | combine(item.1, recursive=True) ] }}"
-  loop: "{{ query('subelements', static_route_include_results.results, 'ansible_facts.static_route_fragment.bigip_static_routes', {'skip_missing': True}) }}"
+- name: Load trunk fragments into bigip_trunks/bigip_trunk_deletions
+  ansible.builtin.import_tasks: "{{ playbook_dir }}/shared/prep/load-fragment-tree.yml"
   vars:
-    static_route_settings_path: "{{ item.0.item | regex_replace('/[^/]+$', '/settings.yml') }}"
-    static_route_directory_defaults: >-
-      {{
-        (
-          lookup('ansible.builtin.file', static_route_settings_path, errors='ignore')
-          | default('{}', true)
-          | from_yaml
-        ).network_route_defaults | default({})
-      }}
+    fragment_label: trunk
+    source_root: "{{ repo_root }}/vars/network/trunks"
+    deletion_root: "{{ repo_root }}/vars/network/deletions/trunks"
+    fragment_var_name: trunk_fragment
+    fragment_deletion_var_name: trunk_deletion_fragment
+    collection_key: bigip_trunks
+    defaults_key: network_trunk_defaults
+    aggregate_var: bigip_trunks
+    deletion_aggregate_var: bigip_trunk_deletions
 
-- name: Aggregate static route deletions with directory settings
-  ansible.builtin.set_fact:
-    bigip_static_route_deletions: "{{ bigip_static_route_deletions | default([]) + [ (static_route_deletion_directory_defaults | combine(item.1, recursive=True)) | combine({'state': 'absent'}, recursive=True) ] }}"
-  loop: "{{ query('subelements', static_route_deletion_include_results.results, 'ansible_facts.static_route_deletion_fragment.bigip_static_routes', {'skip_missing': True}) }}"
+- name: Load NAT fragments into bigip_nats/bigip_nat_deletions
+  ansible.builtin.import_tasks: "{{ playbook_dir }}/shared/prep/load-fragment-tree.yml"
   vars:
-    static_route_deletion_settings_path: "{{ item.0.item | regex_replace('/[^/]+$', '/settings.yml') }}"
-    static_route_deletion_directory_defaults: >-
-      {{
-        (
-          lookup('ansible.builtin.file', static_route_deletion_settings_path, errors='ignore')
-          | default('{}', true)
-          | from_yaml
-        ).network_route_defaults | default({})
-      }}
-
-- name: Discover SNAT translation fragments
-  ansible.builtin.set_fact:
-    snat_translation_files: >-
-      {{
-        lookup(
-          'ansible.builtin.pipe',
-          "find {{ repo_root }}/vars/network/snat_translations -type f -name '*.yml' ! -name 'settings.yml' 2>/dev/null | sort"
-        ).splitlines() | reject('equalto', '') | list
-      }}
-    snat_translation_deletion_files: >-
-      {{
-        lookup(
-          'ansible.builtin.pipe',
-          "find {{ repo_root }}/vars/network/deletions/snat_translations -type f -name '*.yml' ! -name 'settings.yml' 2>/dev/null | sort"
-        ).splitlines() | reject('equalto', '') | list
-      }}
-
-- name: Load SNAT translation fragments
-  ansible.builtin.include_vars:
-    file: "{{ item }}"
-    name: snat_translation_fragment
-  loop: "{{ snat_translation_files }}"
-  register: snat_translation_include_results
-
-- name: Load SNAT translation deletion fragments
-  ansible.builtin.include_vars:
-    file: "{{ item }}"
-    name: snat_translation_deletion_fragment
-  loop: "{{ snat_translation_deletion_files }}"
-  register: snat_translation_deletion_include_results
-
-- name: Aggregate SNAT translations with directory settings
-  ansible.builtin.set_fact:
-    bigip_snat_translations: "{{ bigip_snat_translations | default([]) + [ snat_translation_directory_defaults | combine(item.1, recursive=True) ] }}"
-  loop: "{{ query('subelements', snat_translation_include_results.results, 'ansible_facts.snat_translation_fragment.bigip_snat_translations', {'skip_missing': True}) }}"
-  vars:
-    snat_translation_settings_path: "{{ item.0.item | regex_replace('/[^/]+$', '/settings.yml') }}"
-    snat_translation_directory_defaults: >-
-      {{
-        (
-          lookup('ansible.builtin.file', snat_translation_settings_path, errors='ignore')
-          | default('{}', true)
-          | from_yaml
-        ).network_snat_translation_defaults | default({})
-      }}
-
-- name: Aggregate SNAT translation deletions with directory settings
-  ansible.builtin.set_fact:
-    bigip_snat_translation_deletions: "{{ bigip_snat_translation_deletions | default([]) + [ (snat_translation_deletion_directory_defaults | combine(item.1, recursive=True)) | combine({'state': 'absent'}, recursive=True) ] }}"
-  loop: "{{ query('subelements', snat_translation_deletion_include_results.results, 'ansible_facts.snat_translation_deletion_fragment.bigip_snat_translations', {'skip_missing': True}) }}"
-  vars:
-    snat_translation_deletion_settings_path: "{{ item.0.item | regex_replace('/[^/]+$', '/settings.yml') }}"
-    snat_translation_deletion_directory_defaults: >-
-      {{
-        (
-          lookup('ansible.builtin.file', snat_translation_deletion_settings_path, errors='ignore')
-          | default('{}', true)
-          | from_yaml
-        ).network_snat_translation_defaults | default({})
-      }}
-
-- name: Discover SNAT pool fragments
-  ansible.builtin.set_fact:
-    snat_pool_files: >-
-      {{
-        lookup(
-          'ansible.builtin.pipe',
-          "find {{ repo_root }}/vars/network/snats -type f -name '*.yml' ! -name 'settings.yml' 2>/dev/null | sort"
-        ).splitlines() | reject('equalto', '') | list
-      }}
-    snat_pool_deletion_files: >-
-      {{
-        lookup(
-          'ansible.builtin.pipe',
-          "find {{ repo_root }}/vars/network/deletions/snats -type f -name '*.yml' ! -name 'settings.yml' 2>/dev/null | sort"
-        ).splitlines() | reject('equalto', '') | list
-      }}
-
-- name: Load SNAT pool fragments
-  ansible.builtin.include_vars:
-    file: "{{ item }}"
-    name: snat_pool_fragment
-  loop: "{{ snat_pool_files }}"
-  register: snat_pool_include_results
-
-- name: Load SNAT pool deletion fragments
-  ansible.builtin.include_vars:
-    file: "{{ item }}"
-    name: snat_pool_deletion_fragment
-  loop: "{{ snat_pool_deletion_files }}"
-  register: snat_pool_deletion_include_results
-
-- name: Aggregate SNAT pools with directory settings
-  ansible.builtin.set_fact:
-    bigip_snat_pools: "{{ bigip_snat_pools | default([]) + [ snat_pool_directory_defaults | combine(item.1, recursive=True) ] }}"
-  loop: "{{ query('subelements', snat_pool_include_results.results, 'ansible_facts.snat_pool_fragment.bigip_snat_pools', {'skip_missing': True}) }}"
-  vars:
-    snat_pool_settings_path: "{{ item.0.item | regex_replace('/[^/]+$', '/settings.yml') }}"
-    snat_pool_directory_defaults: >-
-      {{
-        (
-          lookup('ansible.builtin.file', snat_pool_settings_path, errors='ignore')
-          | default('{}', true)
-          | from_yaml
-        ).network_snat_pool_defaults | default({})
-      }}
-
-- name: Aggregate SNAT pool deletions with directory settings
-  ansible.builtin.set_fact:
-    bigip_snat_pool_deletions: "{{ bigip_snat_pool_deletions | default([]) + [ (snat_pool_deletion_directory_defaults | combine(item.1, recursive=True)) | combine({'state': 'absent'}, recursive=True) ] }}"
-  loop: "{{ query('subelements', snat_pool_deletion_include_results.results, 'ansible_facts.snat_pool_deletion_fragment.bigip_snat_pools', {'skip_missing': True}) }}"
-  vars:
-    snat_pool_deletion_settings_path: "{{ item.0.item | regex_replace('/[^/]+$', '/settings.yml') }}"
-    snat_pool_deletion_directory_defaults: >-
-      {{
-        (
-          lookup('ansible.builtin.file', snat_pool_deletion_settings_path, errors='ignore')
-          | default('{}', true)
-          | from_yaml
-        ).network_snat_pool_defaults | default({})
-      }}
-
-- name: Discover trunk fragments
-  ansible.builtin.set_fact:
-    trunk_files: >-
-      {{
-        lookup(
-          'ansible.builtin.pipe',
-          "find {{ repo_root }}/vars/network/trunks -type f -name '*.yml' ! -name 'settings.yml' 2>/dev/null | sort"
-        ).splitlines() | reject('equalto', '') | list
-      }}
-    trunk_deletion_files: >-
-      {{
-        lookup(
-          'ansible.builtin.pipe',
-          "find {{ repo_root }}/vars/network/deletions/trunks -type f -name '*.yml' ! -name 'settings.yml' 2>/dev/null | sort"
-        ).splitlines() | reject('equalto', '') | list
-      }}
-
-- name: Load trunk fragments
-  ansible.builtin.include_vars:
-    file: "{{ item }}"
-    name: trunk_fragment
-  loop: "{{ trunk_files }}"
-  register: trunk_include_results
-
-- name: Load trunk deletion fragments
-  ansible.builtin.include_vars:
-    file: "{{ item }}"
-    name: trunk_deletion_fragment
-  loop: "{{ trunk_deletion_files }}"
-  register: trunk_deletion_include_results
-
-- name: Aggregate trunks with directory settings
-  ansible.builtin.set_fact:
-    bigip_trunks: "{{ bigip_trunks | default([]) + [ trunk_directory_defaults | combine(item.1, recursive=True) ] }}"
-  loop: "{{ query('subelements', trunk_include_results.results, 'ansible_facts.trunk_fragment.bigip_trunks', {'skip_missing': True}) }}"
-  vars:
-    trunk_settings_path: "{{ item.0.item | regex_replace('/[^/]+$', '/settings.yml') }}"
-    trunk_directory_defaults: >-
-      {{
-        (
-          lookup('ansible.builtin.file', trunk_settings_path, errors='ignore')
-          | default('{}', true)
-          | from_yaml
-        ).network_trunk_defaults | default({})
-      }}
-
-- name: Aggregate trunk deletions with directory settings
-  ansible.builtin.set_fact:
-    bigip_trunk_deletions: "{{ bigip_trunk_deletions | default([]) + [ (trunk_deletion_directory_defaults | combine(item.1, recursive=True)) | combine({'state': 'absent'}, recursive=True) ] }}"
-  loop: "{{ query('subelements', trunk_deletion_include_results.results, 'ansible_facts.trunk_deletion_fragment.bigip_trunks', {'skip_missing': True}) }}"
-  vars:
-    trunk_deletion_settings_path: "{{ item.0.item | regex_replace('/[^/]+$', '/settings.yml') }}"
-    trunk_deletion_directory_defaults: >-
-      {{
-        (
-          lookup('ansible.builtin.file', trunk_deletion_settings_path, errors='ignore')
-          | default('{}', true)
-          | from_yaml
-        ).network_trunk_defaults | default({})
-      }}
-
-- name: Discover NAT fragments
-  ansible.builtin.set_fact:
-    nat_files: >-
-      {{
-        lookup(
-          'ansible.builtin.pipe',
-          "find {{ repo_root }}/vars/network/nats -type f -name '*.yml' ! -name 'settings.yml' 2>/dev/null | sort"
-        ).splitlines() | reject('equalto', '') | list
-      }}
-    nat_deletion_files: >-
-      {{
-        lookup(
-          'ansible.builtin.pipe',
-          "find {{ repo_root }}/vars/network/deletions/nats -type f -name '*.yml' ! -name 'settings.yml' 2>/dev/null | sort"
-        ).splitlines() | reject('equalto', '') | list
-      }}
-
-- name: Load NAT fragments
-  ansible.builtin.include_vars:
-    file: "{{ item }}"
-    name: nat_fragment
-  loop: "{{ nat_files }}"
-  register: nat_include_results
-
-- name: Load NAT deletion fragments
-  ansible.builtin.include_vars:
-    file: "{{ item }}"
-    name: nat_deletion_fragment
-  loop: "{{ nat_deletion_files }}"
-  register: nat_deletion_include_results
-
-- name: Aggregate NATs with directory settings
-  ansible.builtin.set_fact:
-    bigip_nats: "{{ bigip_nats | default([]) + [ nat_directory_defaults | combine(item.1, recursive=True) ] }}"
-  loop: "{{ query('subelements', nat_include_results.results, 'ansible_facts.nat_fragment.bigip_nats', {'skip_missing': True}) }}"
-  vars:
-    nat_settings_path: "{{ item.0.item | regex_replace('/[^/]+$', '/settings.yml') }}"
-    nat_directory_defaults: >-
-      {{
-        (
-          lookup('ansible.builtin.file', nat_settings_path, errors='ignore')
-          | default('{}', true)
-          | from_yaml
-        ).network_nat_defaults | default({})
-      }}
-
-- name: Aggregate NAT deletions with directory settings
-  ansible.builtin.set_fact:
-    bigip_nat_deletions: "{{ bigip_nat_deletions | default([]) + [ (nat_deletion_directory_defaults | combine(item.1, recursive=True)) | combine({'state': 'absent'}, recursive=True) ] }}"
-  loop: "{{ query('subelements', nat_deletion_include_results.results, 'ansible_facts.nat_deletion_fragment.bigip_nats', {'skip_missing': True}) }}"
-  vars:
-    nat_deletion_settings_path: "{{ item.0.item | regex_replace('/[^/]+$', '/settings.yml') }}"
-    nat_deletion_directory_defaults: >-
-      {{
-        (
-          lookup('ansible.builtin.file', nat_deletion_settings_path, errors='ignore')
-          | default('{}', true)
-          | from_yaml
-        ).network_nat_defaults | default({})
-      }}
-
+    fragment_label: NAT
+    source_root: "{{ repo_root }}/vars/network/nats"
+    deletion_root: "{{ repo_root }}/vars/network/deletions/nats"
+    fragment_var_name: nat_fragment
+    fragment_deletion_var_name: nat_deletion_fragment
+    collection_key: bigip_nats
+    defaults_key: network_nat_defaults
+    aggregate_var: bigip_nats
+    deletion_aggregate_var: bigip_nat_deletions

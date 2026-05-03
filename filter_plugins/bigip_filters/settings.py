@@ -24,6 +24,21 @@ def construct_ansible_tag(loader, tag_suffix, node):
 AnsibleVarLoader.add_multi_constructor("!", construct_ansible_tag)
 
 
+def discover_yaml_fragments(root_path):
+    if root_path in (None, ""):
+        return []
+
+    root_dir = Path(str(root_path))
+    if not root_dir.exists():
+        return []
+
+    return sorted(
+        str(path)
+        for path in root_dir.rglob("*.yml")
+        if path.is_file() and path.name != "settings.yml"
+    )
+
+
 def load_settings_hierarchy(source_file, settings_root):
     if source_file in (None, "") or settings_root in (None, ""):
         return {}
@@ -54,3 +69,37 @@ def load_settings_hierarchy(source_file, settings_root):
         if isinstance(payload, dict):
             merged = deep_merge_dicts(merged, payload)
     return merged
+
+
+def aggregate_settings_fragments(
+    include_results,
+    settings_root,
+    fragment_var_name,
+    collection_key,
+    defaults_key=None,
+    absent=False,
+):
+    aggregated = []
+
+    for result in include_results or []:
+        if not isinstance(result, dict):
+            continue
+
+        source_file = result.get("item")
+        ansible_facts = result.get("ansible_facts") or {}
+        fragment_payload = ansible_facts.get(fragment_var_name) or {}
+        fragment_items = fragment_payload.get(collection_key) or []
+        settings_payload = load_settings_hierarchy(source_file, settings_root)
+        directory_defaults = (
+            settings_payload.get(defaults_key, {}) if defaults_key else {}
+        )
+
+        for item in fragment_items:
+            if not isinstance(item, dict):
+                continue
+            merged = deep_merge_dicts(directory_defaults, item)
+            if absent:
+                merged = deep_merge_dicts(merged, {"state": "absent"})
+            aggregated.append(merged)
+
+    return aggregated

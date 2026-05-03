@@ -63,6 +63,7 @@ These are also binding. A feature is not complete just because syntax-check pass
   - keep `tasks/manage.yml` as delete-first then apply-second unless ROADMAP explicitly documents an exception
   - keep example var files, docs, and helper tools aligned with the canonical playbook behavior
   - keep top-level `prep.yml` files as documented orchestrators when prep logic grows; split heavy discovery/loading/classification/compiler flows into focused `prep/*.yml` snippets
+  - when prep logic is the same across domains, prefer shared prep snippets under `playbooks/shared/prep/` plus shared Python-backed helpers under `filter_plugins/bigip_filters/` instead of re-implementing the pattern in every domain
   - document in top-level `prep.yml` comments which major runtime facts or canonical sets the prep flow produces
 
 - Preserve the separation between canonical runtime objects and higher-level convenience authoring:
@@ -250,7 +251,8 @@ These updates are **required after every feature change** (new object types, new
 - keep canonical playbooks under `playbooks/` and keep root-level wrapper playbooks working during transitions
 - default to the split canonical playbook model:
   - `playbooks/<domain>.yml` — entrypoint
-  - `playbooks/<domain>/prep.yml` — discovery, `include_vars`, defaults loading, aggregation
+  - `playbooks/<domain>/prep.yml` — discovery/load/build orchestration
+  - `playbooks/shared/prep/*.yml` — shared fragment discovery, settings-aware aggregation, and present/delete classification where the pattern is common
   - `playbooks/<domain>/tasks/manage.yml` — task ordering
   - `playbooks/<domain>/tasks/delete.yml` — destructive tasks
   - `playbooks/<domain>/tasks/apply.yml` — present-state tasks

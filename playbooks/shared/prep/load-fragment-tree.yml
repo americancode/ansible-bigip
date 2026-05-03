@@ -1,0 +1,42 @@
+- name: Discover {{ fragment_label }} fragments
+  ansible.builtin.set_fact:
+    _prep_fragment_files: "{{ source_root | discover_yaml_fragments }}"
+    _prep_fragment_deletion_files: "{{ deletion_root | default('') | discover_yaml_fragments }}"
+
+- name: Load {{ fragment_label }} fragments
+  ansible.builtin.include_vars:
+    file: "{{ item }}"
+    name: "{{ fragment_var_name }}"
+  loop: "{{ _prep_fragment_files }}"
+  register: _prep_fragment_include_results
+
+- name: Load {{ fragment_label }} deletion fragments
+  ansible.builtin.include_vars:
+    file: "{{ item }}"
+    name: "{{ fragment_deletion_var_name | default(fragment_var_name) }}"
+  loop: "{{ _prep_fragment_deletion_files }}"
+  register: _prep_fragment_deletion_include_results
+
+- name: Build {{ fragment_label }} runtime collections
+  ansible.builtin.set_fact:
+    "{{ aggregate_var }}": >-
+      {{
+        (_prep_fragment_include_results.results | default([]))
+        | aggregate_settings_fragments(
+            source_root,
+            fragment_var_name,
+            collection_key,
+            defaults_key
+          )
+      }}
+    "{{ deletion_aggregate_var }}": >-
+      {{
+        (_prep_fragment_deletion_include_results.results | default([]))
+        | aggregate_settings_fragments(
+            deletion_root | default(''),
+            fragment_deletion_var_name | default(fragment_var_name),
+            collection_key,
+            defaults_key,
+            True
+          )
+      }}

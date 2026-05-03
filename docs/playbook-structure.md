@@ -20,6 +20,7 @@ Canonical playbooks use a consistent split so the entrypoint stays small and the
 - `playbooks/<domain>.yml` is the canonical entrypoint
 - `playbooks/<domain>/prep.yml` is the documented orchestrator for prep flow and should say which major facts or canonical sets it produces
 - when a domain has larger compiler or normalization flows, `prep.yml` may import focused prep snippets such as `playbooks/<domain>/prep/*.yml`
+- repeated fragment discovery, settings-aware aggregation, and present/delete classification should be centralized under `playbooks/shared/prep/*.yml` and backed by shared filters in `filter_plugins/bigip_filters/` instead of being rewritten by hand in each domain
 - common split points are `load-*.yml`, `build-*.yml`, and `compile-*.yml`
 - `playbooks/<domain>/tasks/manage.yml` orchestrates task execution order
 - `playbooks/<domain>/tasks/delete.yml` contains destructive tasks
@@ -30,6 +31,13 @@ This pattern is the default for `bootstrap`, `network`, `system`, `ha`, `tls`, `
 When a domain grows a real intent layer, keep those prep snippets under `playbooks/<domain>/prep/intents/<category>/...` instead of leaving them mixed into the prep root.
 
 When Python-backed prep helpers grow beyond a small handful of filters, keep `filter_plugins/bigip_var_filters.py` as the thin Ansible entrypoint and split the implementation by concern under `filter_plugins/bigip_filters/`.
+
+The current preferred split is:
+
+- domain `prep.yml` as the readable orchestrator
+- `playbooks/shared/prep/load-fragment-tree.yml` for recursive var-tree discovery and settings-aware aggregation
+- `playbooks/shared/prep/classify-operations.yml` for publishing `*_present` and `*_delete` collections from the canonical object lists
+- domain-specific `prep/*.yml` snippets only where the prep flow is genuinely specialized, such as intent compilation or lookup-building
 
 ## Path Handling
 

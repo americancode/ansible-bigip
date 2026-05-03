@@ -1,305 +1,64 @@
-- name: Discover TLS key fragments
-  ansible.builtin.set_fact:
-    tls_key_files: >-
-      {{
-        lookup(
-          'ansible.builtin.pipe',
-          "find {{ repo_root }}/vars/tls/keys -type f -name '*.yml' ! -name 'settings.yml' 2>/dev/null | sort"
-        ).splitlines() | reject('equalto', '') | list
-      }}
-    tls_key_deletion_files: >-
-      {{
-        lookup(
-          'ansible.builtin.pipe',
-          "find {{ repo_root }}/vars/tls/deletions/keys -type f -name '*.yml' ! -name 'settings.yml' 2>/dev/null | sort"
-        ).splitlines() | reject('equalto', '') | list
-      }}
-
-- name: Load TLS key fragments
-  ansible.builtin.include_vars:
-    file: "{{ item }}"
-    name: tls_key_fragment
-  loop: "{{ tls_key_files }}"
-  register: tls_key_include_results
-
-- name: Load TLS key deletion fragments
-  ansible.builtin.include_vars:
-    file: "{{ item }}"
-    name: tls_key_deletion_fragment
-  loop: "{{ tls_key_deletion_files }}"
-  register: tls_key_deletion_include_results
-
-- name: Aggregate TLS keys with directory settings
-  ansible.builtin.set_fact:
-    tls_keys: "{{ tls_keys | default([]) + [ tls_key_directory_defaults | combine(item.1, recursive=True) ] }}"
-  loop: "{{ query('subelements', tls_key_include_results.results, 'ansible_facts.tls_key_fragment.tls_keys', {'skip_missing': True}) }}"
+- name: Load TLS key fragments into tls_keys/tls_key_deletions
+  ansible.builtin.import_tasks: "{{ playbook_dir }}/shared/prep/load-fragment-tree.yml"
   vars:
-    tls_key_settings_path: "{{ item.0.item | regex_replace('/[^/]+$', '/settings.yml') }}"
-    tls_key_directory_defaults: >-
-      {{
-        (
-          lookup('ansible.builtin.file', tls_key_settings_path, errors='ignore')
-          | default('{}', true)
-          | from_yaml
-        ).tls_key_defaults | default({})
-      }}
+    fragment_label: TLS key
+    source_root: "{{ repo_root }}/vars/tls/keys"
+    deletion_root: "{{ repo_root }}/vars/tls/deletions/keys"
+    fragment_var_name: tls_key_fragment
+    fragment_deletion_var_name: tls_key_deletion_fragment
+    collection_key: tls_keys
+    defaults_key: tls_key_defaults
+    aggregate_var: tls_keys
+    deletion_aggregate_var: tls_key_deletions
 
-- name: Aggregate TLS key deletions with directory settings
-  ansible.builtin.set_fact:
-    tls_key_deletions: "{{ tls_key_deletions | default([]) + [ (tls_key_deletion_directory_defaults | combine(item.1, recursive=True)) | combine({'state': 'absent'}, recursive=True) ] }}"
-  loop: "{{ query('subelements', tls_key_deletion_include_results.results, 'ansible_facts.tls_key_deletion_fragment.tls_keys', {'skip_missing': True}) }}"
+- name: Load TLS certificate fragments into tls_certificates/tls_certificate_deletions
+  ansible.builtin.import_tasks: "{{ playbook_dir }}/shared/prep/load-fragment-tree.yml"
   vars:
-    tls_key_deletion_settings_path: "{{ item.0.item | regex_replace('/[^/]+$', '/settings.yml') }}"
-    tls_key_deletion_directory_defaults: >-
-      {{
-        (
-          lookup('ansible.builtin.file', tls_key_deletion_settings_path, errors='ignore')
-          | default('{}', true)
-          | from_yaml
-        ).tls_key_defaults | default({})
-      }}
+    fragment_label: TLS certificate
+    source_root: "{{ repo_root }}/vars/tls/certificates"
+    deletion_root: "{{ repo_root }}/vars/tls/deletions/certificates"
+    fragment_var_name: tls_certificate_fragment
+    fragment_deletion_var_name: tls_certificate_deletion_fragment
+    collection_key: tls_certificates
+    defaults_key: tls_certificate_defaults
+    aggregate_var: tls_certificates
+    deletion_aggregate_var: tls_certificate_deletions
 
-- name: Discover TLS certificate fragments
-  ansible.builtin.set_fact:
-    tls_certificate_files: >-
-      {{
-        lookup(
-          'ansible.builtin.pipe',
-          "find {{ repo_root }}/vars/tls/certificates -type f -name '*.yml' ! -name 'settings.yml' 2>/dev/null | sort"
-        ).splitlines() | reject('equalto', '') | list
-      }}
-    tls_certificate_deletion_files: >-
-      {{
-        lookup(
-          'ansible.builtin.pipe',
-          "find {{ repo_root }}/vars/tls/deletions/certificates -type f -name '*.yml' ! -name 'settings.yml' 2>/dev/null | sort"
-        ).splitlines() | reject('equalto', '') | list
-      }}
-
-- name: Load TLS certificate fragments
-  ansible.builtin.include_vars:
-    file: "{{ item }}"
-    name: tls_certificate_fragment
-  loop: "{{ tls_certificate_files }}"
-  register: tls_certificate_include_results
-
-- name: Load TLS certificate deletion fragments
-  ansible.builtin.include_vars:
-    file: "{{ item }}"
-    name: tls_certificate_deletion_fragment
-  loop: "{{ tls_certificate_deletion_files }}"
-  register: tls_certificate_deletion_include_results
-
-- name: Aggregate TLS certificates with directory settings
-  ansible.builtin.set_fact:
-    tls_certificates: "{{ tls_certificates | default([]) + [ tls_certificate_directory_defaults | combine(item.1, recursive=True) ] }}"
-  loop: "{{ query('subelements', tls_certificate_include_results.results, 'ansible_facts.tls_certificate_fragment.tls_certificates', {'skip_missing': True}) }}"
+- name: Load TLS CA bundle fragments into tls_ca_bundles/tls_ca_bundle_deletions
+  ansible.builtin.import_tasks: "{{ playbook_dir }}/shared/prep/load-fragment-tree.yml"
   vars:
-    tls_certificate_settings_path: "{{ item.0.item | regex_replace('/[^/]+$', '/settings.yml') }}"
-    tls_certificate_directory_defaults: >-
-      {{
-        (
-          lookup('ansible.builtin.file', tls_certificate_settings_path, errors='ignore')
-          | default('{}', true)
-          | from_yaml
-        ).tls_certificate_defaults | default({})
-      }}
+    fragment_label: TLS CA bundle
+    source_root: "{{ repo_root }}/vars/tls/ca_bundles"
+    deletion_root: "{{ repo_root }}/vars/tls/deletions/ca_bundles"
+    fragment_var_name: tls_ca_bundle_fragment
+    fragment_deletion_var_name: tls_ca_bundle_deletion_fragment
+    collection_key: tls_ca_bundles
+    defaults_key: tls_ca_bundle_defaults
+    aggregate_var: tls_ca_bundles
+    deletion_aggregate_var: tls_ca_bundle_deletions
 
-- name: Aggregate TLS certificate deletions with directory settings
-  ansible.builtin.set_fact:
-    tls_certificate_deletions: "{{ tls_certificate_deletions | default([]) + [ (tls_certificate_deletion_directory_defaults | combine(item.1, recursive=True)) | combine({'state': 'absent'}, recursive=True) ] }}"
-  loop: "{{ query('subelements', tls_certificate_deletion_include_results.results, 'ansible_facts.tls_certificate_deletion_fragment.tls_certificates', {'skip_missing': True}) }}"
+- name: Load TLS client SSL profile fragments into tls_client_ssl_profiles/tls_client_ssl_profile_deletions
+  ansible.builtin.import_tasks: "{{ playbook_dir }}/shared/prep/load-fragment-tree.yml"
   vars:
-    tls_certificate_deletion_settings_path: "{{ item.0.item | regex_replace('/[^/]+$', '/settings.yml') }}"
-    tls_certificate_deletion_directory_defaults: >-
-      {{
-        (
-          lookup('ansible.builtin.file', tls_certificate_deletion_settings_path, errors='ignore')
-          | default('{}', true)
-          | from_yaml
-        ).tls_certificate_defaults | default({})
-      }}
+    fragment_label: TLS client SSL profile
+    source_root: "{{ repo_root }}/vars/tls/client_ssl_profiles"
+    deletion_root: "{{ repo_root }}/vars/tls/deletions/client_ssl_profiles"
+    fragment_var_name: tls_client_ssl_profile_fragment
+    fragment_deletion_var_name: tls_client_ssl_profile_deletion_fragment
+    collection_key: tls_client_ssl_profiles
+    defaults_key: tls_client_ssl_profile_defaults
+    aggregate_var: tls_client_ssl_profiles
+    deletion_aggregate_var: tls_client_ssl_profile_deletions
 
-- name: Discover TLS CA bundle fragments
-  ansible.builtin.set_fact:
-    tls_ca_bundle_files: >-
-      {{
-        lookup(
-          'ansible.builtin.pipe',
-          "find {{ repo_root }}/vars/tls/ca_bundles -type f -name '*.yml' ! -name 'settings.yml' 2>/dev/null | sort"
-        ).splitlines() | reject('equalto', '') | list
-      }}
-    tls_ca_bundle_deletion_files: >-
-      {{
-        lookup(
-          'ansible.builtin.pipe',
-          "find {{ repo_root }}/vars/tls/deletions/ca_bundles -type f -name '*.yml' ! -name 'settings.yml' 2>/dev/null | sort"
-        ).splitlines() | reject('equalto', '') | list
-      }}
-
-- name: Load TLS CA bundle fragments
-  ansible.builtin.include_vars:
-    file: "{{ item }}"
-    name: tls_ca_bundle_fragment
-  loop: "{{ tls_ca_bundle_files }}"
-  register: tls_ca_bundle_include_results
-
-- name: Load TLS CA bundle deletion fragments
-  ansible.builtin.include_vars:
-    file: "{{ item }}"
-    name: tls_ca_bundle_deletion_fragment
-  loop: "{{ tls_ca_bundle_deletion_files }}"
-  register: tls_ca_bundle_deletion_include_results
-
-- name: Aggregate TLS CA bundles with directory settings
-  ansible.builtin.set_fact:
-    tls_ca_bundles: "{{ tls_ca_bundles | default([]) + [ tls_ca_bundle_directory_defaults | combine(item.1, recursive=True) ] }}"
-  loop: "{{ query('subelements', tls_ca_bundle_include_results.results, 'ansible_facts.tls_ca_bundle_fragment.tls_ca_bundles', {'skip_missing': True}) }}"
+- name: Load TLS server SSL profile fragments into tls_server_ssl_profiles/tls_server_ssl_profile_deletions
+  ansible.builtin.import_tasks: "{{ playbook_dir }}/shared/prep/load-fragment-tree.yml"
   vars:
-    tls_ca_bundle_settings_path: "{{ item.0.item | regex_replace('/[^/]+$', '/settings.yml') }}"
-    tls_ca_bundle_directory_defaults: >-
-      {{
-        (
-          lookup('ansible.builtin.file', tls_ca_bundle_settings_path, errors='ignore')
-          | default('{}', true)
-          | from_yaml
-        ).tls_ca_bundle_defaults | default({})
-      }}
-
-- name: Aggregate TLS CA bundle deletions with directory settings
-  ansible.builtin.set_fact:
-    tls_ca_bundle_deletions: "{{ tls_ca_bundle_deletions | default([]) + [ (tls_ca_bundle_deletion_directory_defaults | combine(item.1, recursive=True)) | combine({'state': 'absent'}, recursive=True) ] }}"
-  loop: "{{ query('subelements', tls_ca_bundle_deletion_include_results.results, 'ansible_facts.tls_ca_bundle_deletion_fragment.tls_ca_bundles', {'skip_missing': True}) }}"
-  vars:
-    tls_ca_bundle_deletion_settings_path: "{{ item.0.item | regex_replace('/[^/]+$', '/settings.yml') }}"
-    tls_ca_bundle_deletion_directory_defaults: >-
-      {{
-        (
-          lookup('ansible.builtin.file', tls_ca_bundle_deletion_settings_path, errors='ignore')
-          | default('{}', true)
-          | from_yaml
-        ).tls_ca_bundle_defaults | default({})
-      }}
-
-- name: Discover TLS client SSL profile fragments
-  ansible.builtin.set_fact:
-    tls_client_ssl_profile_files: >-
-      {{
-        lookup(
-          'ansible.builtin.pipe',
-          "find {{ repo_root }}/vars/tls/client_ssl_profiles -type f -name '*.yml' ! -name 'settings.yml' 2>/dev/null | sort"
-        ).splitlines() | reject('equalto', '') | list
-      }}
-    tls_client_ssl_profile_deletion_files: >-
-      {{
-        lookup(
-          'ansible.builtin.pipe',
-          "find {{ repo_root }}/vars/tls/deletions/client_ssl_profiles -type f -name '*.yml' ! -name 'settings.yml' 2>/dev/null | sort"
-        ).splitlines() | reject('equalto', '') | list
-      }}
-
-- name: Load TLS client SSL profile fragments
-  ansible.builtin.include_vars:
-    file: "{{ item }}"
-    name: tls_client_ssl_profile_fragment
-  loop: "{{ tls_client_ssl_profile_files }}"
-  register: tls_client_ssl_profile_include_results
-
-- name: Load TLS client SSL profile deletion fragments
-  ansible.builtin.include_vars:
-    file: "{{ item }}"
-    name: tls_client_ssl_profile_deletion_fragment
-  loop: "{{ tls_client_ssl_profile_deletion_files }}"
-  register: tls_client_ssl_profile_deletion_include_results
-
-- name: Aggregate TLS client SSL profiles with directory settings
-  ansible.builtin.set_fact:
-    tls_client_ssl_profiles: "{{ tls_client_ssl_profiles | default([]) + [ tls_client_ssl_profile_directory_defaults | combine(item.1, recursive=True) ] }}"
-  loop: "{{ query('subelements', tls_client_ssl_profile_include_results.results, 'ansible_facts.tls_client_ssl_profile_fragment.tls_client_ssl_profiles', {'skip_missing': True}) }}"
-  vars:
-    tls_client_ssl_profile_settings_path: "{{ item.0.item | regex_replace('/[^/]+$', '/settings.yml') }}"
-    tls_client_ssl_profile_directory_defaults: >-
-      {{
-        (
-          lookup('ansible.builtin.file', tls_client_ssl_profile_settings_path, errors='ignore')
-          | default('{}', true)
-          | from_yaml
-        ).tls_client_ssl_profile_defaults | default({})
-      }}
-
-- name: Aggregate TLS client SSL profile deletions with directory settings
-  ansible.builtin.set_fact:
-    tls_client_ssl_profile_deletions: "{{ tls_client_ssl_profile_deletions | default([]) + [ (tls_client_ssl_profile_deletion_directory_defaults | combine(item.1, recursive=True)) | combine({'state': 'absent'}, recursive=True) ] }}"
-  loop: "{{ query('subelements', tls_client_ssl_profile_deletion_include_results.results, 'ansible_facts.tls_client_ssl_profile_deletion_fragment.tls_client_ssl_profiles', {'skip_missing': True}) }}"
-  vars:
-    tls_client_ssl_profile_deletion_settings_path: "{{ item.0.item | regex_replace('/[^/]+$', '/settings.yml') }}"
-    tls_client_ssl_profile_deletion_directory_defaults: >-
-      {{
-        (
-          lookup('ansible.builtin.file', tls_client_ssl_profile_deletion_settings_path, errors='ignore')
-          | default('{}', true)
-          | from_yaml
-        ).tls_client_ssl_profile_defaults | default({})
-      }}
-
-- name: Discover TLS server SSL profile fragments
-  ansible.builtin.set_fact:
-    tls_server_ssl_profile_files: >-
-      {{
-        lookup(
-          'ansible.builtin.pipe',
-          "find {{ repo_root }}/vars/tls/server_ssl_profiles -type f -name '*.yml' ! -name 'settings.yml' 2>/dev/null | sort"
-        ).splitlines() | reject('equalto', '') | list
-      }}
-    tls_server_ssl_profile_deletion_files: >-
-      {{
-        lookup(
-          'ansible.builtin.pipe',
-          "find {{ repo_root }}/vars/tls/deletions/server_ssl_profiles -type f -name '*.yml' ! -name 'settings.yml' 2>/dev/null | sort"
-        ).splitlines() | reject('equalto', '') | list
-      }}
-
-- name: Load TLS server SSL profile fragments
-  ansible.builtin.include_vars:
-    file: "{{ item }}"
-    name: tls_server_ssl_profile_fragment
-  loop: "{{ tls_server_ssl_profile_files }}"
-  register: tls_server_ssl_profile_include_results
-
-- name: Load TLS server SSL profile deletion fragments
-  ansible.builtin.include_vars:
-    file: "{{ item }}"
-    name: tls_server_ssl_profile_deletion_fragment
-  loop: "{{ tls_server_ssl_profile_deletion_files }}"
-  register: tls_server_ssl_profile_deletion_include_results
-
-- name: Aggregate TLS server SSL profiles with directory settings
-  ansible.builtin.set_fact:
-    tls_server_ssl_profiles: "{{ tls_server_ssl_profiles | default([]) + [ tls_server_ssl_profile_directory_defaults | combine(item.1, recursive=True) ] }}"
-  loop: "{{ query('subelements', tls_server_ssl_profile_include_results.results, 'ansible_facts.tls_server_ssl_profile_fragment.tls_server_ssl_profiles', {'skip_missing': True}) }}"
-  vars:
-    tls_server_ssl_profile_settings_path: "{{ item.0.item | regex_replace('/[^/]+$', '/settings.yml') }}"
-    tls_server_ssl_profile_directory_defaults: >-
-      {{
-        (
-          lookup('ansible.builtin.file', tls_server_ssl_profile_settings_path, errors='ignore')
-          | default('{}', true)
-          | from_yaml
-        ).tls_server_ssl_profile_defaults | default({})
-      }}
-
-- name: Aggregate TLS server SSL profile deletions with directory settings
-  ansible.builtin.set_fact:
-    tls_server_ssl_profile_deletions: "{{ tls_server_ssl_profile_deletions | default([]) + [ (tls_server_ssl_profile_deletion_directory_defaults | combine(item.1, recursive=True)) | combine({'state': 'absent'}, recursive=True) ] }}"
-  loop: "{{ query('subelements', tls_server_ssl_profile_deletion_include_results.results, 'ansible_facts.tls_server_ssl_profile_deletion_fragment.tls_server_ssl_profiles', {'skip_missing': True}) }}"
-  vars:
-    tls_server_ssl_profile_deletion_settings_path: "{{ item.0.item | regex_replace('/[^/]+$', '/settings.yml') }}"
-    tls_server_ssl_profile_deletion_directory_defaults: >-
-      {{
-        (
-          lookup('ansible.builtin.file', tls_server_ssl_profile_deletion_settings_path, errors='ignore')
-          | default('{}', true)
-          | from_yaml
-        ).tls_server_ssl_profile_defaults | default({})
-      }}
-
+    fragment_label: TLS server SSL profile
+    source_root: "{{ repo_root }}/vars/tls/server_ssl_profiles"
+    deletion_root: "{{ repo_root }}/vars/tls/deletions/server_ssl_profiles"
+    fragment_var_name: tls_server_ssl_profile_fragment
+    fragment_deletion_var_name: tls_server_ssl_profile_deletion_fragment
+    collection_key: tls_server_ssl_profiles
+    defaults_key: tls_server_ssl_profile_defaults
+    aggregate_var: tls_server_ssl_profiles
+    deletion_aggregate_var: tls_server_ssl_profile_deletions

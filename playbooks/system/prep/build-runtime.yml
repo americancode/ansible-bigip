@@ -1,206 +1,80 @@
-- name: Classify system DNS operations
-  ansible.builtin.set_fact:
-    system_dns_delete: >-
-      {{
-        ((system_dns | default([])) + (system_dns_deletions | default([])))
-        | selectattr('state', 'defined')
-        | selectattr('state', 'equalto', 'absent')
-        | list
-      }}
-    system_dns_present: >-
-      {{
-        (system_dns | default([]))
-        | rejectattr('state', 'defined')
-        | list
-        +
-        (
-          (system_dns | default([]))
-          | selectattr('state', 'defined')
-          | rejectattr('state', 'equalto', 'absent')
-          | list
-        )
-      }}
+- name: Classify system DNS operations into system_dns_present/system_dns_delete
+  ansible.builtin.import_tasks: "{{ playbook_dir }}/shared/prep/classify-operations.yml"
+  vars:
+    object_label: system DNS
+    active_objects: "{{ system_dns | default([]) }}"
+    deletion_objects: "{{ system_dns_deletions | default([]) }}"
+    delete_var: system_dns_delete
+    present_var: system_dns_present
 
-- name: Classify system NTP operations
-  ansible.builtin.set_fact:
-    system_ntp_delete: >-
-      {{
-        ((system_ntp | default([])) + (system_ntp_deletions | default([])))
-        | selectattr('state', 'defined')
-        | selectattr('state', 'equalto', 'absent')
-        | list
-      }}
-    system_ntp_present: >-
-      {{
-        (system_ntp | default([]))
-        | rejectattr('state', 'defined')
-        | list
-        +
-        (
-          (system_ntp | default([]))
-          | selectattr('state', 'defined')
-          | rejectattr('state', 'equalto', 'absent')
-          | list
-        )
-      }}
+- name: Classify system NTP operations into system_ntp_present/system_ntp_delete
+  ansible.builtin.import_tasks: "{{ playbook_dir }}/shared/prep/classify-operations.yml"
+  vars:
+    object_label: system NTP
+    active_objects: "{{ system_ntp | default([]) }}"
+    deletion_objects: "{{ system_ntp_deletions | default([]) }}"
+    delete_var: system_ntp_delete
+    present_var: system_ntp_present
 
-- name: Classify system provisioning operations
-  ansible.builtin.set_fact:
-    system_provisioning_delete: >-
-      {{
-        ((system_provisioning | default([])) + (system_provisioning_deletions | default([])))
-        | selectattr('state', 'defined')
-        | selectattr('state', 'equalto', 'absent')
-        | list
-      }}
-    system_provisioning_present: >-
-      {{
-        (system_provisioning | default([]))
-        | rejectattr('state', 'defined')
-        | list
-        +
-        (
-          (system_provisioning | default([]))
-          | selectattr('state', 'defined')
-          | rejectattr('state', 'equalto', 'absent')
-          | list
-        )
-      }}
+- name: Classify system provisioning operations into system_provisioning_present/system_provisioning_delete
+  ansible.builtin.import_tasks: "{{ playbook_dir }}/shared/prep/classify-operations.yml"
+  vars:
+    object_label: system provisioning
+    active_objects: "{{ system_provisioning | default([]) }}"
+    deletion_objects: "{{ system_provisioning_deletions | default([]) }}"
+    delete_var: system_provisioning_delete
+    present_var: system_provisioning_present
 
-- name: Classify system user operations
-  ansible.builtin.set_fact:
-    system_users_delete: >-
-      {{
-        ((system_users | default([])) + (system_user_deletions | default([])))
-        | selectattr('state', 'defined')
-        | selectattr('state', 'equalto', 'absent')
-        | list
-      }}
-    system_users_present: >-
-      {{
-        (system_users | default([]))
-        | rejectattr('state', 'defined')
-        | list
-        +
-        (
-          (system_users | default([]))
-          | selectattr('state', 'defined')
-          | rejectattr('state', 'equalto', 'absent')
-          | list
-        )
-      }}
+- name: Classify system user operations into system_users_present/system_users_delete
+  ansible.builtin.import_tasks: "{{ playbook_dir }}/shared/prep/classify-operations.yml"
+  vars:
+    object_label: system user
+    active_objects: "{{ system_users | default([]) }}"
+    deletion_objects: "{{ system_user_deletions | default([]) }}"
+    delete_var: system_users_delete
+    present_var: system_users_present
 
-- name: Classify system LDAP auth operations
-  ansible.builtin.set_fact:
-    system_auth_ldap_delete: >-
-      {{
-        ((system_auth_ldap | default([])) + (system_auth_ldap_deletions | default([])))
-        | selectattr('state', 'defined')
-        | selectattr('state', 'equalto', 'absent')
-        | list
-      }}
-    system_auth_ldap_present: >-
-      {{
-        (system_auth_ldap | default([]))
-        | rejectattr('state', 'defined')
-        | list
-        +
-        (
-          (system_auth_ldap | default([]))
-          | selectattr('state', 'defined')
-          | rejectattr('state', 'equalto', 'absent')
-          | list
-        )
-      }}
+- name: Classify system LDAP auth operations into system_auth_ldap_present/system_auth_ldap_delete
+  ansible.builtin.import_tasks: "{{ playbook_dir }}/shared/prep/classify-operations.yml"
+  vars:
+    object_label: system LDAP auth
+    active_objects: "{{ system_auth_ldap | default([]) }}"
+    deletion_objects: "{{ system_auth_ldap_deletions | default([]) }}"
+    delete_var: system_auth_ldap_delete
+    present_var: system_auth_ldap_present
 
-- name: Classify system TACACS auth operations
-  ansible.builtin.set_fact:
-    system_auth_tacacs_delete: >-
-      {{
-        ((system_auth_tacacs | default([])) + (system_auth_tacacs_deletions | default([])))
-        | selectattr('state', 'defined')
-        | selectattr('state', 'equalto', 'absent')
-        | list
-      }}
-    system_auth_tacacs_present: >-
-      {{
-        (system_auth_tacacs | default([]))
-        | rejectattr('state', 'defined')
-        | list
-        +
-        (
-          (system_auth_tacacs | default([]))
-          | selectattr('state', 'defined')
-          | rejectattr('state', 'equalto', 'absent')
-          | list
-        )
-      }}
+- name: Classify system TACACS auth operations into system_auth_tacacs_present/system_auth_tacacs_delete
+  ansible.builtin.import_tasks: "{{ playbook_dir }}/shared/prep/classify-operations.yml"
+  vars:
+    object_label: system TACACS auth
+    active_objects: "{{ system_auth_tacacs | default([]) }}"
+    deletion_objects: "{{ system_auth_tacacs_deletions | default([]) }}"
+    delete_var: system_auth_tacacs_delete
+    present_var: system_auth_tacacs_present
 
-- name: Classify system RADIUS server operations
-  ansible.builtin.set_fact:
-    system_auth_radius_servers_delete: >-
-      {{
-        ((system_auth_radius_servers | default([])) + (system_auth_radius_server_deletions | default([])))
-        | selectattr('state', 'defined')
-        | selectattr('state', 'equalto', 'absent')
-        | list
-      }}
-    system_auth_radius_servers_present: >-
-      {{
-        (system_auth_radius_servers | default([]))
-        | rejectattr('state', 'defined')
-        | list
-        +
-        (
-          (system_auth_radius_servers | default([]))
-          | selectattr('state', 'defined')
-          | rejectattr('state', 'equalto', 'absent')
-          | list
-        )
-      }}
+- name: Classify system RADIUS server operations into system_auth_radius_servers_present/system_auth_radius_servers_delete
+  ansible.builtin.import_tasks: "{{ playbook_dir }}/shared/prep/classify-operations.yml"
+  vars:
+    object_label: system RADIUS server
+    active_objects: "{{ system_auth_radius_servers | default([]) }}"
+    deletion_objects: "{{ system_auth_radius_server_deletions | default([]) }}"
+    delete_var: system_auth_radius_servers_delete
+    present_var: system_auth_radius_servers_present
 
-- name: Classify system RADIUS auth operations
-  ansible.builtin.set_fact:
-    system_auth_radius_delete: >-
-      {{
-        ((system_auth_radius | default([])) + (system_auth_radius_deletions | default([])))
-        | selectattr('state', 'defined')
-        | selectattr('state', 'equalto', 'absent')
-        | list
-      }}
-    system_auth_radius_present: >-
-      {{
-        (system_auth_radius | default([]))
-        | rejectattr('state', 'defined')
-        | list
-        +
-        (
-          (system_auth_radius | default([]))
-          | selectattr('state', 'defined')
-          | rejectattr('state', 'equalto', 'absent')
-          | list
-        )
-      }}
+- name: Classify system RADIUS auth operations into system_auth_radius_present/system_auth_radius_delete
+  ansible.builtin.import_tasks: "{{ playbook_dir }}/shared/prep/classify-operations.yml"
+  vars:
+    object_label: system RADIUS auth
+    active_objects: "{{ system_auth_radius | default([]) }}"
+    deletion_objects: "{{ system_auth_radius_deletions | default([]) }}"
+    delete_var: system_auth_radius_delete
+    present_var: system_auth_radius_present
 
-- name: Classify system login banner operations
-  ansible.builtin.set_fact:
-    system_login_banner_delete: >-
-      {{
-        ((system_login_banners | default([])) + (system_login_banner_deletions | default([])))
-        | selectattr('state', 'defined')
-        | selectattr('state', 'equalto', 'absent')
-        | list
-      }}
-    system_login_banner_present: >-
-      {{
-        (system_login_banners | default([]))
-        | rejectattr('state', 'defined')
-        | list
-        +
-        (
-          (system_login_banners | default([]))
-          | selectattr('state', 'defined')
-          | rejectattr('state', 'equalto', 'absent')
-          | list
-        )
-      }}
+- name: Classify system login banner operations into system_login_banner_present/system_login_banner_delete
+  ansible.builtin.import_tasks: "{{ playbook_dir }}/shared/prep/classify-operations.yml"
+  vars:
+    object_label: system login banner
+    active_objects: "{{ system_login_banners | default([]) }}"
+    deletion_objects: "{{ system_login_banner_deletions | default([]) }}"
+    delete_var: system_login_banner_delete
+    present_var: system_login_banner_present

@@ -1,122 +1,25 @@
-- name: Discover WAF policy fragments
-  ansible.builtin.set_fact:
-    waf_policy_files: >-
-      {{
-        lookup(
-          'ansible.builtin.pipe',
-          "find {{ repo_root }}/vars/security/waf/policies -type f -name '*.yml' ! -name 'settings.yml' 2>/dev/null | sort"
-        ).splitlines() | reject('equalto', '') | list
-      }}
-    waf_policy_deletion_files: >-
-      {{
-        lookup(
-          'ansible.builtin.pipe',
-          "find {{ repo_root }}/vars/security/waf/deletions/policies -type f -name '*.yml' ! -name 'settings.yml' 2>/dev/null | sort"
-        ).splitlines() | reject('equalto', '') | list
-      }}
-
-- name: Load WAF policy fragments
-  ansible.builtin.include_vars:
-    file: "{{ item }}"
-    name: waf_policy_fragment
-  loop: "{{ waf_policy_files }}"
-  register: waf_policy_include_results
-
-- name: Load WAF policy deletion fragments
-  ansible.builtin.include_vars:
-    file: "{{ item }}"
-    name: waf_policy_deletion_fragment
-  loop: "{{ waf_policy_deletion_files }}"
-  register: waf_policy_deletion_include_results
-
-- name: Aggregate WAF policies with directory settings
-  ansible.builtin.set_fact:
-    waf_policies: "{{ waf_policies | default([]) + [ waf_policy_directory_defaults | combine(item.1, recursive=True) ] }}"
-  loop: "{{ query('subelements', waf_policy_include_results.results, 'ansible_facts.waf_policy_fragment.waf_policies', {'skip_missing': True}) }}"
+- name: Load WAF policy fragments into waf_policies/waf_policy_deletions
+  ansible.builtin.import_tasks: "{{ playbook_dir }}/shared/prep/load-fragment-tree.yml"
   vars:
-    waf_policy_settings_path: "{{ item.0.item | regex_replace('/[^/]+$', '/settings.yml') }}"
-    waf_policy_directory_defaults: >-
-      {{
-        (
-          lookup('ansible.builtin.file', waf_policy_settings_path, errors='ignore')
-          | default('{}', true)
-          | from_yaml
-        ).waf_policy_defaults | default({})
-      }}
+    fragment_label: WAF policy
+    source_root: "{{ repo_root }}/vars/security/waf/policies"
+    deletion_root: "{{ repo_root }}/vars/security/waf/deletions/policies"
+    fragment_var_name: waf_policy_fragment
+    fragment_deletion_var_name: waf_policy_deletion_fragment
+    collection_key: waf_policies
+    defaults_key: waf_policy_defaults
+    aggregate_var: waf_policies
+    deletion_aggregate_var: waf_policy_deletions
 
-- name: Aggregate WAF policy deletions with directory settings
-  ansible.builtin.set_fact:
-    waf_policy_deletions: "{{ waf_policy_deletions | default([]) + [ (waf_policy_deletion_directory_defaults | combine(item.1, recursive=True)) | combine({'state': 'absent'}, recursive=True) ] }}"
-  loop: "{{ query('subelements', waf_policy_deletion_include_results.results, 'ansible_facts.waf_policy_deletion_fragment.waf_policies', {'skip_missing': True}) }}"
+- name: Load WAF server technology fragments into waf_server_technologies/waf_server_technology_deletions
+  ansible.builtin.import_tasks: "{{ playbook_dir }}/shared/prep/load-fragment-tree.yml"
   vars:
-    waf_policy_deletion_settings_path: "{{ item.0.item | regex_replace('/[^/]+$', '/settings.yml') }}"
-    waf_policy_deletion_directory_defaults: >-
-      {{
-        (
-          lookup('ansible.builtin.file', waf_policy_deletion_settings_path, errors='ignore')
-          | default('{}', true)
-          | from_yaml
-        ).waf_policy_defaults | default({})
-      }}
-
-- name: Discover WAF server technology fragments
-  ansible.builtin.set_fact:
-    waf_server_technology_files: >-
-      {{
-        lookup(
-          'ansible.builtin.pipe',
-          "find {{ repo_root }}/vars/security/waf/server_technologies -type f -name '*.yml' ! -name 'settings.yml' 2>/dev/null | sort"
-        ).splitlines() | reject('equalto', '') | list
-      }}
-    waf_server_technology_deletion_files: >-
-      {{
-        lookup(
-          'ansible.builtin.pipe',
-          "find {{ repo_root }}/vars/security/waf/deletions/server_technologies -type f -name '*.yml' ! -name 'settings.yml' 2>/dev/null | sort"
-        ).splitlines() | reject('equalto', '') | list
-      }}
-
-- name: Load WAF server technology fragments
-  ansible.builtin.include_vars:
-    file: "{{ item }}"
-    name: waf_server_technology_fragment
-  loop: "{{ waf_server_technology_files }}"
-  register: waf_server_technology_include_results
-
-- name: Load WAF server technology deletion fragments
-  ansible.builtin.include_vars:
-    file: "{{ item }}"
-    name: waf_server_technology_deletion_fragment
-  loop: "{{ waf_server_technology_deletion_files }}"
-  register: waf_server_technology_deletion_include_results
-
-- name: Aggregate WAF server technologies with directory settings
-  ansible.builtin.set_fact:
-    waf_server_technologies: "{{ waf_server_technologies | default([]) + [ waf_server_technology_directory_defaults | combine(item.1, recursive=True) ] }}"
-  loop: "{{ query('subelements', waf_server_technology_include_results.results, 'ansible_facts.waf_server_technology_fragment.waf_server_technologies', {'skip_missing': True}) }}"
-  vars:
-    waf_server_technology_settings_path: "{{ item.0.item | regex_replace('/[^/]+$', '/settings.yml') }}"
-    waf_server_technology_directory_defaults: >-
-      {{
-        (
-          lookup('ansible.builtin.file', waf_server_technology_settings_path, errors='ignore')
-          | default('{}', true)
-          | from_yaml
-        ).waf_server_technology_defaults | default({})
-      }}
-
-- name: Aggregate WAF server technology deletions with directory settings
-  ansible.builtin.set_fact:
-    waf_server_technology_deletions: "{{ waf_server_technology_deletions | default([]) + [ (waf_server_technology_deletion_directory_defaults | combine(item.1, recursive=True)) | combine({'state': 'absent'}, recursive=True) ] }}"
-  loop: "{{ query('subelements', waf_server_technology_deletion_include_results.results, 'ansible_facts.waf_server_technology_deletion_fragment.waf_server_technologies', {'skip_missing': True}) }}"
-  vars:
-    waf_server_technology_deletion_settings_path: "{{ item.0.item | regex_replace('/[^/]+$', '/settings.yml') }}"
-    waf_server_technology_deletion_directory_defaults: >-
-      {{
-        (
-          lookup('ansible.builtin.file', waf_server_technology_deletion_settings_path, errors='ignore')
-          | default('{}', true)
-          | from_yaml
-        ).waf_server_technology_defaults | default({})
-      }}
-
+    fragment_label: WAF server technology
+    source_root: "{{ repo_root }}/vars/security/waf/server_technologies"
+    deletion_root: "{{ repo_root }}/vars/security/waf/deletions/server_technologies"
+    fragment_var_name: waf_server_technology_fragment
+    fragment_deletion_var_name: waf_server_technology_deletion_fragment
+    collection_key: waf_server_technologies
+    defaults_key: waf_server_technology_defaults
+    aggregate_var: waf_server_technologies
+    deletion_aggregate_var: waf_server_technology_deletions

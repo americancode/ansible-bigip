@@ -1,45 +1,20 @@
-- name: Classify bootstrap objects
-  ansible.builtin.set_fact:
-    bootstrap_licenses_delete: >-
-      {{
-        ((bootstrap_licenses | default([])) + (bootstrap_license_deletions | default([])))
-        | selectattr('state', 'defined')
-        | selectattr('state', 'equalto', 'absent')
-        | list
-      }}
-    bootstrap_licenses_present: >-
-      {{
-        (bootstrap_licenses | default([]))
-        | rejectattr('state', 'defined')
-        | list
-        +
-        (
-          (bootstrap_licenses | default([]))
-          | selectattr('state', 'defined')
-          | rejectattr('state', 'equalto', 'absent')
-          | list
-        )
-      }}
-    bootstrap_management_delete: >-
-      {{
-        ((bootstrap_management | default([])) + (bootstrap_management_deletions | default([])))
-        | selectattr('state', 'defined')
-        | selectattr('state', 'equalto', 'absent')
-        | list
-      }}
-    bootstrap_management_present: >-
-      {{
-        (bootstrap_management | default([]))
-        | rejectattr('state', 'defined')
-        | list
-        +
-        (
-          (bootstrap_management | default([]))
-          | selectattr('state', 'defined')
-          | rejectattr('state', 'equalto', 'absent')
-          | list
-        )
-      }}
+- name: Classify bootstrap license operations into bootstrap_licenses_present/bootstrap_licenses_delete
+  ansible.builtin.import_tasks: "{{ playbook_dir }}/shared/prep/classify-operations.yml"
+  vars:
+    object_label: bootstrap license
+    active_objects: "{{ bootstrap_licenses | default([]) }}"
+    deletion_objects: "{{ bootstrap_license_deletions | default([]) }}"
+    delete_var: bootstrap_licenses_delete
+    present_var: bootstrap_licenses_present
+
+- name: Classify bootstrap management operations into bootstrap_management_present/bootstrap_management_delete
+  ansible.builtin.import_tasks: "{{ playbook_dir }}/shared/prep/classify-operations.yml"
+  vars:
+    object_label: bootstrap management
+    active_objects: "{{ bootstrap_management | default([]) }}"
+    deletion_objects: "{{ bootstrap_management_deletions | default([]) }}"
+    delete_var: bootstrap_management_delete
+    present_var: bootstrap_management_present
 
 - name: Probe management route presence on BIG-IP
   f5networks.f5_modules.bigip_command:

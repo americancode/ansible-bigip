@@ -1,122 +1,53 @@
-- name: Classify HA object operations
-  ansible.builtin.set_fact:
-    ha_device_trusts_delete: >-
-      {{
-        ((ha_device_trusts | default([])) + (ha_device_trust_deletions | default([])))
-        | selectattr('state', 'defined')
-        | selectattr('state', 'equalto', 'absent')
-        | list
-      }}
-    ha_device_trusts_present: >-
-      {{
-        (ha_device_trusts | default([]))
-        | rejectattr('state', 'defined')
-        | list
-        +
-        (
-          (ha_device_trusts | default([]))
-          | selectattr('state', 'defined')
-          | rejectattr('state', 'equalto', 'absent')
-          | list
-        )
-      }}
-    ha_device_groups_delete: >-
-      {{
-        ((ha_device_groups | default([])) + (ha_device_group_deletions | default([])))
-        | selectattr('state', 'defined')
-        | selectattr('state', 'equalto', 'absent')
-        | list
-      }}
-    ha_device_groups_present: >-
-      {{
-        (ha_device_groups | default([]))
-        | rejectattr('state', 'defined')
-        | list
-        +
-        (
-          (ha_device_groups | default([]))
-          | selectattr('state', 'defined')
-          | rejectattr('state', 'equalto', 'absent')
-          | list
-        )
-      }}
-    ha_device_group_members_delete: >-
-      {{
-        ((ha_device_group_members | default([])) + (ha_device_group_member_deletions | default([])))
-        | selectattr('state', 'defined')
-        | selectattr('state', 'equalto', 'absent')
-        | list
-      }}
-    ha_device_group_members_present: >-
-      {{
-        (ha_device_group_members | default([]))
-        | rejectattr('state', 'defined')
-        | list
-        +
-        (
-          (ha_device_group_members | default([]))
-          | selectattr('state', 'defined')
-          | rejectattr('state', 'equalto', 'absent')
-          | list
-        )
-      }}
-    ha_traffic_groups_delete: >-
-      {{
-        ((ha_traffic_groups | default([])) + (ha_traffic_group_deletions | default([])))
-        | selectattr('state', 'defined')
-        | selectattr('state', 'equalto', 'absent')
-        | list
-      }}
-    ha_traffic_groups_present: >-
-      {{
-        (ha_traffic_groups | default([]))
-        | rejectattr('state', 'defined')
-        | list
-        +
-        (
-          (ha_traffic_groups | default([]))
-          | selectattr('state', 'defined')
-          | rejectattr('state', 'equalto', 'absent')
-          | list
-        )
-      }}
-    ha_device_connectivity_delete: >-
-      {{
-        ((ha_device_connectivity | default([])) + (ha_device_connectivity_deletions | default([])))
-        | selectattr('state', 'defined')
-        | selectattr('state', 'equalto', 'absent')
-        | list
-      }}
-    ha_device_connectivity_present: >-
-      {{
-        (ha_device_connectivity | default([]))
-        | rejectattr('state', 'defined')
-        | list
-        +
-        (
-          (ha_device_connectivity | default([]))
-          | selectattr('state', 'defined')
-          | rejectattr('state', 'equalto', 'absent')
-          | list
-        )
-      }}
-    ha_groups_delete: >-
-      {{
-        ((ha_groups | default([])) + (ha_group_deletions | default([])))
-        | selectattr('state', 'defined')
-        | selectattr('state', 'equalto', 'absent')
-        | list
-      }}
-    ha_groups_present: >-
-      {{
-        (ha_groups | default([]))
-        | rejectattr('state', 'defined')
-        | list
-        +
-        (
-          (ha_groups | default([]))
-          | selectattr('state', 'defined')
-          | rejectattr('state', 'equalto', 'absent')
-          | list
-        )
-      }}
+- name: Classify HA device trust operations into ha_device_trusts_present/ha_device_trusts_delete
+  ansible.builtin.import_tasks: "{{ playbook_dir }}/shared/prep/classify-operations.yml"
+  vars:
+    object_label: HA device trust
+    active_objects: "{{ ha_device_trusts | default([]) }}"
+    deletion_objects: "{{ ha_device_trust_deletions | default([]) }}"
+    delete_var: ha_device_trusts_delete
+    present_var: ha_device_trusts_present
+
+- name: Classify HA device group operations into ha_device_groups_present/ha_device_groups_delete
+  ansible.builtin.import_tasks: "{{ playbook_dir }}/shared/prep/classify-operations.yml"
+  vars:
+    object_label: HA device group
+    active_objects: "{{ ha_device_groups | default([]) }}"
+    deletion_objects: "{{ ha_device_group_deletions | default([]) }}"
+    delete_var: ha_device_groups_delete
+    present_var: ha_device_groups_present
+
+- name: Classify HA device group member operations into ha_device_group_members_present/ha_device_group_members_delete
+  ansible.builtin.import_tasks: "{{ playbook_dir }}/shared/prep/classify-operations.yml"
+  vars:
+    object_label: HA device group member
+    active_objects: "{{ ha_device_group_members | default([]) }}"
+    deletion_objects: "{{ ha_device_group_member_deletions | default([]) }}"
+    delete_var: ha_device_group_members_delete
+    present_var: ha_device_group_members_present
+
+- name: Classify HA traffic group operations into ha_traffic_groups_present/ha_traffic_groups_delete
+  ansible.builtin.import_tasks: "{{ playbook_dir }}/shared/prep/classify-operations.yml"
+  vars:
+    object_label: HA traffic group
+    active_objects: "{{ ha_traffic_groups | default([]) }}"
+    deletion_objects: "{{ ha_traffic_group_deletions | default([]) }}"
+    delete_var: ha_traffic_groups_delete
+    present_var: ha_traffic_groups_present
+
+- name: Classify HA device connectivity operations into ha_device_connectivity_present/ha_device_connectivity_delete
+  ansible.builtin.import_tasks: "{{ playbook_dir }}/shared/prep/classify-operations.yml"
+  vars:
+    object_label: HA device connectivity
+    active_objects: "{{ ha_device_connectivity | default([]) }}"
+    deletion_objects: "{{ ha_device_connectivity_deletions | default([]) }}"
+    delete_var: ha_device_connectivity_delete
+    present_var: ha_device_connectivity_present
+
+- name: Classify HA group operations into ha_groups_present/ha_groups_delete
+  ansible.builtin.import_tasks: "{{ playbook_dir }}/shared/prep/classify-operations.yml"
+  vars:
+    object_label: HA group
+    active_objects: "{{ ha_groups | default([]) }}"
+    deletion_objects: "{{ ha_group_deletions | default([]) }}"
+    delete_var: ha_groups_delete
+    present_var: ha_groups_present

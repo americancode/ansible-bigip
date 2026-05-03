@@ -1,0 +1,11 @@
+- name: Classify {{ object_label }} operations
+  ansible.builtin.set_fact:
+    _prep_classified_operations: >-
+      {{
+        active_objects | default([]) | classify_operations(deletion_objects | default([]))
+      }}
+
+- name: Publish {{ object_label }} present/delete collections
+  ansible.builtin.set_fact:
+    "{{ delete_var }}": "{{ _prep_classified_operations.delete }}"
+    "{{ present_var }}": "{{ _prep_classified_operations.present }}"

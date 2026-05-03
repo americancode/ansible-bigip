@@ -1,165 +1,74 @@
-- name: Classify network object operations
-  ansible.builtin.set_fact:
-    bigip_vlans_delete: >-
-      {{
-        ((bigip_vlans | default([])) + (bigip_vlan_deletions | default([])))
-        | selectattr('state', 'defined')
-        | selectattr('state', 'equalto', 'absent')
-        | list
-      }}
-    bigip_vlans_present: >-
-      {{
-        (bigip_vlans | default([]))
-        | rejectattr('state', 'defined')
-        | list
-        +
-        (
-          (bigip_vlans | default([]))
-          | selectattr('state', 'defined')
-          | rejectattr('state', 'equalto', 'absent')
-          | list
-        )
-      }}
-    bigip_route_domains_delete: >-
-      {{
-        ((bigip_route_domains | default([])) + (bigip_route_domain_deletions | default([])))
-        | selectattr('state', 'defined')
-        | selectattr('state', 'equalto', 'absent')
-        | list
-      }}
-    bigip_route_domains_present: >-
-      {{
-        (bigip_route_domains | default([]))
-        | rejectattr('state', 'defined')
-        | list
-        +
-        (
-          (bigip_route_domains | default([]))
-          | selectattr('state', 'defined')
-          | rejectattr('state', 'equalto', 'absent')
-          | list
-        )
-      }}
-    bigip_self_ips_delete: >-
-      {{
-        ((bigip_self_ips | default([])) + (bigip_self_ip_deletions | default([])))
-        | selectattr('state', 'defined')
-        | selectattr('state', 'equalto', 'absent')
-        | list
-      }}
-    bigip_self_ips_present: >-
-      {{
-        (bigip_self_ips | default([]))
-        | rejectattr('state', 'defined')
-        | list
-        +
-        (
-          (bigip_self_ips | default([]))
-          | selectattr('state', 'defined')
-          | rejectattr('state', 'equalto', 'absent')
-          | list
-        )
-      }}
-    bigip_static_routes_delete: >-
-      {{
-        ((bigip_static_routes | default([])) + (bigip_static_route_deletions | default([])))
-        | selectattr('state', 'defined')
-        | selectattr('state', 'equalto', 'absent')
-        | list
-      }}
-    bigip_static_routes_present: >-
-      {{
-        (bigip_static_routes | default([]))
-        | rejectattr('state', 'defined')
-        | list
-        +
-        (
-          (bigip_static_routes | default([]))
-          | selectattr('state', 'defined')
-          | rejectattr('state', 'equalto', 'absent')
-          | list
-        )
-      }}
-    bigip_snat_translations_delete: >-
-      {{
-        ((bigip_snat_translations | default([])) + (bigip_snat_translation_deletions | default([])))
-        | selectattr('state', 'defined')
-        | selectattr('state', 'equalto', 'absent')
-        | list
-      }}
-    bigip_snat_translations_present: >-
-      {{
-        (bigip_snat_translations | default([]))
-        | rejectattr('state', 'defined')
-        | list
-        +
-        (
-          (bigip_snat_translations | default([]))
-          | selectattr('state', 'defined')
-          | rejectattr('state', 'equalto', 'absent')
-          | list
-        )
-      }}
-    bigip_snat_pools_delete: >-
-      {{
-        ((bigip_snat_pools | default([])) + (bigip_snat_pool_deletions | default([])))
-        | selectattr('state', 'defined')
-        | selectattr('state', 'equalto', 'absent')
-        | list
-      }}
-    bigip_snat_pools_present: >-
-      {{
-        (bigip_snat_pools | default([]))
-        | rejectattr('state', 'defined')
-        | list
-        +
-        (
-          (bigip_snat_pools | default([]))
-          | selectattr('state', 'defined')
-          | rejectattr('state', 'equalto', 'absent')
-          | list
-        )
-      }}
-    bigip_trunks_delete: >-
-      {{
-        ((bigip_trunks | default([])) + (bigip_trunk_deletions | default([])))
-        | selectattr('state', 'defined')
-        | selectattr('state', 'equalto', 'absent')
-        | list
-      }}
-    bigip_trunks_present: >-
-      {{
-        (bigip_trunks | default([]))
-        | rejectattr('state', 'defined')
-        | list
-        +
-        (
-          (bigip_trunks | default([]))
-          | selectattr('state', 'defined')
-          | rejectattr('state', 'equalto', 'absent')
-          | list
-        )
-      }}
-    bigip_nats_delete: >-
-      {{
-        ((bigip_nats | default([])) + (bigip_nat_deletions | default([])))
-        | selectattr('state', 'defined')
-        | selectattr('state', 'equalto', 'absent')
-        | list
-      }}
-    bigip_nats_present: >-
-      {{
-        (bigip_nats | default([]))
-        | rejectattr('state', 'defined')
-        | list
-        +
-        (
-          (bigip_nats | default([]))
-          | selectattr('state', 'defined')
-          | rejectattr('state', 'equalto', 'absent')
-          | list
-        )
-      }}
+- name: Classify VLAN operations into bigip_vlans_present/bigip_vlans_delete
+  ansible.builtin.import_tasks: "{{ playbook_dir }}/shared/prep/classify-operations.yml"
+  vars:
+    object_label: VLAN
+    active_objects: "{{ bigip_vlans | default([]) }}"
+    deletion_objects: "{{ bigip_vlan_deletions | default([]) }}"
+    delete_var: bigip_vlans_delete
+    present_var: bigip_vlans_present
+
+- name: Classify route domain operations into bigip_route_domains_present/bigip_route_domains_delete
+  ansible.builtin.import_tasks: "{{ playbook_dir }}/shared/prep/classify-operations.yml"
+  vars:
+    object_label: route domain
+    active_objects: "{{ bigip_route_domains | default([]) }}"
+    deletion_objects: "{{ bigip_route_domain_deletions | default([]) }}"
+    delete_var: bigip_route_domains_delete
+    present_var: bigip_route_domains_present
+
+- name: Classify self IP operations into bigip_self_ips_present/bigip_self_ips_delete
+  ansible.builtin.import_tasks: "{{ playbook_dir }}/shared/prep/classify-operations.yml"
+  vars:
+    object_label: self IP
+    active_objects: "{{ bigip_self_ips | default([]) }}"
+    deletion_objects: "{{ bigip_self_ip_deletions | default([]) }}"
+    delete_var: bigip_self_ips_delete
+    present_var: bigip_self_ips_present
+
+- name: Classify static route operations into bigip_static_routes_present/bigip_static_routes_delete
+  ansible.builtin.import_tasks: "{{ playbook_dir }}/shared/prep/classify-operations.yml"
+  vars:
+    object_label: static route
+    active_objects: "{{ bigip_static_routes | default([]) }}"
+    deletion_objects: "{{ bigip_static_route_deletions | default([]) }}"
+    delete_var: bigip_static_routes_delete
+    present_var: bigip_static_routes_present
+
+- name: Classify SNAT translation operations into bigip_snat_translations_present/bigip_snat_translations_delete
+  ansible.builtin.import_tasks: "{{ playbook_dir }}/shared/prep/classify-operations.yml"
+  vars:
+    object_label: SNAT translation
+    active_objects: "{{ bigip_snat_translations | default([]) }}"
+    deletion_objects: "{{ bigip_snat_translation_deletions | default([]) }}"
+    delete_var: bigip_snat_translations_delete
+    present_var: bigip_snat_translations_present
+
+- name: Classify SNAT pool operations into bigip_snat_pools_present/bigip_snat_pools_delete
+  ansible.builtin.import_tasks: "{{ playbook_dir }}/shared/prep/classify-operations.yml"
+  vars:
+    object_label: SNAT pool
+    active_objects: "{{ bigip_snat_pools | default([]) }}"
+    deletion_objects: "{{ bigip_snat_pool_deletions | default([]) }}"
+    delete_var: bigip_snat_pools_delete
+    present_var: bigip_snat_pools_present
+
+- name: Classify trunk operations into bigip_trunks_present/bigip_trunks_delete
+  ansible.builtin.import_tasks: "{{ playbook_dir }}/shared/prep/classify-operations.yml"
+  vars:
+    object_label: trunk
+    active_objects: "{{ bigip_trunks | default([]) }}"
+    deletion_objects: "{{ bigip_trunk_deletions | default([]) }}"
+    delete_var: bigip_trunks_delete
+    present_var: bigip_trunks_present
+
+- name: Classify NAT operations into bigip_nats_present/bigip_nats_delete
+  ansible.builtin.import_tasks: "{{ playbook_dir }}/shared/prep/classify-operations.yml"
+  vars:
+    object_label: NAT
+    active_objects: "{{ bigip_nats | default([]) }}"
+    deletion_objects: "{{ bigip_nat_deletions | default([]) }}"
+    delete_var: bigip_nats_delete
+    present_var: bigip_nats_present
 
 - name: Probe NAT presence on BIG-IP
   f5networks.f5_modules.bigip_command:
@@ -187,4 +96,3 @@
         })
       }}
   loop: "{{ nat_probe_results.results | default([]) }}"
-

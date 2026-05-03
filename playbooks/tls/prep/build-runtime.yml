@@ -1,103 +1,44 @@
-- name: Classify TLS object operations
-  ansible.builtin.set_fact:
-    tls_keys_delete: >-
-      {{
-        ((tls_keys | default([])) + (tls_key_deletions | default([])))
-        | selectattr('state', 'defined')
-        | selectattr('state', 'equalto', 'absent')
-        | list
-      }}
-    tls_keys_present: >-
-      {{
-        (tls_keys | default([]))
-        | rejectattr('state', 'defined')
-        | list
-        +
-        (
-          (tls_keys | default([]))
-          | selectattr('state', 'defined')
-          | rejectattr('state', 'equalto', 'absent')
-          | list
-        )
-      }}
-    tls_certificates_delete: >-
-      {{
-        ((tls_certificates | default([])) + (tls_certificate_deletions | default([])))
-        | selectattr('state', 'defined')
-        | selectattr('state', 'equalto', 'absent')
-        | list
-      }}
-    tls_certificates_present: >-
-      {{
-        (tls_certificates | default([]))
-        | rejectattr('state', 'defined')
-        | list
-        +
-        (
-          (tls_certificates | default([]))
-          | selectattr('state', 'defined')
-          | rejectattr('state', 'equalto', 'absent')
-          | list
-        )
-      }}
-    tls_ca_bundles_delete: >-
-      {{
-        ((tls_ca_bundles | default([])) + (tls_ca_bundle_deletions | default([])))
-        | selectattr('state', 'defined')
-        | selectattr('state', 'equalto', 'absent')
-        | list
-      }}
-    tls_ca_bundles_present: >-
-      {{
-        (tls_ca_bundles | default([]))
-        | rejectattr('state', 'defined')
-        | list
-        +
-        (
-          (tls_ca_bundles | default([]))
-          | selectattr('state', 'defined')
-          | rejectattr('state', 'equalto', 'absent')
-          | list
-        )
-      }}
-    tls_client_ssl_profiles_delete: >-
-      {{
-        ((tls_client_ssl_profiles | default([])) + (tls_client_ssl_profile_deletions | default([])))
-        | selectattr('state', 'defined')
-        | selectattr('state', 'equalto', 'absent')
-        | list
-      }}
-    tls_client_ssl_profiles_present: >-
-      {{
-        (tls_client_ssl_profiles | default([]))
-        | rejectattr('state', 'defined')
-        | list
-        +
-        (
-          (tls_client_ssl_profiles | default([]))
-          | selectattr('state', 'defined')
-          | rejectattr('state', 'equalto', 'absent')
-          | list
-        )
-      }}
-    tls_server_ssl_profiles_delete: >-
-      {{
-        ((tls_server_ssl_profiles | default([])) + (tls_server_ssl_profile_deletions | default([])))
-        | selectattr('state', 'defined')
-        | selectattr('state', 'equalto', 'absent')
-        | list
-      }}
-    tls_server_ssl_profiles_present: >-
-      {{
-        (tls_server_ssl_profiles | default([]))
-        | rejectattr('state', 'defined')
-        | list
-        +
-        (
-          (tls_server_ssl_profiles | default([]))
-          | selectattr('state', 'defined')
-          | rejectattr('state', 'equalto', 'absent')
-          | list
-        )
-      }}
+- name: Classify TLS key operations into tls_keys_present/tls_keys_delete
+  ansible.builtin.import_tasks: "{{ playbook_dir }}/shared/prep/classify-operations.yml"
+  vars:
+    object_label: TLS key
+    active_objects: "{{ tls_keys | default([]) }}"
+    deletion_objects: "{{ tls_key_deletions | default([]) }}"
+    delete_var: tls_keys_delete
+    present_var: tls_keys_present
 
+- name: Classify TLS certificate operations into tls_certificates_present/tls_certificates_delete
+  ansible.builtin.import_tasks: "{{ playbook_dir }}/shared/prep/classify-operations.yml"
+  vars:
+    object_label: TLS certificate
+    active_objects: "{{ tls_certificates | default([]) }}"
+    deletion_objects: "{{ tls_certificate_deletions | default([]) }}"
+    delete_var: tls_certificates_delete
+    present_var: tls_certificates_present
+
+- name: Classify TLS CA bundle operations into tls_ca_bundles_present/tls_ca_bundles_delete
+  ansible.builtin.import_tasks: "{{ playbook_dir }}/shared/prep/classify-operations.yml"
+  vars:
+    object_label: TLS CA bundle
+    active_objects: "{{ tls_ca_bundles | default([]) }}"
+    deletion_objects: "{{ tls_ca_bundle_deletions | default([]) }}"
+    delete_var: tls_ca_bundles_delete
+    present_var: tls_ca_bundles_present
+
+- name: Classify TLS client SSL profile operations into tls_client_ssl_profiles_present/tls_client_ssl_profiles_delete
+  ansible.builtin.import_tasks: "{{ playbook_dir }}/shared/prep/classify-operations.yml"
+  vars:
+    object_label: TLS client SSL profile
+    active_objects: "{{ tls_client_ssl_profiles | default([]) }}"
+    deletion_objects: "{{ tls_client_ssl_profile_deletions | default([]) }}"
+    delete_var: tls_client_ssl_profiles_delete
+    present_var: tls_client_ssl_profiles_present
+
+- name: Classify TLS server SSL profile operations into tls_server_ssl_profiles_present/tls_server_ssl_profiles_delete
+  ansible.builtin.import_tasks: "{{ playbook_dir }}/shared/prep/classify-operations.yml"
+  vars:
+    object_label: TLS server SSL profile
+    active_objects: "{{ tls_server_ssl_profiles | default([]) }}"
+    deletion_objects: "{{ tls_server_ssl_profile_deletions | default([]) }}"
+    delete_var: tls_server_ssl_profiles_delete
+    present_var: tls_server_ssl_profiles_present

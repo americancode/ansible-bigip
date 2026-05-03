@@ -1,92 +1,35 @@
-- name: Classify AFM address list operations
-  ansible.builtin.set_fact:
-    afm_address_lists_delete: >-
-      {{
-        ((afm_address_lists | default([])) + (afm_address_list_deletions | default([])))
-        | selectattr('state', 'defined')
-        | selectattr('state', 'equalto', 'absent')
-        | list
-      }}
-    afm_address_lists_present: >-
-      {{
-        (afm_address_lists | default([]))
-        | rejectattr('state', 'defined')
-        | list
-        +
-        (
-          (afm_address_lists | default([]))
-          | selectattr('state', 'defined')
-          | rejectattr('state', 'equalto', 'absent')
-          | list
-        )
-      }}
+- name: Classify AFM address list operations into afm_address_lists_present/afm_address_lists_delete
+  ansible.builtin.import_tasks: "{{ playbook_dir }}/shared/prep/classify-operations.yml"
+  vars:
+    object_label: AFM address list
+    active_objects: "{{ afm_address_lists | default([]) }}"
+    deletion_objects: "{{ afm_address_list_deletions | default([]) }}"
+    delete_var: afm_address_lists_delete
+    present_var: afm_address_lists_present
 
-- name: Classify AFM port list operations
-  ansible.builtin.set_fact:
-    afm_port_lists_delete: >-
-      {{
-        ((afm_port_lists | default([])) + (afm_port_list_deletions | default([])))
-        | selectattr('state', 'defined')
-        | selectattr('state', 'equalto', 'absent')
-        | list
-      }}
-    afm_port_lists_present: >-
-      {{
-        (afm_port_lists | default([]))
-        | rejectattr('state', 'defined')
-        | list
-        +
-        (
-          (afm_port_lists | default([]))
-          | selectattr('state', 'defined')
-          | rejectattr('state', 'equalto', 'absent')
-          | list
-        )
-      }}
+- name: Classify AFM port list operations into afm_port_lists_present/afm_port_lists_delete
+  ansible.builtin.import_tasks: "{{ playbook_dir }}/shared/prep/classify-operations.yml"
+  vars:
+    object_label: AFM port list
+    active_objects: "{{ afm_port_lists | default([]) }}"
+    deletion_objects: "{{ afm_port_list_deletions | default([]) }}"
+    delete_var: afm_port_lists_delete
+    present_var: afm_port_lists_present
 
-- name: Classify AFM rule operations
-  ansible.builtin.set_fact:
-    afm_rules_delete: >-
-      {{
-        ((afm_rules | default([])) + (afm_rule_deletions | default([])))
-        | selectattr('state', 'defined')
-        | selectattr('state', 'equalto', 'absent')
-        | list
-      }}
-    afm_rules_present: >-
-      {{
-        (afm_rules | default([]))
-        | rejectattr('state', 'defined')
-        | list
-        +
-        (
-          (afm_rules | default([]))
-          | selectattr('state', 'defined')
-          | rejectattr('state', 'equalto', 'absent')
-          | list
-        )
-      }}
+- name: Classify AFM rule operations into afm_rules_present/afm_rules_delete
+  ansible.builtin.import_tasks: "{{ playbook_dir }}/shared/prep/classify-operations.yml"
+  vars:
+    object_label: AFM rule
+    active_objects: "{{ afm_rules | default([]) }}"
+    deletion_objects: "{{ afm_rule_deletions | default([]) }}"
+    delete_var: afm_rules_delete
+    present_var: afm_rules_present
 
-- name: Classify AFM policy operations
-  ansible.builtin.set_fact:
-    afm_policies_delete: >-
-      {{
-        ((afm_policies | default([])) + (afm_policy_deletions | default([])))
-        | selectattr('state', 'defined')
-        | selectattr('state', 'equalto', 'absent')
-        | list
-      }}
-    afm_policies_present: >-
-      {{
-        (afm_policies | default([]))
-        | rejectattr('state', 'defined')
-        | list
-        +
-        (
-          (afm_policies | default([]))
-          | selectattr('state', 'defined')
-          | rejectattr('state', 'equalto', 'absent')
-          | list
-        )
-      }}
-
+- name: Classify AFM policy operations into afm_policies_present/afm_policies_delete
+  ansible.builtin.import_tasks: "{{ playbook_dir }}/shared/prep/classify-operations.yml"
+  vars:
+    object_label: AFM policy
+    active_objects: "{{ afm_policies | default([]) }}"
+    deletion_objects: "{{ afm_policy_deletions | default([]) }}"
+    delete_var: afm_policies_delete
+    present_var: afm_policies_present
