@@ -1,0 +1,10 @@
+---
+# Default settings for BIG-IP management-plane RADIUS server objects.
+# Objects in `vars/system/auth/radius_servers/*.yml` are referenced by `vars/system/auth/radius/*.yml`
+# through `system_auth_radius[*].servers`.
+# Supported fields: `partition`, `description`, `port`, `timeout`, `secret`, and `update_secret`.
+system_auth_radius_server_defaults:
+  partition: "Common"
+  port: 1812
+  timeout: 5
+  update_secret: "on_create"

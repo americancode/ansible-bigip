@@ -39,3 +39,39 @@
   loop: "{{ system_users_delete | default([]) }}"
   loop_control:
     label: "{{ item.name }}"
+
+- name: Remove RADIUS management-plane auth profile
+  f5networks.f5_modules.bigip_device_auth_radius:
+    provider: "{{ provider }}"
+    state: absent
+  loop: "{{ system_auth_radius_delete | default([]) }}"
+  loop_control:
+    label: "{{ item.name | default('radius-auth') }}"
+
+- name: Remove RADIUS management-plane auth servers
+  f5networks.f5_modules.bigip_device_auth_radius_server:
+    provider: "{{ provider }}"
+    name: "{{ item.name }}"
+    partition: "{{ item.partition | default('Common') }}"
+    state: absent
+  loop: "{{ system_auth_radius_servers_delete | default([]) }}"
+  loop_control:
+    label: "{{ item.partition | default('Common') }}/{{ item.name }}"
+
+- name: Remove TACACS management-plane auth providers
+  f5networks.f5_modules.bigip_device_auth:
+    provider: "{{ provider }}"
+    type: tacacs
+    state: absent
+  loop: "{{ system_auth_tacacs_delete | default([]) }}"
+  loop_control:
+    label: "{{ item.name | default('tacacs-auth') }}"
+
+- name: Remove LDAP management-plane auth providers
+  f5networks.f5_modules.bigip_device_auth_ldap:
+    provider: "{{ provider }}"
+    name: "{{ item.name }}"
+    state: absent
+  loop: "{{ system_auth_ldap_delete | default([]) }}"
+  loop_control:
+    label: "{{ item.name }}"

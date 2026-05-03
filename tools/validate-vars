@@ -265,6 +265,34 @@ class Validator:
                 settings_key="system_user_defaults",
             ),
             TreeSpec(
+                name="system_auth_ldap",
+                active_dir=VARS_DIR / "system" / "auth" / "ldap",
+                deletion_dir=VARS_DIR / "system" / "deletions" / "auth" / "ldap",
+                top_key="system_auth_ldap",
+                settings_key="system_auth_ldap_defaults",
+            ),
+            TreeSpec(
+                name="system_auth_tacacs",
+                active_dir=VARS_DIR / "system" / "auth" / "tacacs",
+                deletion_dir=VARS_DIR / "system" / "deletions" / "auth" / "tacacs",
+                top_key="system_auth_tacacs",
+                settings_key="system_auth_tacacs_defaults",
+            ),
+            TreeSpec(
+                name="system_auth_radius_servers",
+                active_dir=VARS_DIR / "system" / "auth" / "radius_servers",
+                deletion_dir=VARS_DIR / "system" / "deletions" / "auth" / "radius_servers",
+                top_key="system_auth_radius_servers",
+                settings_key="system_auth_radius_server_defaults",
+            ),
+            TreeSpec(
+                name="system_auth_radius",
+                active_dir=VARS_DIR / "system" / "auth" / "radius",
+                deletion_dir=VARS_DIR / "system" / "deletions" / "auth" / "radius",
+                top_key="system_auth_radius",
+                settings_key="system_auth_radius_defaults",
+            ),
+            TreeSpec(
                 name="system_config",
                 active_dir=VARS_DIR / "system" / "config",
                 deletion_dir=VARS_DIR / "system" / "deletions" / "config",
@@ -832,6 +860,10 @@ class Validator:
         ntp_settings = self.objects.get("system_ntp", [])
         provisioning = self.objects.get("system_provisioning", [])
         users = self.objects.get("system_users", [])
+        auth_ldap = self.objects.get("system_auth_ldap", [])
+        auth_tacacs = self.objects.get("system_auth_tacacs", [])
+        auth_radius_servers = self.objects.get("system_auth_radius_servers", [])
+        auth_radius = self.objects.get("system_auth_radius", [])
         config = self.objects.get("system_config", [])
 
         for obj in hostnames:
@@ -868,6 +900,218 @@ class Validator:
                     self.error(obj.relpath, f"system user `{obj.data.get('name')}` uses `update_password: on_create` without `password_credential`")
 
         self.check_duplicates(users, lambda obj: ("system_user", obj.data.get("name")), "system user")
+
+        active_radius_server_names = set()
+        for obj in auth_radius_servers:
+            self.require_fields(obj, ["name"])
+            if obj.effective_state == "absent":
+                continue
+
+            self.require_fields(obj, ["ip"])
+            self.validate_ip_like(obj.relpath, obj.data.get("ip"), f"system RADIUS server `{obj.data.get('name')}` `ip`")
+
+            port = obj.data.get("port")
+            if port is not None:
+                if not isinstance(port, int):
+                    self.error(obj.relpath, f"system RADIUS server `{obj.data.get('name')}` `port` must be an integer")
+                elif port < 0 or port > 65535:
+                    self.error(obj.relpath, f"system RADIUS server `{obj.data.get('name')}` `port` must be between 0 and 65535")
+
+            timeout = obj.data.get("timeout")
+            if timeout is not None:
+                if not isinstance(timeout, int):
+                    self.error(obj.relpath, f"system RADIUS server `{obj.data.get('name')}` `timeout` must be an integer")
+                elif timeout < 1 or timeout > 60:
+                    self.error(obj.relpath, f"system RADIUS server `{obj.data.get('name')}` `timeout` must be between 1 and 60")
+
+            update_secret = obj.data.get("update_secret")
+            if update_secret is not None and update_secret not in ("always", "on_create"):
+                self.error(obj.relpath, f"system RADIUS server `{obj.data.get('name')}` `update_secret` must be `always` or `on_create`")
+
+            if obj.data.get("update_secret") == "on_create" and obj.data.get("secret") is None:
+                self.error(obj.relpath, f"system RADIUS server `{obj.data.get('name')}` uses `update_secret: on_create` without `secret`")
+
+            active_radius_server_names.add(self.fq_name(str(obj.data.get("partition", "Common")), str(obj.data["name"])))
+
+        self.check_duplicates(
+            auth_radius_servers,
+            lambda obj: ("system_radius_server", obj.data.get("partition", "Common"), obj.data.get("name")),
+            "system RADIUS server",
+        )
+
+        active_system_auth_sources = []
+        for obj in auth_ldap:
+            self.require_fields(obj, ["name"])
+            if obj.effective_state == "absent":
+                continue
+
+            self.require_fields(obj, ["servers"])
+
+            servers = obj.data.get("servers")
+            if not isinstance(servers, list) or not servers:
+                self.error(obj.relpath, f"system LDAP auth `{obj.data.get('name')}` `servers` must be a non-empty list")
+            else:
+                for idx, server in enumerate(servers):
+                    if not isinstance(server, str) or not server:
+                        self.error(obj.relpath, f"system LDAP auth `{obj.data.get('name')}` `servers[{idx}]` must be a non-empty string")
+
+            source_type = obj.data.get("source_type")
+            if source_type is not None and source_type not in ("ldap", "active-directory"):
+                self.error(obj.relpath, f"system LDAP auth `{obj.data.get('name')}` `source_type` must be `ldap` or `active-directory`")
+
+            scope = obj.data.get("scope")
+            if scope is not None and scope not in ("sub", "one", "base"):
+                self.error(obj.relpath, f"system LDAP auth `{obj.data.get('name')}` `scope` must be `sub`, `one`, or `base`")
+
+            ssl = obj.data.get("ssl")
+            if ssl is not None and ssl not in ("yes", "no", "start-tls"):
+                self.error(obj.relpath, f"system LDAP auth `{obj.data.get('name')}` `ssl` must be `yes`, `no`, or `start-tls`")
+
+            for field in ("check_member_attr", "fallback_to_local", "referrals", "use_for_auth", "validate_certs"):
+                value = obj.data.get(field)
+                if value is not None and not isinstance(value, bool):
+                    self.error(obj.relpath, f"system LDAP auth `{obj.data.get('name')}` `{field}` must be a boolean")
+
+            port = obj.data.get("port")
+            if port is not None:
+                if not isinstance(port, int):
+                    self.error(obj.relpath, f"system LDAP auth `{obj.data.get('name')}` `port` must be an integer")
+                elif port < 1 or port > 65535:
+                    self.error(obj.relpath, f"system LDAP auth `{obj.data.get('name')}` `port` must be between 1 and 65535")
+
+            update_password = obj.data.get("update_password")
+            if update_password is not None and update_password not in ("always", "on_create"):
+                self.error(obj.relpath, f"system LDAP auth `{obj.data.get('name')}` `update_password` must be `always` or `on_create`")
+
+            if obj.data.get("update_password") == "on_create" and obj.data.get("bind_password") is None:
+                self.error(obj.relpath, f"system LDAP auth `{obj.data.get('name')}` uses `update_password: on_create` without `bind_password`")
+
+            if obj.data.get("use_for_auth") is True:
+                active_system_auth_sources.append(("ldap", obj))
+
+        self.check_duplicates(auth_ldap, lambda obj: ("system_auth_ldap", obj.data.get("name")), "system LDAP auth")
+
+        active_tacacs_present = [obj for obj in auth_tacacs if obj.effective_state != "absent"]
+        if len(active_tacacs_present) > 1:
+            self.error(
+                active_tacacs_present[1].relpath,
+                "system TACACS auth is device-scoped and supports only one active declaration per target BIG-IP",
+            )
+
+        for obj in auth_tacacs:
+            if obj.effective_state == "absent":
+                continue
+
+            self.require_fields(obj, ["servers"])
+            servers = obj.data.get("servers")
+            if not isinstance(servers, list) or not servers:
+                self.error(obj.relpath, "system TACACS auth `servers` must be a non-empty list")
+            else:
+                for idx, server in enumerate(servers):
+                    if isinstance(server, str):
+                        self.validate_ip_like(obj.relpath, server, f"system TACACS auth `servers[{idx}]`")
+                    elif isinstance(server, dict):
+                        if not server.get("address"):
+                            self.error(obj.relpath, f"system TACACS auth `servers[{idx}]` must define `address`")
+                        else:
+                            self.validate_ip_like(obj.relpath, server.get("address"), f"system TACACS auth `servers[{idx}].address`")
+                        if server.get("port") is not None:
+                            port = server.get("port")
+                            if not isinstance(port, int):
+                                self.error(obj.relpath, f"system TACACS auth `servers[{idx}].port` must be an integer")
+                            elif port < 0 or port > 65535:
+                                self.error(obj.relpath, f"system TACACS auth `servers[{idx}].port` must be between 0 and 65535")
+                    else:
+                        self.error(obj.relpath, f"system TACACS auth `servers[{idx}]` must be a string or mapping")
+
+            authentication = obj.data.get("authentication")
+            if authentication is not None and authentication not in ("use-first-server", "use-all-servers"):
+                self.error(obj.relpath, "`authentication` must be `use-first-server` or `use-all-servers`")
+
+            accounting = obj.data.get("accounting")
+            if accounting is not None and accounting not in ("send-to-first-server", "send-to-all-servers"):
+                self.error(obj.relpath, "`accounting` must be `send-to-first-server` or `send-to-all-servers`")
+
+            protocol_name = obj.data.get("protocol_name")
+            if protocol_name is not None and protocol_name not in (
+                "lcp", "ip", "ipx", "atalk", "vines", "lat", "xremote", "tn3270",
+                "telnet", "rlogin", "pad", "vpdn", "ftp", "http", "deccp", "osicp", "unknown",
+            ):
+                self.error(obj.relpath, f"system TACACS auth `protocol_name` `{protocol_name}` is not supported")
+
+            service_name = obj.data.get("service_name")
+            if service_name is not None and service_name not in (
+                "slip", "ppp", "arap", "shell", "tty-daemon", "connection", "system", "firewall",
+            ):
+                self.error(obj.relpath, f"system TACACS auth `service_name` `{service_name}` is not supported")
+
+            update_secret = obj.data.get("update_secret")
+            if update_secret is not None and update_secret not in ("always", "on_create"):
+                self.error(obj.relpath, "system TACACS auth `update_secret` must be `always` or `on_create`")
+
+            if obj.data.get("update_secret") == "on_create" and obj.data.get("secret") is None:
+                self.error(obj.relpath, "system TACACS auth uses `update_secret: on_create` without `secret`")
+
+            use_for_auth = obj.data.get("use_for_auth")
+            if use_for_auth is not None and not isinstance(use_for_auth, bool):
+                self.error(obj.relpath, "system TACACS auth `use_for_auth` must be a boolean")
+            if use_for_auth is True:
+                active_system_auth_sources.append(("tacacs", obj))
+
+        active_radius_present = [obj for obj in auth_radius if obj.effective_state != "absent"]
+        if len(active_radius_present) > 1:
+            self.error(
+                active_radius_present[1].relpath,
+                "system RADIUS auth is device-scoped and supports only one active declaration per target BIG-IP",
+            )
+
+        for obj in auth_radius:
+            if obj.effective_state == "absent":
+                continue
+
+            self.require_fields(obj, ["servers"])
+            servers = obj.data.get("servers")
+            if not isinstance(servers, list) or not servers:
+                self.error(obj.relpath, "system RADIUS auth `servers` must be a non-empty list")
+            else:
+                for idx, server in enumerate(servers):
+                    if not isinstance(server, str) or not server:
+                        self.error(obj.relpath, f"system RADIUS auth `servers[{idx}]` must be a non-empty string")
+                        continue
+                    normalized_server = server if server.startswith("/") else self.fq_name("Common", server)
+                    if normalized_server not in active_radius_server_names:
+                        self.error(obj.relpath, f"system RADIUS auth references undefined RADIUS server `{normalized_server}`")
+
+            retries = obj.data.get("retries")
+            if retries is not None:
+                if not isinstance(retries, int):
+                    self.error(obj.relpath, "system RADIUS auth `retries` must be an integer")
+                elif retries < 0:
+                    self.error(obj.relpath, "system RADIUS auth `retries` must be zero or greater")
+
+            service_type = obj.data.get("service_type")
+            if service_type is not None and service_type not in (
+                "authenticate-only", "login", "default", "framed", "callback-login", "callback-framed",
+                "outbound", "administrative", "nas-prompt", "callback-nas-prompt", "call-check",
+                "callback-administrative",
+            ):
+                self.error(obj.relpath, f"system RADIUS auth `service_type` `{service_type}` is not supported")
+
+            for field in ("accounting_bug", "fallback_to_local", "use_for_auth"):
+                value = obj.data.get(field)
+                if value is not None and not isinstance(value, bool):
+                    self.error(obj.relpath, f"system RADIUS auth `{field}` must be a boolean")
+
+            if obj.data.get("use_for_auth") is True:
+                active_system_auth_sources.append(("radius", obj))
+
+        if len(active_system_auth_sources) > 1:
+            _, conflicting_obj = active_system_auth_sources[1]
+            active_types = ", ".join(sorted(auth_type for auth_type, _ in active_system_auth_sources))
+            self.error(
+                conflicting_obj.relpath,
+                f"only one management-plane auth source can set `use_for_auth: true` on a target BIG-IP; found {active_types}",
+            )
 
         for obj in config:
             if "save" in obj.data and not isinstance(obj.data.get("save"), bool):

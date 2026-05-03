@@ -1,0 +1,16 @@
+---
+# BIG-IP management-plane TACACS+ auth example.
+# This file configures BIG-IP administrator login for `playbooks/system.yml`. It does not reference
+# other repo-managed object files; the `servers` entries point at remote TACACS+ endpoints directly.
+# Supported fields: `name`, `servers`, `secret`, `authentication`, `accounting`, `protocol_name`,
+# `service_name`, `update_secret`, and `use_for_auth`.
+system_auth_tacacs:
+  - name: "corp-tacacs"
+    servers:
+      - address: "192.0.2.61"
+        port: 49163
+      - address: "192.0.2.62"
+    secret: !vault |
+      $ANSIBLE_VAULT;1.1;AES256
+      35663139333363363931373462653637373238343865653136363133646261303631616131333266
+    use_for_auth: false

@@ -104,6 +104,22 @@ Linkage works like this:
 - `ha_traffic_groups[*].ha_group: "hg_apps_prefer_healthy_pools"` points at `vars/ha/ha_groups/foundation-ha-groups.yml`
 - `ha_traffic_groups[*].ha_order` is the direct static preference alternative; do not use both `ha_group` and `ha_order` on the same object
 
+## System Admin Auth Model
+
+The system tree uses a mixed direct-and-referenced model for BIG-IP administrator login methods.
+
+- LDAP / AD auth: `vars/system/auth/ldap/foundation-ldap.yml`
+- TACACS+ auth: `vars/system/auth/tacacs/foundation-tacacs.yml`
+- RADIUS server objects: `vars/system/auth/radius_servers/foundation-radius-servers.yml`
+- RADIUS auth profile: `vars/system/auth/radius/foundation-radius.yml`
+
+Linkage works like this:
+
+- `system_auth_radius[*].servers: ["radius_dc1"]` points at `vars/system/auth/radius_servers/foundation-radius-servers.yml`
+- `system_auth_ldap[*].servers` is just the remote LDAP or AD server list; it does not point at another repo-managed BIG-IP object tree
+- only one of `system_auth_ldap[*].use_for_auth`, `system_auth_tacacs[*].use_for_auth`, or `system_auth_radius[*].use_for_auth` should be `true` for the current BIG-IP target
+- this system-auth layer controls how operators log in to BIG-IP itself; it is separate from APM end-user identity under `vars/security/apm/`
+
 ## AFM Security Model
 
 The security playbook uses first-class var trees for address lists, port lists, rules, and policies.

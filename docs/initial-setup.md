@@ -91,6 +91,7 @@ This is where the day-1/day-2 device baseline begins:
 - NTP
 - provisioning
 - local users
+- optional centralized admin auth providers for BIG-IP operator login
 - config save behavior
 
 Author those objects in:
@@ -100,7 +101,13 @@ Author those objects in:
 - `vars/system/ntp/`
 - `vars/system/provisioning/`
 - `vars/system/users/`
+- `vars/system/auth/`
 - `vars/system/config/`
+
+Important boundary:
+
+- `vars/system/auth/` is for BIG-IP management-plane administrator login
+- APM end-user identity, access policy, and backend SSO stay under `vars/security/apm/`
 
 This is the point where the repo stops being a narrow bootstrap tool and starts becoming the system of record.
 

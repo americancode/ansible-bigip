@@ -1,0 +1,13 @@
+---
+# Default settings for BIG-IP management-plane LDAP or Active Directory auth objects.
+# Objects in `vars/system/auth/ldap/*.yml` are consumed by `playbooks/system.yml` and do not reference
+# other repo-managed BIG-IP object trees; they point at external directory services.
+# Supported fields: `source_type`, `scope`, `ssl`, `fallback_to_local`, `use_for_auth`,
+# `validate_certs`, `update_password`, and other LDAP module fields overridden per object as needed.
+system_auth_ldap_defaults:
+  source_type: "active-directory"
+  scope: "sub"
+  ssl: "start-tls"
+  fallback_to_local: true
+  update_password: "on_create"
+  validate_certs: true

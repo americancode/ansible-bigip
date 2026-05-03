@@ -54,6 +54,81 @@
   loop_control:
     label: "{{ item.name }}"
 
+- name: Configure LDAP management-plane auth providers
+  f5networks.f5_modules.bigip_device_auth_ldap:
+    provider: "{{ provider }}"
+    name: "{{ item.name }}"
+    bind_dn: "{{ item.bind_dn | default(omit) }}"
+    bind_password: "{{ item.bind_password | default(omit) }}"
+    ca_cert: "{{ item.ca_cert | default(omit) }}"
+    check_member_attr: "{{ item.check_member_attr | default(omit) }}"
+    client_cert: "{{ item.client_cert | default(omit) }}"
+    client_key: "{{ item.client_key | default(omit) }}"
+    fallback_to_local: "{{ item.fallback_to_local | default(omit) }}"
+    login_ldap_attr: "{{ item.login_ldap_attr | default(omit) }}"
+    port: "{{ item.port | default(omit) }}"
+    referrals: "{{ item.referrals | default(omit) }}"
+    remote_directory_tree: "{{ item.remote_directory_tree | default(omit) }}"
+    scope: "{{ item.scope | default(omit) }}"
+    servers: "{{ item.servers | default(omit) }}"
+    source_type: "{{ item.source_type | default(omit) }}"
+    ssl: "{{ item.ssl | default(omit) }}"
+    update_password: "{{ item.update_password | default(omit) }}"
+    use_for_auth: "{{ item.use_for_auth | default(omit) }}"
+    user_template: "{{ item.user_template | default(omit) }}"
+    validate_certs: "{{ item.validate_certs | default(omit) }}"
+    state: present
+  loop: "{{ system_auth_ldap_present | default([]) }}"
+  loop_control:
+    label: "{{ item.name }}"
+
+- name: Configure TACACS management-plane auth providers
+  f5networks.f5_modules.bigip_device_auth:
+    provider: "{{ provider }}"
+    type: tacacs
+    accounting: "{{ item.accounting | default(omit) }}"
+    authentication: "{{ item.authentication | default(omit) }}"
+    protocol_name: "{{ item.protocol_name | default(omit) }}"
+    secret: "{{ item.secret | default(omit) }}"
+    servers: "{{ item.servers | default(omit) }}"
+    service_name: "{{ item.service_name | default(omit) }}"
+    update_secret: "{{ item.update_secret | default(omit) }}"
+    use_for_auth: "{{ item.use_for_auth | default(omit) }}"
+    state: present
+  loop: "{{ system_auth_tacacs_present | default([]) }}"
+  loop_control:
+    label: "{{ item.name | default('tacacs-auth') }}"
+
+- name: Configure RADIUS management-plane auth servers
+  f5networks.f5_modules.bigip_device_auth_radius_server:
+    provider: "{{ provider }}"
+    name: "{{ item.name }}"
+    partition: "{{ item.partition | default('Common') }}"
+    description: "{{ item.description | default(omit) }}"
+    ip: "{{ item.ip }}"
+    port: "{{ item.port | default(omit) }}"
+    secret: "{{ item.secret | default(omit) }}"
+    timeout: "{{ item.timeout | default(omit) }}"
+    update_secret: "{{ item.update_secret | default(omit) }}"
+    state: present
+  loop: "{{ system_auth_radius_servers_present | default([]) }}"
+  loop_control:
+    label: "{{ item.partition | default('Common') }}/{{ item.name }}"
+
+- name: Configure RADIUS management-plane auth profile
+  f5networks.f5_modules.bigip_device_auth_radius:
+    provider: "{{ provider }}"
+    servers: "{{ item.servers | default(omit) }}"
+    retries: "{{ item.retries | default(omit) }}"
+    service_type: "{{ item.service_type | default(omit) }}"
+    accounting_bug: "{{ item.accounting_bug | default(omit) }}"
+    use_for_auth: "{{ item.use_for_auth | default(omit) }}"
+    fallback_to_local: "{{ item.fallback_to_local | default(omit) }}"
+    state: present
+  loop: "{{ system_auth_radius_present | default([]) }}"
+  loop_control:
+    label: "{{ item.name | default('radius-auth') }}"
+
 - name: Save BIG-IP running config
   f5networks.f5_modules.bigip_config:
     provider: "{{ provider }}"

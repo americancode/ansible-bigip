@@ -1,6 +1,6 @@
 # System Management
 
-The `playbooks/system.yml` playbook manages base BIG-IP device settings after the device is already reachable through a stable management endpoint: hostname, DNS, NTP, module provisioning, local users, and config persistence.
+The `playbooks/system.yml` playbook manages base BIG-IP device settings after the device is already reachable through a stable management endpoint: hostname, DNS, NTP, module provisioning, local users, management-plane admin authentication providers, and config persistence.
 
 For day-0 licensing and the first management IP/default route, use [bootstrap.md](bootstrap.md) and `playbooks/bootstrap.yml` first.
 
@@ -86,6 +86,94 @@ system_users:
 
 Required: `name`. Common fields: `full_name`, `partition_access`, `shell`, `password_credential`, `update_password`. The `update_password` field controls when passwords are changed: `on_create` sets it only on first creation, `always` updates on every run.
 
+### Management-Plane LDAP / Active Directory Auth
+
+Location: `vars/system/auth/ldap/`
+
+This configures how BIG-IP administrators log in to the appliance itself. It is separate from APM end-user authentication in [apm.md](apm.md).
+
+```yaml
+system_auth_ldap:
+  - name: "corp-ad-admins"
+    source_type: "active-directory"
+    servers:
+      - "ad01.example.com"
+      - "ad02.example.com"
+    bind_dn: "CN=svc-bigip,OU=Svc,DC=example,DC=com"
+    bind_password: !vault |
+      $ANSIBLE_VAULT;1.1;AES256
+      61333363356166323839396436313537326461346238656462613039373161626538393061656434
+    remote_directory_tree: "DC=example,DC=com"
+    user_template: "%s@example.com"
+    login_ldap_attr: "sAMAccountName"
+    ssl: "start-tls"
+    use_for_auth: true
+    fallback_to_local: true
+```
+
+Required: `name`, `servers`. Common fields: `source_type`, `bind_dn`, `bind_password`, `remote_directory_tree`, `user_template`, `login_ldap_attr`, `ssl`, `scope`, `use_for_auth`, `fallback_to_local`.
+
+### Management-Plane TACACS+
+
+Location: `vars/system/auth/tacacs/`
+
+```yaml
+system_auth_tacacs:
+  - name: "corp-tacacs"
+    servers:
+      - address: "192.0.2.61"
+        port: 49163
+      - address: "192.0.2.62"
+    secret: !vault |
+      $ANSIBLE_VAULT;1.1;AES256
+      36373433643035616266303536386461613665363566633361663434366563303962616464326362
+    authentication: "use-all-servers"
+    accounting: "send-to-all-servers"
+    protocol_name: "ip"
+    service_name: "system"
+    use_for_auth: false
+```
+
+Common fields: `servers`, `secret`, `authentication`, `accounting`, `protocol_name`, `service_name`, `update_secret`, `use_for_auth`.
+
+### Management-Plane RADIUS Servers
+
+Location: `vars/system/auth/radius_servers/`
+
+```yaml
+system_auth_radius_servers:
+  - name: "radius_dc1"
+    partition: "Common"
+    ip: "192.0.2.71"
+    port: 1812
+    secret: !vault |
+      $ANSIBLE_VAULT;1.1;AES256
+      65663563323663353562656434383762613631353939656435623336353330383232626539653864
+    timeout: 5
+```
+
+Required: `name`, `ip`. Common fields: `partition`, `description`, `port`, `secret`, `timeout`, `update_secret`.
+
+### Management-Plane RADIUS Auth Profile
+
+Location: `vars/system/auth/radius/`
+
+```yaml
+system_auth_radius:
+  - name: "corp-radius"
+    servers:
+      - "radius_dc1"
+      - "radius_dc2"
+    retries: 3
+    service_type: "administrative"
+    fallback_to_local: true
+    use_for_auth: false
+```
+
+The `servers` list points at objects defined in `vars/system/auth/radius_servers/`. Use `/Partition/name` when a referenced server is not in `Common`.
+
+Common fields: `servers`, `retries`, `service_type`, `accounting_bug`, `fallback_to_local`, `use_for_auth`.
+
 ### Config Save
 
 Location: `vars/system/config/`
@@ -106,14 +194,20 @@ This runs `bigip_config` to save the running config. It is the last task in the 
 3. NTP
 4. Provisioning
 5. Users
-6. Config save
+6. Management-plane auth providers
+7. Config save
 
 ## Partition and Naming Conventions
 
-System objects are device-scoped, not partition-scoped (with the exception of users, which support `partition_access` for role assignment). Use `Common` partition for user partition access unless you need restricted partitions.
+System objects are device-scoped, not partition-scoped, with two practical exceptions:
+
+- users support `partition_access` for role assignment
+- RADIUS server objects can still live in a partition, usually `Common`
+
+For environments with multiple auth methods defined in Git, only one of LDAP, TACACS, or RADIUS should set `use_for_auth: true` for a given target BIG-IP.
 
 For environments with multiple HA pairs, system settings are typically applied per device rather than synced. Run `system.yml` against each device individually when settings differ between peers.
 
 ## Deletion
 
-Users can be removed with `state: absent`. DNS and NTP objects use a present-state model where the last declaration wins. See [deletion-workflows.md](deletion-workflows.md).
+Users and management-plane auth objects can be removed with `state: absent` or the matching `vars/system/deletions/...` tree. DNS and NTP objects use a present-state model where the last declaration wins. See [deletion-workflows.md](deletion-workflows.md).
