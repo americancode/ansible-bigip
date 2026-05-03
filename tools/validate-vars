@@ -31,6 +31,23 @@ class AnsibleVarLoader(yaml.SafeLoader):
 
 
 def construct_ansible_tag(loader: AnsibleVarLoader, tag_suffix: str, node: yaml.Node) -> Any:
+    """YAML constructor that passes through Ansible-style tags (!) unchanged.
+
+    Purpose:
+        Allows the AnsibleVarLoader to parse YAML files that use Ansible-specific
+        tags (e.g., !vault, !unsafe) without raising errors.
+
+    Inputs:
+        loader (AnsibleVarLoader): The YAML loader instance.
+        tag_suffix (str): The tag suffix after the "!" prefix.
+        node (yaml.Node): The YAML node being constructed.
+
+    Outputs:
+        The constructed Python object (str, list, or dict depending on node type).
+
+    Constraints:
+        - Raises TypeError for unsupported node types.
+    """
     if isinstance(node, yaml.ScalarNode):
         return loader.construct_scalar(node)
     if isinstance(node, yaml.SequenceNode):
@@ -45,6 +62,20 @@ AnsibleVarLoader.add_multi_constructor("!", construct_ansible_tag)
 
 @dataclass(frozen=True)
 class TreeSpec:
+    """Specification for a var tree: where to find YAML files and how to parse them.
+
+    Purpose:
+        Defines the mapping between a domain object type (e.g., "ltm_pools")
+        and its on-disk location, YAML top-level key, and settings keys.
+
+    Attributes:
+        name (str): Unique identifier for this tree (e.g., "ltm_pools").
+        active_dir (Path): Directory containing active object definitions.
+        deletion_dir (Path): Directory containing deletion markers.
+        top_key (str): The YAML top-level key that holds the object list (e.g., "ltm_pools").
+        settings_key (str): The settings.yml key for defaults (e.g., "ltm_pool_defaults").
+        extra_settings_keys (tuple): Additional settings keys to load (e.g., monitor sets).
+    """
     name: str
     active_dir: Path
     deletion_dir: Path
@@ -55,6 +86,24 @@ class TreeSpec:
 
 @dataclass
 class LoadedObject:
+    """A loaded object from a var tree, enriched with metadata.
+
+    Purpose:
+        Wraps a single declared object with its source file, defaults, and
+        whether it came from the deletions tree.
+
+    Attributes:
+        tree (TreeSpec): The tree specification this object belongs to.
+        source_file (Path): The YAML file this object was loaded from.
+        defaults (dict): Merged directory-level defaults for this object.
+        data (dict): The actual object data from the YAML file.
+        from_deletions (bool): True if loaded from a deletions/ directory.
+
+    Properties:
+        relpath (str): Relative path for error messages.
+        effective_state (str): "absent" if from deletions, otherwise data["state"] or "present".
+        partition (str): The object's partition, falling back to defaults then "Common".
+    """
     tree: TreeSpec
     source_file: Path
     defaults: dict[str, Any]
@@ -77,6 +126,20 @@ class LoadedObject:
 
 
 class Validator:
+    """Orchestrates offline validation of all var trees against the repo's field model.
+
+    Purpose:
+        Loads all object trees defined in tree_specs, runs domain-specific
+        validation (bootstrap, network, system, ha, tls, ltm, gtm, security),
+        and collects errors for any violations.
+
+    Attributes:
+        errors (list[str]): Accumulated error messages.
+        objects (dict): Loaded objects keyed by tree name (e.g., "ltm_pools").
+        settings_cache (dict): Cache of loaded settings.yml payloads.
+        tree_specs (list[TreeSpec]): All registered var tree specifications.
+    """
+
     def __init__(self) -> None:
         self.errors: list[str] = []
         self.objects: dict[str, list[LoadedObject]] = {}
@@ -538,6 +601,16 @@ class Validator:
         ]
 
     def run(self) -> int:
+        """Execute the full validation suite and return an exit code.
+
+        Purpose:
+            Entry point for the validation tool. Loads all object trees, then runs
+            domain-specific validation (bootstrap, network, system, ha, tls, ltm, gtm,
+            security, waf, apm). Prints errors to stderr.
+
+        Returns:
+            int: 0 if validation passed, 1 if any errors were found.
+        """
         self.validate_common()
 
         for spec in self.tree_specs:
@@ -565,6 +638,15 @@ class Validator:
         return 0
 
     def validate_common(self) -> None:
+        """Validate vars/common.yml for required fields.
+
+        Purpose:
+            Ensures the repo-wide provider variable is defined and is a mapping.
+
+        Validates:
+            - vars/common.yml must exist and be a mapping.
+            - "provider" key must be present and be a dict.
+        """
         path = VARS_DIR / "common.yml"
         payload = self.load_yaml(path)
         if not isinstance(payload, dict):
@@ -576,6 +658,19 @@ class Validator:
             self.error(path, "`provider` must be a mapping")
 
     def validate_bootstrap(self) -> None:
+        """Validate bootstrap domain objects (licenses and management).
+
+        Purpose:
+            Checks that bootstrap licenses and management routes are correctly
+            structured and conform to the bootstrap domain's limited model.
+
+        Validates:
+            - License objects: state must be present/latest/absent/revoked;
+              accept_eula must be true for present/latest; addon_keys must be a list.
+            - Management objects: address must be valid CIDR; gateway must be valid IP;
+              route_name must not be empty if present.
+            - Deletion trees are not supported for bootstrap objects.
+        """
         licenses = self.objects.get("bootstrap_licenses", [])
         management = self.objects.get("bootstrap_management", [])
 
@@ -624,6 +719,20 @@ class Validator:
         )
 
     def load_tree(self, spec: TreeSpec, *, from_deletions: bool) -> None:
+        """Load and register objects from a single var tree directory.
+
+        Purpose:
+            Walks the active or deletions directory for a TreeSpec, loads each
+            YAML file, and registers valid objects into self.objects.
+
+        Inputs:
+            spec (TreeSpec): The tree specification to load.
+            from_deletions (bool): If True, load from the deletions directory.
+
+        Side effects:
+            - Registers LoadedObject instances into self.objects[spec.name].
+            - Validates settings.yml files and object structure.
+        """
         base_dir = spec.deletion_dir if from_deletions else spec.active_dir
         if not base_dir.exists():
             return
@@ -719,6 +828,20 @@ class Validator:
         return payload
 
     def validate_network(self) -> None:
+        """Validate network domain objects: VLAns, self IPs, route domains, routes, SNATs, NATs, trunks.
+
+        Purpose:
+            Checks structural correctness and cross-object references for all
+            network-level objects.
+
+        Validates:
+            - VLANS: name required; interfaces must be a list if present.
+            - Route domains: name and id required; VLAN references must exist;
+              parent must be a valid route domain ID; routing_protocol must be a list.
+            - Self IPs: name, address, netmask, vlan required (if not absent);
+              referenced VLAN must exist; route domain in address must be defined.
+            - SNAT translations, SNAT pools, trunks, NATs: structure and field types.
+        """
         vlans = self.objects.get("network_vlans", [])
         self_ips = self.objects.get("network_self_ips", [])
         route_domains = self.objects.get("network_route_domains", [])
@@ -891,6 +1014,19 @@ class Validator:
         self.check_duplicates(nats, lambda obj: ("nat", obj.partition, obj.data.get("name")), "NAT")
 
     def validate_system(self) -> None:
+        """Validate system domain objects: hostname, DNS, NTP, provisioning, users, auth, banners, config.
+
+        Purpose:
+            Checks that system-level objects are correctly structured.
+
+        Validates:
+            - Hostname, DNS, NTP: required fields and format.
+            - Provisioning: module names and levels.
+            - Users: username, password, partition fields.
+            - Auth (LDAP, TACACS, RADIUS): connection and auth settings.
+            - Login banners: enabled flag and text.
+            - Config: config save settings.
+        """
         hostnames = self.objects.get("system_hostnames", [])
         dns_settings = self.objects.get("system_dns", [])
         ntp_settings = self.objects.get("system_ntp", [])
@@ -1172,6 +1308,20 @@ class Validator:
                 self.error(obj.relpath, "`save` must be a boolean")
 
     def validate_ha(self) -> None:
+        """Validate high-availability domain objects: device trust, device groups, traffic groups, HA groups, config sync.
+
+        Purpose:
+            Checks that HA objects are correctly structured and cross-referenced.
+
+        Validates:
+            - Device trusts: peer addresses and credentials.
+            - Device groups: name, type, members.
+            - Device group members: member references and state.
+            - Traffic groups: name, auto-failback, ha-group references.
+            - HA groups: name, type, members, thresholds.
+            - Config sync actions: target device and state.
+            - Device connectivity: management IPs (delete not supported).
+        """
         trusts = self.objects.get("ha_device_trusts", [])
         groups = self.objects.get("ha_device_groups", [])
         members = self.objects.get("ha_device_group_members", [])
@@ -1448,6 +1598,21 @@ class Validator:
         )
 
     def validate_ltm(self) -> None:
+        """Validate LTM domain objects: nodes, profiles, pools, monitors, virtual servers, persistence, iRules, data groups, policies.
+
+        Purpose:
+            Checks structural correctness and cross-object references for all
+            LTM (Local Traffic Manager) objects.
+
+        Validates:
+            - Nodes: name required; address or FQDN required; duplicate detection.
+            - Monitors: name and type required; type must be supported.
+            - Profiles: name and type required; parent profile validation.
+            - Pools: name required; monitor validation; member references.
+            - Virtual servers: name, destination, pool references.
+            - Persistence profiles, iRules, data groups, policies: structure and references.
+            - RKE2 server intents: cluster intent compilation and validation.
+        """
         nodes = self.objects.get("ltm_nodes", [])
         profiles = self.objects.get("ltm_profiles", [])
         pools = self.objects.get("ltm_pools", [])
@@ -1851,7 +2016,27 @@ class Validator:
                     self.error(source, f"LTM pool `{pool_name}` member `{member_name}` references undefined node `{fq_node}`")
 
     def validate_gtm(self) -> None:
+        """Validate GTM domain objects: datacenters, servers, pools, wide IPs, topology regions/records, monitors.
+
+        Purpose:
+            Checks structural correctness and cross-object references for all
+            GTM (Global Traffic Manager) objects.
+
+        Validates:
+            - Datacenters: name required; location/contact fields.
+            - Servers: name, datacenter reference, virtual server references.
+            - Pools: name, lb_method, member references to LTM virtual servers.
+            - Wide IPs: name, record_type, pool references.
+            - Topology regions: name, region_members.
+            - Topology records: source, destination, weight.
+            - Monitors: name and type validation.
+        """
         datacenters = self.objects.get("gtm_datacenters", [])
+        servers = self.objects.get("gtm_servers", [])
+        pools = self.objects.get("gtm_pools", [])
+        wide_ips = self.objects.get("gtm_wide_ips", [])
+        topology_regions = self.objects.get("gtm_topology_regions", [])
+        topology_records = self.objects.get("gtm_topology_records", [])
         monitors = self.objects.get("gtm_monitors", [])
         servers = self.objects.get("gtm_servers", [])
         pools = self.objects.get("gtm_pools", [])
@@ -2795,6 +2980,21 @@ class Validator:
         key_func,
         label: str,
     ) -> None:
+        """Detect duplicate object definitions across the var tree.
+
+        Purpose:
+            Ensures no two objects in the same tree share the same identity
+            (e.g., same name + partition).
+
+        Inputs:
+            objects (list[LoadedObject]): Objects to check.
+            key_func (callable): Function that takes a LoadedObject and returns
+                a tuple key (e.g., (type, partition, name)).
+            label (str): Human-readable label for error messages.
+
+        Side effects:
+            Calls self.error() for each duplicate found.
+        """
         seen: dict[tuple[Any, ...], LoadedObject] = {}
         for obj in objects:
             key = key_func(obj)
@@ -2812,6 +3012,20 @@ class Validator:
         source: str | None = None,
         label: str | None = None,
     ) -> None:
+        """Check that required fields are present and non-empty in an object.
+
+        Purpose:
+            Fails validation if any required field is missing, None, or empty string.
+
+        Inputs:
+            obj (LoadedObject | dict): The object to check.
+            fields (list[str]): List of required field names.
+            source (str|None): Override source path for error messages.
+            label (str|None): Override label for error messages.
+
+        Side effects:
+            Calls self.error() for each missing field.
+        """
         data = obj.data if isinstance(obj, LoadedObject) else obj
         source_ref = obj.relpath if isinstance(obj, LoadedObject) else (source or "<unknown>")
         prefix = label or "object"

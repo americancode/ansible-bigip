@@ -133,19 +133,150 @@ These are the highest-value open items.
 
 These are the concrete remaining backlog items.
 
-1. Add function-level documentation across `filter_plugins/bigip_var_filters.py` and `filter_plugins/bigip_filters/*.py`
-   - document purpose, inputs, outputs, emitted canonical object shapes, and key assumptions
-   - add inline comments where normalization or name generation is non-obvious
+1. **Function-level documentation for tools/** (BREAKDOWN)**
+    - **tools/validate-vars:**
+      - [x] `construct_ansible_tag()` — YAML tag constructor for Ansible vars
+      - [x] `TreeSpec` dataclass — var tree specification
+      - [x] `LoadedObject` dataclass — loaded object with metadata
+      - [x] `Validator.__init__()` — initialize validator state
+      - [x] `Validator.run()` — main validation entry point
+      - [x] `Validator.validate_common()` — validate common.yml provider
+      - [x] `Validator.validate_bootstrap()` — validate bootstrap objects
+      - [x] `Validator.load_tree()` — load and register objects from a var tree
+      - [x] `Validator.validate_network()` — validate network domain objects
+      - [x] `Validator.validate_system()` — validate system domain objects
+      - [x] `Validator.validate_ha()` — validate HA domain objects
+      - [ ] `Validator.validate_tls()` — validate TLS domain objects
+      - [x] `Validator.validate_ltm()` — validate LTM domain objects
+      - [x] `Validator.validate_gtm()` — validate GTM domain objects
+      - [x] `Validator.validate_security()` — validate security domain objects
+      - [x] `Validator.check_duplicates()` — duplicate object detection
+      - [x] `Validator.require_fields()` — required field validation
+      - [ ] `Validator.validate_named_or_fq_reference()` — cross-object reference validation
+    - **tools/drift-check:**
+      - [ ] `BigIPConnection` class — device connection and REST helpers
+      - [ ] `DriftEntry` / `DriftReport` dataclasses — drift result types
+      - [ ] `VarTreeLoader.__init__()` / `load()` — load var trees for comparison
+      - [ ] `VarTreeLoader._load_simple_tree()` — single tree loader
+      - [ ] `DriftChecker.__init__()` / `run()` — main drift check entry point
+      - [ ] `DriftChecker._check_type()` — check a single object type for drift
+      - [ ] `DriftChecker._fetch_live_items()` — query BIG-IP REST API
+      - [ ] `DriftChecker._find_value_drift()` — compare declared vs live values
+      - [ ] `DriftChecker._find_network_value_drift()` — network-specific drift
+      - [ ] `DriftChecker._find_gtm_value_drift()` — GTM-specific drift
+      - [ ] `DriftChecker._find_tls_value_drift()` — TLS-specific drift
+      - [ ] `DriftChecker._find_apm_value_drift()` — APM-specific drift
+      - [ ] `DriftChecker._compare_field()` — single field comparison helper
+      - [ ] `DriftChecker._normalize_*()` — value normalization helpers
+    - **tools/import-from-bigip:**
+      - [ ] `BigIPConnection` class — device connection and REST helpers
+      - [ ] `ImportSpec` dataclass — import specification
+      - [ ] `Importer.__init__()` / `run()` — main import entry point
+      - [ ] `Importer._import_type()` — import a single object type
+      - [ ] `Importer._transform_item()` — transform BIG-IP API object to repo shape
+      - [ ] `Importer._normalize_value()` — normalize imported field values
+      - [ ] `Importer._import_waf_server_technologies()` — WAF-specific import
+      - [ ] `Importer._import_apm_sso_configs()` — APM SSO import
+      - [ ] `Importer._import_apm_policy_nodes()` — APM policy node import
+      - [ ] `Importer._import_gtm_topology_records()` — GTM topology import
+      - [ ] `Importer._transform_pool()` — pool-specific transformations
+      - [ ] `Importer._transform_virtual()` — virtual server transformations
+      - [ ] `Importer._transform_monitor()` — monitor transformations
+      - [ ] `Importer._write_import_objects()` — write imported objects to YAML
 
-2. Add top-level header comments across canonical playbook prep/task files
-   - cover what each file produces or mutates
-   - start with `prep.yml`, `prep/*.yml`, and `tasks/manage.yml`
+2. Add function-level documentation across `filter_plugins/bigip_var_filters.py` and `filter_plugins/bigip_filters/*.py` ✅ COMPLETED
 
-3. Add targeted inline comments across playbook task/job files in manageable domain batches
-   - batch 1: `bootstrap`, `network`, `system`, `ha`, `tls`
-   - batch 2: `ltm`, `gtm`
-   - batch 3: `security`
-   - focus on task ordering, data reshaping, compiler handoff, lookup building, and delete/apply merging
+3. **Add top-level header comments across canonical playbook prep/task files**
+   - **Shared prep snippets (`playbooks/shared/prep/`):**
+     - [ ] `load-fragments.yml` — discovery and aggregation helper
+     - [ ] `classify-ops.yml` — delete/apply classification helper
+   - **Bootstrap (`playbooks/bootstrap/`):**
+     - [ ] `prep.yml` — load license and management vars
+     - [ ] `tasks/manage.yml` — apply/delete ordering
+     - [ ] `tasks/apply.yml` — licensing and management-ip apply
+     - [ ] `tasks/delete.yml` — intentionally empty (day-0 only)
+   - **Network (`playbooks/network/`):**
+     - [ ] `prep.yml` — load VLANs, self-IPs, routes, trunks, SNATs, NATs
+     - [ ] `prep/*.yml` — fragment loaders for each object type
+     - [ ] `tasks/manage.yml` — apply/delete ordering for network objects
+     - [ ] `tasks/apply.yml` — create/update network objects
+     - [ ] `tasks/delete.yml` — delete network objects in reverse order
+   - **System (`playbooks/system/`):**
+     - [ ] `prep.yml` — load hostname, DNS, NTP, provisioning, users, auth, banners
+     - [ ] `tasks/manage.yml` — apply/delete ordering for system objects
+     - [ ] `tasks/apply.yml` — configure system settings
+     - [ ] `tasks/delete.yml` — delete system objects
+   - **HA (`playbooks/ha/`):**
+     - [ ] `prep.yml` — load device trust, groups, traffic groups, HA groups
+     - [ ] `tasks/manage.yml` — apply/delete ordering for HA objects
+     - [ ] `tasks/apply.yml` — configure HA relationships
+     - [ ] `tasks/delete.yml` — tear down HA relationships
+   - **TLS (`playbooks/tls/`):**
+     - [ ] `prep.yml` — load keys, certs, CA bundles, SSL profiles
+     - [ ] `tasks/manage.yml` — apply/delete ordering for TLS objects
+     - [ ] `tasks/apply.yml` — deploy TLS materials and profiles
+     - [ ] `tasks/delete.yml` — remove TLS objects
+   - **LTM (`playbooks/ltm/`):**
+     - [ ] `prep.yml` — load monitors, profiles, nodes, pools, virtual servers, persistence, iRules, data groups, policies
+     - [ ] `prep/intents/*` — intent compiler snippets (clusters, etc.)
+     - [ ] `tasks/manage.yml` — apply/delete ordering for LTM objects
+     - [ ] `tasks/apply.yml` — create/update LTM objects
+     - [ ] `tasks/delete.yml` — delete LTM objects in reverse order
+   - **GTM (`playbooks/gtm/`):**
+     - [ ] `prep.yml` — load datacenters, servers, pools, wide IPs, regions, topology
+     - [ ] `tasks/manage.yml` — apply/delete ordering for GTM objects
+     - [ ] `tasks/apply.yml` — create/update GTM objects
+     - [ ] `tasks/delete.yml` — delete GTM objects
+   - **Security (`playbooks/security/`):**
+     - [ ] `prep.yml` — load AFM, WAF, APM objects
+     - [ ] `tasks/manage.yml` — apply/delete ordering for security objects
+     - [ ] `tasks/apply.yml` — create/update security objects
+     - [ ] `tasks/delete.yml` — delete security objects
+
+4. **Add targeted inline comments across playbook task files (by batch)**
+   - **Batch 1: `bootstrap`, `network`, `system`, `ha`, `tls`**
+     - [ ] `playbooks/bootstrap/tasks/apply.yml` — licensing flow, management-ip, route setup
+     - [ ] `playbooks/network/tasks/apply.yml` — VLAN creation, self-IP binding, route tables
+     - [ ] `playbooks/network/tasks/delete.yml` — reverse-order teardown (VLANs last)
+     - [ ] `playbooks/system/tasks/apply.yml` — hostname, DNS, NTP, provisioning, users, auth
+     - [ ] `playbooks/ha/tasks/apply.yml` — device trust, group membership, traffic groups
+     - [ ] `playbooks/ha/tasks/delete.yml` — HA teardown order
+     - [ ] `playbooks/tls/tasks/apply.yml` — key/cert deployment, profile creation
+     - [ ] `playbooks/tls/tasks/delete.yml` — profile/cert removal order
+   - **Batch 2: `ltm`, `gtm`**
+     - [ ] `playbooks/ltm/tasks/apply.yml` — pool members, virtual server destination, profile binding
+     - [ ] `playbooks/ltm/tasks/delete.yml` — virtual servers first, then pools, then nodes
+     - [ ] `playbooks/ltm/prep/intents/clusters/*.yml` — RKE2 intent compiler logic
+     - [ ] `playbooks/gtm/tasks/apply.yml` — server discovery, pool members, wide IP records
+     - [ ] `playbooks/gtm/tasks/delete.yml` — wide IPs first, then pools, then servers
+   - **Batch 3: `security`**
+     - [ ] `playbooks/security/tasks/apply.yml` — AFM rules/policies, WAF policies, APM config
+     - [ ] `playbooks/security/tasks/delete.yml` — security object teardown order
+   - **Focus areas for inline comments:**
+     - [ ] Task ordering rationale (why this order?)
+     - [ ] Data reshaping logic (how does vars → runtime input?)
+     - [ ] Compiler handoff points (where do intent → canonical transformations happen?)
+     - [ ] Lookup building (how are cross-object references resolved?)
+     - [ ] Delete/apply merging (how does classification route objects?)
+
+5. **Refactor `tools/validate-vars` into a modular package after the documentation hardening work**
+   - split monolithic validator logic into focused modules under a dedicated `tools/validate_vars/` package
+   - extract shared YAML loading, tree walking, defaults handling, and reference helpers into common utilities
+   - split domain validation into separate modules where it improves readability (`network`, `system`, `ha`, `tls`, `ltm`, `gtm`, `security`, `bootstrap`)
+   - keep the CLI entrypoint stable as `tools/validate-vars`
+   - update docs/comments as part of the refactor so contributors can navigate the new structure without AI assistance
+
+6. **Refactor `tools/drift-check` into a modular package after the documentation hardening work**
+   - split connection/client logic, var-tree loading, endpoint mappings, normalization helpers, and drift comparison logic into dedicated modules under `tools/drift_check/`
+   - separate generic comparison helpers from domain-specific drift logic (`network`, `gtm`, `tls`, `apm`, etc.)
+   - keep the CLI entrypoint stable as `tools/drift-check`
+   - prefer reusable classes and utility functions over one large script body
+
+7. **Refactor `tools/import-from-bigip` into a modular package after the documentation hardening work**
+   - split connection/client logic, import specs, field transformation helpers, file-output writers, and object-family-specific import routines into dedicated modules under `tools/import_from_bigip/`
+   - separate generic import plumbing from domain-specific transforms (`ltm`, `gtm`, `network`, `security`, `tls`)
+   - keep the CLI entrypoint stable as `tools/import-from-bigip`
+   - prefer reusable classes and shared normalization utilities over repeated inline transformations
 
 4. UCS backup/export workflow for configuration snapshots
    - priority: lower than management-plane auth, compliance, and current repo-boundary decisions
