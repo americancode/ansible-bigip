@@ -154,35 +154,34 @@ These are the concrete remaining backlog items.
       - [x] `Validator.require_fields()` — required field validation
       - [ ] `Validator.validate_named_or_fq_reference()` — cross-object reference validation
     - **tools/drift-check:**
-      - [ ] `BigIPConnection` class — device connection and REST helpers
-      - [ ] `DriftEntry` / `DriftReport` dataclasses — drift result types
-      - [ ] `VarTreeLoader.__init__()` / `load()` — load var trees for comparison
-      - [ ] `VarTreeLoader._load_simple_tree()` — single tree loader
-      - [ ] `DriftChecker.__init__()` / `run()` — main drift check entry point
-      - [ ] `DriftChecker._check_type()` — check a single object type for drift
-      - [ ] `DriftChecker._fetch_live_items()` — query BIG-IP REST API
-      - [ ] `DriftChecker._find_value_drift()` — compare declared vs live values
-      - [ ] `DriftChecker._find_network_value_drift()` — network-specific drift
-      - [ ] `DriftChecker._find_gtm_value_drift()` — GTM-specific drift
-      - [ ] `DriftChecker._find_tls_value_drift()` — TLS-specific drift
-      - [ ] `DriftChecker._find_apm_value_drift()` — APM-specific drift
-      - [ ] `DriftChecker._compare_field()` — single field comparison helper
-      - [ ] `DriftChecker._normalize_*()` — value normalization helpers
+      - [x] `BigIPConnection` class — device connection and REST helpers
+      - [x] `DriftEntry` / `DriftReport` dataclasses — drift result types
+      - [x] `VarTreeLoader.__init__()` / `load()` — load var trees for comparison
+      - [x] `VarTreeLoader._load_simple_tree()` — single tree loader
+      - [x] `DriftChecker.__init__()` / `run()` — main drift check entry point
+      - [x] `DriftChecker._check_type()` — check a single object type for drift
+      - [x] `DriftChecker._fetch_live_items()` — query BIG-IP REST API
+      - [x] `DriftChecker._find_value_drift()` — compare declared vs live values
+      - [x] `DriftChecker._find_network_value_drift()` — network-specific drift
+      - [x] `DriftChecker._find_gtm_value_drift()` — GTM-specific drift
+      - [x] `DriftChecker._find_tls_value_drift()` — TLS-specific drift
+      - [x] `DriftChecker._find_apm_value_drift()` — APM-specific drift
+      - [x] `DriftChecker._compare_field()` — single field comparison helper
+      - [x] `DriftChecker._normalize_*()` — value normalization helpers
     - **tools/import-from-bigip:**
-      - [ ] `BigIPConnection` class — device connection and REST helpers
-      - [ ] `ImportSpec` dataclass — import specification
-      - [ ] `Importer.__init__()` / `run()` — main import entry point
-      - [ ] `Importer._import_type()` — import a single object type
-      - [ ] `Importer._transform_item()` — transform BIG-IP API object to repo shape
-      - [ ] `Importer._normalize_value()` — normalize imported field values
-      - [ ] `Importer._import_waf_server_technologies()` — WAF-specific import
-      - [ ] `Importer._import_apm_sso_configs()` — APM SSO import
-      - [ ] `Importer._import_apm_policy_nodes()` — APM policy node import
-      - [ ] `Importer._import_gtm_topology_records()` — GTM topology import
-      - [ ] `Importer._transform_pool()` — pool-specific transformations
-      - [ ] `Importer._transform_virtual()` — virtual server transformations
-      - [ ] `Importer._transform_monitor()` — monitor transformations
-      - [ ] `Importer._write_import_objects()` — write imported objects to YAML
+      - [x] `BigIPConnection` class — device connection and REST helpers
+      - [x] `ImportSpec` dataclass — import specification
+      - [x] `Importer.__init__()` / `run()` — main import entry point
+      - [x] `Importer._import_type()` — import a single object type
+      - [x] `Importer._transform_item()` — transform BIG-IP API object to repo shape
+      - [x] `Importer._normalize_value()` — normalize imported field values
+      - [x] `Importer._import_waf_server_technologies()` — WAF-specific import
+      - [x] `Importer._import_apm_sso_configs()` — APM SSO import
+      - [x] `Importer._import_apm_policy_nodes()` — APM policy node import
+      - [x] `Importer._import_gtm_topology_records()` — GTM topology import
+      - [x] `Importer._transform_pool()` — pool-specific transformations
+      - [x] `Importer._transform_virtual()` — virtual server transformations
+      - [x] `Importer._transform_monitor()` — monitor transformations
 
 2. Add function-level documentation across `filter_plugins/bigip_var_filters.py` and `filter_plugins/bigip_filters/*.py` ✅ COMPLETED
 

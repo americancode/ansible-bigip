@@ -53,6 +53,22 @@ VarTreeDumper.add_representer(str, str_representer)
 
 @dataclass
 class BigIPConnection:
+    """Manage authenticated REST API connections to a BIG-IP device.
+
+    Purpose:
+        Reads connection details from environment variables and provides
+        helpers to query the BIG-IP REST API for object imports.
+
+    Attributes:
+        host (str): BIG-IP hostname or IP address.
+        username (str): BIG-IP username (default: "admin").
+        password (str): BIG-IP password.
+        port (int): BIG-IP management port (default: 443).
+
+    Environment variables:
+        F5_HOST (required), F5_USERNAME (default: admin), F5_PASSWORD (required),
+        F5_SERVER_PORT / F5_PORT (default: 443).
+    """
     host: str
     username: str
     password: str
@@ -60,10 +76,19 @@ class BigIPConnection:
 
     @property
     def base_url(self) -> str:
+        """Return the base URL for BIG-IP REST API calls."""
         return f"https://{self.host}:{self.port}/mgmt/tm"
 
     @classmethod
     def from_env(cls) -> "BigIPConnection":
+        """Create a BigIPConnection from environment variables.
+
+        Returns:
+            BigIPConnection: Configured connection instance.
+
+        Side effects:
+            Exits with code 1 if F5_HOST or F5_PASSWORD are missing.
+        """
         host = os.environ.get("F5_HOST")
         if not host:
             print("ERROR: F5_HOST environment variable is required.", file=sys.stderr)
@@ -80,9 +105,18 @@ class BigIPConnection:
         )
 
     def get_all(self, uri: str) -> list[dict[str, Any]]:
+        """Paginate through a BIG-IP REST endpoint and return all items.
+
+        Inputs:
+            uri (str): API endpoint path (e.g., "ltm/pool").
+
+        Returns:
+            list[dict]: All items from the paginated response.
+        """
         url = f"{self.base_url}/{uri}"
         params = {"$top": 1000}
         items: list[dict[str, Any]] = []
+
         while url:
             resp = requests.get(url, auth=(self.username, self.password), params=params, verify=False, timeout=30)
             resp.raise_for_status()
@@ -90,6 +124,7 @@ class BigIPConnection:
             items.extend(data.get("items", []))
             url = data.get("nextSelfLink")
             params = {}
+
         return items
 
 
@@ -514,11 +549,32 @@ BUILTIN_PROFILES = {
 
 
 class Importer:
+    """Orchestrates importing BIG-IP configuration into repository var tree format.
+
+    Purpose:
+        Queries a BIG-IP device via REST API and generates YAML files
+        matching the repository's var tree structure under vars/.
+
+    Attributes:
+        conn (BigIPConnection): Authenticated BIG-IP connection.
+        out_dir (Path): Output directory for generated YAML files.
+    """
+
     def __init__(self, conn: BigIPConnection, out_dir: Path) -> None:
         self.conn = conn
         self.out_dir = out_dir
 
     def run(self, types: list[str] | None = None) -> dict[str, int]:
+        """Execute import for all or a subset of object types.
+
+        Inputs:
+            types (list[str]|None): If provided, only import these types
+                (e.g., ["ltm_pools", "ltm_virtual_servers"]).
+
+        Returns:
+            dict[str, int]: Mapping of object type to count of imported objects
+                (or -1 if an error occurred).
+        """
         specs = {k: v for k, v in IMPORT_SPECS.items() if k in (types or list(IMPORT_SPECS))}
         results: dict[str, int] = {}
 
@@ -533,6 +589,23 @@ class Importer:
         return results
 
     def _import_type(self, obj_type: str, spec: ImportSpec) -> int:
+        """Import a single object type from BIG-IP to YAML files.
+
+        Purpose:
+            Queries BIG-IP REST API for the given object type,
+            transforms items to repo format, and writes YAML output.
+
+        Inputs:
+            obj_type (str): The object type key (e.g., "ltm_pools").
+            spec (ImportSpec): The import specification for this type.
+
+        Returns:
+            int: Number of objects imported (or -1 on error).
+
+        Side effects:
+            For special types (WAF, APM, GTM topology), delegates to type-specific methods.
+            Otherwise, queries BIG-IP, transforms items, and writes YAML output.
+        """
         if obj_type == "waf_server_technologies":
             return self._import_waf_server_technologies(spec)
         if obj_type == "apm_sso_configs":
@@ -569,6 +642,18 @@ class Importer:
         return len(objects)
 
     def _import_waf_server_technologies(self, spec: ImportSpec) -> int:
+        """Import WAF server technologies from BIG-IP to YAML.
+
+        Inputs:
+            spec (ImportSpec): The import specification for WAF technologies.
+
+        Returns:
+            int: Number of technologies imported.
+
+        Side effects:
+            For each ASM policy, queries its server technology reference and
+            extracts technology names into the output YAML.
+        """
         policies = self.conn.get_all(spec.endpoint)
         if not policies:
             return 0
@@ -603,6 +688,17 @@ class Importer:
         return self._write_import_objects("waf_server_technologies", spec, objects)
 
     def _import_apm_sso_configs(self, spec: ImportSpec) -> int:
+        """Import APM SSO configurations from BIG-IP to YAML.
+
+        Inputs:
+            spec (ImportSpec): The import specification for APM SSO configs.
+
+        Returns:
+            int: Number of SSO configs imported.
+
+        Side effects:
+            Transforms each SSO config and writes import-{obj_type}.yml.
+        """
         items = self.conn.get_all(spec.endpoint)
         if not items:
             return 0
@@ -616,6 +712,18 @@ class Importer:
         return self._write_import_objects("apm_sso_configs", spec, objects)
 
     def _import_apm_policy_nodes(self, spec: ImportSpec) -> int:
+        """Import APM policy nodes from BIG-IP to YAML.
+
+        Inputs:
+            spec (ImportSpec): The import specification for APM policy nodes.
+
+        Returns:
+            int: Number of policy nodes imported.
+
+        Side effects:
+            For each APM policy, extracts its access policy nodes
+            and writes them to the output YAML.
+        """
         policies = self.conn.get_all(spec.endpoint)
         if not policies:
             return 0
@@ -693,6 +801,22 @@ class Importer:
         return len(objects)
 
     def _transform_item(self, item: dict, spec: ImportSpec) -> dict | None:
+        """Transform a BIG-IP API object into repository var tree shape.
+
+        Purpose:
+            Converts a raw BIG-IP REST response item into the repository's
+            var tree format, applying type-specific transformations.
+
+        Inputs:
+            item (dict): Raw object from BIG-IP REST API.
+            spec (ImportSpec): Import specification with field mappings.
+
+        Returns:
+            dict|None: Transformed object ready for YAML output, or None if invalid.
+
+        Side effects:
+            Calls type-specific transform methods for pools, virtual servers, monitors, etc.
+        """
         obj: dict[str, Any] = {}
 
         for decl_key, api_key in spec.extract.items():
@@ -727,6 +851,24 @@ class Importer:
         return obj if obj.get("name") else None
 
     def _normalize_value(self, key: str, value: Any, spec: ImportSpec) -> Any:
+        """Normalize a field value from BIG-IP API to repo format.
+
+        Purpose:
+            Converts BIG-IP API field values into the appropriate Python
+            types and formats used in the repository var trees.
+
+        Inputs:
+            key (str): The field name being normalized.
+            value (Any): The raw value from BIG-IP API.
+            spec (ImportSpec): The import specification for context.
+
+        Returns:
+            Any: The normalized value ready for YAML output.
+
+        Side effects:
+            Handles special cases for load balancing methods, profile types,
+            destinations, booleans, integers, traffic groups, and scopes.
+        """
         if key == "lb_method":
             return str(value)
         if key == "type" and spec.top_key == "ltm_profiles":
@@ -798,6 +940,22 @@ class Importer:
         return value
 
     def _transform_apm_sso_config(self, item: dict[str, Any]) -> dict[str, Any] | None:
+        """Transform an APM SSO configuration item from BIG-IP API.
+
+        Purpose:
+            Converts a raw APM SSO configuration from the BIG-IP API
+            into the repository's var tree format.
+
+        Inputs:
+            item (dict[str, Any]): Raw SSO config from BIG-IP REST API.
+
+        Returns:
+            dict[str, Any] | None: Transformed SSO config, or None if invalid.
+
+        Side effects:
+            Derives the SSO type, extracts fields based on type-specific
+            field specs, and normalizes all values.
+        """
         name = item.get("name")
         if not name:
             return None

@@ -855,6 +855,18 @@ class DriftChecker:
         live_value: Any,
         normalizer: Any = None,
     ) -> None:
+        """Compare a single field between declared and live objects.
+
+        Inputs:
+            drifts (list[str]): The drift list to append to if mismatch.
+            field_name (str): Human-readable field name for the error.
+            declared_value (Any): The value from the var tree.
+            live_value (Any): The value from the BIG-IP device.
+            normalizer (callable|None): Optional function to normalize both values.
+
+        Side effects:
+            Appends a drift description to drifts if values mismatch.
+        """
         if declared_value is None:
             return
         normalize = normalizer or (lambda value: value)
@@ -864,12 +876,30 @@ class DriftChecker:
             drifts.append(f"{field_name}: declared={normalized_declared} vs live={normalized_live}")
 
     def _first_present(self, item: dict[str, Any], keys: tuple[str, ...]) -> Any:
+        """Return the first non-empty value from a dict given multiple possible keys.
+
+        Inputs:
+            item (dict): The dictionary to search.
+            keys (tuple): Ordered list of keys to try.
+
+        Returns:
+            The first non-None, non-empty value, or None.
+        """
         for key in keys:
             if key in item and item.get(key) not in (None, ""):
                 return item.get(key)
         return None
 
     def _normalize_short_name(self, value: Any) -> Any:
+        """Extract the short name from a BIG-IP FQ name or reference.
+
+        Inputs:
+            value (Any): The value to normalize.
+
+        Returns:
+            str: The last segment after "/" if value is a string starting with "/",
+                otherwise returns value unchanged.
+        """
         if not isinstance(value, str):
             return value
         text = value.strip()
@@ -880,6 +910,14 @@ class DriftChecker:
         return text
 
     def _normalize_name_list(self, value: Any) -> Any:
+        """Normalize a list of BIG-IP names to sorted short names.
+
+        Inputs:
+            value (Any): A list of names, a single name string, or None.
+
+        Returns:
+            sorted list: Sorted short names, or None.
+        """
         if value is None:
             return None
         if isinstance(value, list):
@@ -890,6 +928,14 @@ class DriftChecker:
         return value
 
     def _normalize_string_list(self, value: Any) -> Any:
+        """Normalize a list or space-separated string to a sorted list of strings.
+
+        Inputs:
+            value (Any): A list, a string, or None.
+
+        Returns:
+            sorted list of str, or None.
+        """
         if value is None:
             return None
         if isinstance(value, list):
