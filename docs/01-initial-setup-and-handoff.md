@@ -1,14 +1,12 @@
 # Initial Setup and Handoff
 
-This guide documents the full path from a brand-new BIG-IP appliance to normal Git-managed operation with this repository.
+This is the primary operator path for bringing a BIG-IP under Git management with this repository.
 
-It exists to answer a different question than the narrower bootstrap docs:
+Use this document first. The other bootstrap docs are narrower execution guides:
 
-- [bootstrap.md](bootstrap.md) explains the day-0 playbook itself
-- [cli-bootstrap.md](cli-bootstrap.md) explains how to run bootstrap from a terminal
-- [awx-ha-bootstrap.md](awx-ha-bootstrap.md) explains how to run HA setup from AWX once BIG-IP is reachable
-
-This document is the high-level sequence that ties those pieces together.
+- [02-bootstrap-playbook.md](02-bootstrap-playbook.md) explains only why `playbooks/bootstrap.yml` exists and what it manages
+- [03-cli-bootstrap.md](03-cli-bootstrap.md) explains how to execute the early phases from a terminal
+- [05-awx-ha-bootstrap.md](05-awx-ha-bootstrap.md) explains the AWX-side HA setup pattern after the management endpoint is stable
 
 ## Intended Outcome
 
@@ -20,6 +18,20 @@ At the end of this process:
 - base system settings are managed through Git
 - HA is established if the device belongs to a pair
 - routine `network`, `system`, `tls`, `ltm`, `gtm`, and `security` changes are made through GitOps workflows instead of ad hoc device edits
+
+## Short Version
+
+The intended path is:
+
+1. get the factory or temporary management endpoint reachable
+2. run `playbooks/bootstrap.yml` from the CLI
+3. if bootstrap changed the management IP, update `f5_host`
+4. run `playbooks/system.yml` to establish the device baseline
+5. if this is an HA pair, run `playbooks/ha.yml` from one designated device
+6. verify reachability, trust, and sync health
+7. hand routine operations off to AWX
+
+That sequence is the reason `bootstrap` is a separate playbook: it handles the one-time cutover into a stable management endpoint before the normal `system` and service-domain lifecycle begins.
 
 ## Phase 0: First-Boot Prerequisites
 
@@ -59,6 +71,11 @@ Use AWX-first only when:
 
 In most brand-new environments, CLI-first is the correct choice.
 
+Practical rule:
+
+- if BIG-IP still needs licensing or a permanent management IP, start with CLI and `playbooks/bootstrap.yml`
+- if BIG-IP is already stably reachable and AWX can connect to it, you can start in AWX after bootstrap is no longer needed
+
 ## Phase 2: Day-0 Bootstrap
 
 Use `playbooks/bootstrap.yml` to seed the minimum stable state:
@@ -72,13 +89,15 @@ Author the day-0 vars in:
 - `vars/bootstrap/license/`
 - `vars/bootstrap/management/`
 
-Run the bootstrap from the CLI path in [cli-bootstrap.md](cli-bootstrap.md).
+Run the bootstrap from the CLI path in [03-cli-bootstrap.md](03-cli-bootstrap.md).
 
 Important cutover rule:
 
 - if `bootstrap_management[*].address` changes the management IP, update the inventory host var `f5_host` before running the next playbook
 
 That management address becomes the durable endpoint this repo should target going forward.
+
+Bootstrap is intentionally narrow. It is not the long-term system baseline playbook. Its job is only to get the device licensed and reachable at the correct management endpoint so the normal lifecycle can begin cleanly.
 
 ## Phase 3: Base Device Configuration
 
@@ -163,10 +182,16 @@ Recommended handoff model:
 2. CLI optionally runs `playbooks/system.yml` and `playbooks/ha.yml` for first stabilization
 3. AWX takes over for routine operations after reachability and ownership are clear
 
+Recommended AWX ownership after handoff:
+
+- keep one inventory host per execution target with `f5_host` set to the stable management endpoint
+- for an HA pair, keep one default sync-owner target for shared-config jobs
+- use AWX for routine `system`, `network`, `tls`, `ltm`, `gtm`, and `security` changes after the bootstrap/sync-owner target is established
+
 See:
 
-- [awx-operation.md](awx-operation.md)
-- [awx-ha-bootstrap.md](awx-ha-bootstrap.md)
+- [04-awx-operation.md](04-awx-operation.md)
+- [05-awx-ha-bootstrap.md](05-awx-ha-bootstrap.md)
 
 ## What Is Still Manual
 
@@ -193,6 +218,8 @@ For a brand-new pair, the practical sequence is:
 6. verify trust, sync health, and management reachability
 7. hand off routine operations to AWX
 8. manage ongoing changes through Git-backed playbook runs
+
+For a standalone device, the same path applies without step 5.
 
 ## Source of Truth Boundary
 

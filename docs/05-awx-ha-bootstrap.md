@@ -2,11 +2,15 @@
 
 This guide walks through bringing up HA for two brand-new BIG-IP devices using AWX.
 
-For the broader first-boot sequence and when to hand off from CLI bootstrap to AWX, see [initial-setup.md](initial-setup.md).
+This is not the first document to read for a brand-new device. The intended path is:
 
-For the general AWX targeting model, inventory patterns, credential design, and template list, see [awx-operation.md](awx-operation.md).
+1. follow [01-initial-setup-and-handoff.md](01-initial-setup-and-handoff.md)
+2. use [03-cli-bootstrap.md](03-cli-bootstrap.md) first if the device still needs bootstrap
+3. use this guide after the management endpoint is stable and AWX can reach it
 
-If you need to initialize BIG-IP before AWX can safely reach it (e.g., AWX is fronted by the BIG-IP), use the CLI path in [cli-bootstrap.md](cli-bootstrap.md) and the day-0 runtime in [bootstrap.md](bootstrap.md) first, then adopt this AWX model afterward.
+For the general AWX targeting model, inventory patterns, credential design, and template list, see [04-awx-operation.md](04-awx-operation.md).
+
+If you need to initialize BIG-IP before AWX can safely reach it, use the CLI path in [03-cli-bootstrap.md](03-cli-bootstrap.md) and the day-0 runtime in [02-bootstrap-playbook.md](02-bootstrap-playbook.md) first, then adopt this AWX model afterward.
 
 ## Example Topology
 
@@ -17,7 +21,7 @@ If you need to initialize BIG-IP before AWX can safely reach it (e.g., AWX is fr
 
 ## Step 1: Set Up AWX Inventory
 
-See [awx-operation.md](awx-operation.md) for the full inventory pattern. Minimum working shape:
+See [04-awx-operation.md](04-awx-operation.md) for the full inventory pattern. Minimum working shape:
 
 ```text
 Inventory: prod-bigip
@@ -42,7 +46,7 @@ Only `f5_host` is required. The rest are for operator clarity.
 
 ## Step 2: Set Up AWX Credential
 
-Create a custom credential type using `bigip-credential-config.yaml` and attach a credential instance to your job template. See [awx-operation.md](awx-operation.md) for credential design details.
+Create a custom credential type using `bigip-credential-config.yaml` and attach a credential instance to your job template. See [04-awx-operation.md](04-awx-operation.md) for credential design details.
 
 ## Step 3: Create the HA Bootstrap Template
 
@@ -54,7 +58,7 @@ In AWX:
 4. Host: `bigip-east-sync-owner` (the bootstrap device)
 5. Credential: attach your BIG-IP auth credential
 
-See [awx-operation.md](awx-operation.md) for the full template list.
+See [04-awx-operation.md](04-awx-operation.md) for the full template list.
 
 ## Step 4: Write the Repo HA Vars
 

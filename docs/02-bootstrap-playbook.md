@@ -1,6 +1,6 @@
 # Bootstrap Management
 
-The `playbooks/bootstrap.yml` playbook handles day-0 bootstrap tasks for a brand-new or newly reset BIG-IP before the broader `system`, `ha`, `network`, and service-domain playbooks take over.
+The `playbooks/bootstrap.yml` playbook exists for one narrow stage: turning a brand-new or newly reset BIG-IP into a device that has a stable management endpoint and can be managed normally by the rest of the repo.
 
 This playbook is intentionally narrow:
 
@@ -8,6 +8,30 @@ This playbook is intentionally narrow:
 - first reachable management IP and default management route
 
 It is designed for the chicken-and-egg case where AWX cannot be the first control plane yet.
+
+## When To Use Bootstrap
+
+Use `playbooks/bootstrap.yml` when any of these are true:
+
+- the BIG-IP still needs licensing
+- the current management IP is temporary, factory, or otherwise not the long-lived target endpoint
+- AWX cannot be the first control plane yet
+- you need a terminal-first recovery or first-run path before handing off to AWX
+
+Do not treat `bootstrap` as the normal system baseline. After bootstrap succeeds, the intended next playbook is `playbooks/system.yml`.
+
+## The Path
+
+The operator path is:
+
+1. reach the temporary management endpoint
+2. run `playbooks/bootstrap.yml`
+3. if bootstrap changed the management IP, update `f5_host`
+4. run `playbooks/system.yml`
+5. if needed, run `playbooks/ha.yml`
+6. hand routine operation off to AWX
+
+For the full narrative, see [01-initial-setup-and-handoff.md](01-initial-setup-and-handoff.md). For terminal execution details, see [03-cli-bootstrap.md](03-cli-bootstrap.md).
 
 ## Playbook Structure
 
@@ -83,10 +107,8 @@ The management step intentionally saves within the same `bigip_command` task. If
 After `bootstrap.yml` succeeds:
 
 1. update the inventory host var `f5_host` to the new management IP if it changed
-2. move to `playbooks/system.yml` for hostname, DNS, NTP, provisioning, and users
+2. move to `playbooks/system.yml` for hostname, DNS, NTP, provisioning, users, and management-plane admin auth
 3. move to `playbooks/ha.yml` if the device is joining an HA pair
 4. then apply `network`, `tls`, `ltm`, `gtm`, and `security` as needed
 
 This playbook is currently `runtime+validation`, not helper-tool complete. There is no `drift-check` or brownfield import support for bootstrap objects yet because bootstrap is a day-0, apply-only domain whose primary purpose is to establish first reachability and licensing before the steadier Git-managed lifecycle begins.
-
-For the full first-boot sequence and AWX handoff story, see [initial-setup.md](initial-setup.md).

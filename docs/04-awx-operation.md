@@ -114,7 +114,7 @@ That control belongs in AWX inventory and template design. The safe pattern is t
 
 ## Bootstrap Guides
 
-- day-0 bootstrap domain: [bootstrap.md](bootstrap.md)
-- first-boot and handoff sequence: [initial-setup.md](initial-setup.md)
-- AWX step-by-step: [awx-ha-bootstrap.md](awx-ha-bootstrap.md)
-- CLI step-by-step: [cli-bootstrap.md](cli-bootstrap.md)
+- primary first-boot path: [01-initial-setup-and-handoff.md](01-initial-setup-and-handoff.md)
+- day-0 bootstrap domain reference: [02-bootstrap-playbook.md](02-bootstrap-playbook.md)
+- CLI-first execution path: [03-cli-bootstrap.md](03-cli-bootstrap.md)
+- AWX HA step-by-step after bootstrap: [05-awx-ha-bootstrap.md](05-awx-ha-bootstrap.md)

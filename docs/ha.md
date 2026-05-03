@@ -143,4 +143,4 @@ Apply `playbooks/ha.yml` from one designated sync-owner or bootstrap device.
 - trust is authored from the current target device toward its peer
 - device groups, members, HA groups, and traffic groups describe shared HA state, but should still be applied from one designated device in the sync domain
 
-For AWX targeting and operating guidance, see [awx-operation.md](awx-operation.md) and [awx-ha-bootstrap.md](awx-ha-bootstrap.md).
+For AWX targeting and operating guidance, see [04-awx-operation.md](04-awx-operation.md) and [05-awx-ha-bootstrap.md](05-awx-ha-bootstrap.md).

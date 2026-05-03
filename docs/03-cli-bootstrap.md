@@ -2,7 +2,7 @@
 
 This guide covers the chicken-and-egg case where AWX is not the right first control plane because AWX itself depends on BIG-IP being available first.
 
-For the broader first-boot sequence and the GitOps handoff point, see [initial-setup.md](initial-setup.md).
+For the broader first-boot sequence and the GitOps handoff point, see [01-initial-setup-and-handoff.md](01-initial-setup-and-handoff.md). For the narrow explanation of why `bootstrap` is a separate playbook, see [02-bootstrap-playbook.md](02-bootstrap-playbook.md).
 
 Use this path when:
 
@@ -249,6 +249,16 @@ ansible-playbook -i inventory/bootstrap.ini playbooks/ltm.yml --limit bigip-east
 
 Do not run routine shared-config jobs against both peers unless you explicitly mean to do that.
 
+### 7. Hand off to AWX
+
+Once the stable management IP, system baseline, and HA target model are clear:
+
+- create or update the AWX inventory host with `f5_host` set to the stable management endpoint
+- attach the BIG-IP auth credential
+- move routine jobs into AWX templates such as `BIG-IP System Apply`, `BIG-IP Network Apply`, `BIG-IP TLS Apply`, and `BIG-IP LTM Apply`
+
+At that point, CLI bootstrap is finished and AWX becomes the normal control plane.
+
 ## Bootstrap Without a Local Inventory File
 
 If you really want a one-liner without creating an inventory file, you can use an inline inventory:
@@ -289,7 +299,7 @@ Once BIG-IP is initialized and AWX is safely reachable behind it:
 2. Create the auth-only BIG-IP credential from `bigip-credential-config.yaml`
 3. Point AWX templates at the same sync-owner execution host model
 
-See [awx-operation.md](awx-operation.md) for the full AWX pattern.
+See [04-awx-operation.md](04-awx-operation.md) for the full AWX pattern.
 
 At that point the CLI bootstrap path and the AWX path use the same repo model:
 

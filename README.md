@@ -2,6 +2,13 @@
 
 Declarative BIG-IP playbooks organized for GitOps-style management.
 
+For first boot through AWX handoff, follow the numbered operator path:
+[docs/01-initial-setup-and-handoff.md](docs/01-initial-setup-and-handoff.md),
+[docs/02-bootstrap-playbook.md](docs/02-bootstrap-playbook.md),
+[docs/03-cli-bootstrap.md](docs/03-cli-bootstrap.md),
+[docs/04-awx-operation.md](docs/04-awx-operation.md), and
+[docs/05-awx-ha-bootstrap.md](docs/05-awx-ha-bootstrap.md).
+
 ## Current Coverage
 
 The repo already manages the main BIG-IP runtime domains through Git:
@@ -25,10 +32,10 @@ Current lifecycle boundaries:
 | Variables and precedence | [docs/var-layout.md](docs/var-layout.md) |
 | Hybrid authoring | [docs/hybrid-authoring.md](docs/hybrid-authoring.md) |
 | Deletion workflows | [docs/deletion-workflows.md](docs/deletion-workflows.md) |
-| AWX and HA operation | [docs/awx-operation.md](docs/awx-operation.md) |
+| AWX and HA operation | [docs/04-awx-operation.md](docs/04-awx-operation.md) |
 | Validation | [docs/validation.md](docs/validation.md) |
-| Day-0 bootstrap | [docs/bootstrap.md](docs/bootstrap.md) |
-| Initial setup | [docs/initial-setup.md](docs/initial-setup.md) |
+| 01 Initial setup | [docs/01-initial-setup-and-handoff.md](docs/01-initial-setup-and-handoff.md) |
+| 02 Bootstrap playbook | [docs/02-bootstrap-playbook.md](docs/02-bootstrap-playbook.md) |
 | TLS secrets | [docs/tls-secrets.md](docs/tls-secrets.md) |
 | Network objects | [docs/network-objects.md](docs/network-objects.md) |
 | System management | [docs/system-management.md](docs/system-management.md) |
@@ -40,11 +47,11 @@ Current lifecycle boundaries:
 | APM access | [docs/apm.md](docs/apm.md) |
 | Authentication | [docs/authentication.md](docs/authentication.md) |
 | Kerberos SSO | [docs/kerberos-sso.md](docs/kerberos-sso.md) |
-| AWX bootstrap | [docs/awx-ha-bootstrap.md](docs/awx-ha-bootstrap.md) |
+| 05 AWX HA bootstrap | [docs/05-awx-ha-bootstrap.md](docs/05-awx-ha-bootstrap.md) |
 | Drift and import | [docs/drift-import.md](docs/drift-import.md) |
 | Promotion workflows | [docs/promotion-workflows.md](docs/promotion-workflows.md) |
 | Rollback patterns | [docs/rollback-patterns.md](docs/rollback-patterns.md) |
-| CLI bootstrap | [docs/cli-bootstrap.md](docs/cli-bootstrap.md) |
+| 03 CLI bootstrap | [docs/03-cli-bootstrap.md](docs/03-cli-bootstrap.md) |
 | Example models | [docs/example-models.md](docs/example-models.md) |
 | Roadmap | [ROADMAP.md](ROADMAP.md) |
 

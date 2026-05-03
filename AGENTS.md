@@ -66,7 +66,7 @@ These are also binding. A feature is not complete just because syntax-check pass
 - `bootstrap` is the current documented exception to normal delete/apply semantics:
   - keep `playbooks/bootstrap/tasks/delete.yml` intentionally empty
   - do not invent deletion behavior for day-0 licensing or first management-IP seeding
-  - keep that exception documented in `ROADMAP.md` and `docs/bootstrap.md`
+  - keep that exception documented in `ROADMAP.md` and `docs/02-bootstrap-playbook.md`
   - keep `bootstrap` classified as `runtime+validation` unless the roadmap explicitly decides helper-tool coverage is worth adding later
   - do not treat `bootstrap` as precedent for skipping drift/import work in other domains
 
@@ -119,8 +119,8 @@ Update existing `docs/` files when an existing domain changes:
 - `docs/example-models.md` — add a section explaining the new domain's authoring model and cross-file linkages
 - `docs/hybrid-authoring.md` — update if a new hybrid pattern is introduced
 - `docs/security.md` — update when AFM, WAF, or APM object types are added or changed
-- `docs/bootstrap.md` — update when day-0 licensing, first management reachability, or handoff behavior changes
-- `docs/initial-setup.md` — update when first-boot prerequisites, bootstrap sequencing, or AWX handoff behavior changes
+- `docs/02-bootstrap-playbook.md` — update when day-0 licensing, first management reachability, or handoff behavior changes
+- `docs/01-initial-setup-and-handoff.md` — update when first-boot prerequisites, bootstrap sequencing, or AWX handoff behavior changes
 
 ### README.md Updates
 
@@ -135,9 +135,9 @@ When a new playbook is added or an existing playbook gains new object coverage:
 When changing the bootstrap story, onboarding flow, or target-selection model:
 
 - update the relevant setup docs under `docs/` such as:
-  - `docs/cli-bootstrap.md`
-  - `docs/awx-ha-bootstrap.md`
-  - `docs/awx-operation.md`
+  - `docs/03-cli-bootstrap.md`
+  - `docs/05-awx-ha-bootstrap.md`
+  - `docs/04-awx-operation.md`
   - `docs/system-management.md`
 - if the change affects first-run or brand-new appliance setup, record any remaining documentation gaps in `ROADMAP.md` instead of assuming existing bootstrap docs are sufficient
 
