@@ -31,9 +31,14 @@ def compile_ltm_virtual_server_intent(virtual_server, pool_defaults=None, member
 
 
 def compile_ltm_rke2_server_intent(intent, intent_defaults=None, pool_defaults=None, member_defaults=None, monitor_sets=None):
+    # This compiler turns one higher-level cluster intent into the canonical LTM objects
+    # that the normal runtime playbook already knows how to manage:
+    # - 2 control-plane virtual servers on the shared control-plane VIP (`6443` and `9345`)
+    # - N worker-service virtual servers on `443`, each backed by a worker NodePort pool
     if not isinstance(intent, dict):
         return {"virtual_servers": [], "pools": []}
 
+    # Apply compiler-level defaults first, then let the explicit intent object win.
     resolved_intent = dict(intent_defaults or {})
     resolved_intent.update(intent)
 
@@ -42,10 +47,14 @@ def compile_ltm_rke2_server_intent(intent, intent_defaults=None, pool_defaults=N
     if not intent_name:
         return {"virtual_servers": [], "pools": []}
 
+    # Normalize member inputs once so the generated pools inherit the same member-default logic
+    # used by first-class canonical pool authoring.
     control_plane_members = normalize_members(resolved_intent.get("control_plane_members"), member_defaults) or []
     worker_members = normalize_members(resolved_intent.get("worker_members"), member_defaults) or []
     worker_services = resolved_intent.get("worker_services") or {}
 
+    # Carry forward only the fields that are valid on the emitted canonical virtual servers.
+    # Intent-only keys such as worker member lists and service maps are consumed here, not by runtime tasks.
     base_virtual_server = {
         key: value
         for key, value in resolved_intent.items()
@@ -82,6 +91,9 @@ def compile_ltm_rke2_server_intent(intent, intent_defaults=None, pool_defaults=N
     compiled_pools = []
 
     def build_members(source_members, port):
+        # Reuse the declared member objects but rewrite the port for the generated pool.
+        # The same control-plane members feed both `6443` and `9345`, and worker members
+        # are reused for each worker service with its own NodePort.
         members = []
         for member in source_members:
             if not isinstance(member, dict):
@@ -92,6 +104,8 @@ def compile_ltm_rke2_server_intent(intent, intent_defaults=None, pool_defaults=N
         return members
 
     def add_service(*, suffix, destination, destination_port, pool_name, monitors, members, description):
+        # Every generated service emits one canonical virtual server and one canonical pool.
+        # Delete support stays symmetric by emitting the same names with `state: absent`.
         virtual_server = dict(base_virtual_server)
         virtual_server["name"] = f"vs_{intent_name}_{suffix}"
         virtual_server["partition"] = partition
@@ -143,6 +157,7 @@ def compile_ltm_rke2_server_intent(intent, intent_defaults=None, pool_defaults=N
             continue
         service = service if isinstance(service, dict) else {}
         node_port = service.get("node_port")
+        # Worker services front `443` externally but forward to a configurable NodePort internally.
         monitors = expand_monitor_list(ensure_list(service.get("monitors")), monitor_sets)
         add_service(
             suffix=f"{service_name}_443",

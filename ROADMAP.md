@@ -116,11 +116,16 @@ Do not call work complete when any of the following is true:
 
 These are the highest-value open items.
 
-1. Configuration snapshot and recovery workflows
+1. Code-path documentation hardening for contributors
+   - function-level documentation across `filter_plugins/` and `filter_plugins/bigip_filters/`
+   - top-level header comments and targeted inline comments across playbook prep/task files
+   - prioritize the paths new contributors are most likely to extend incorrectly: intent/compiler wiring, prep loaders/builders, and canonical task ordering
+
+2. Configuration snapshot and recovery workflows
    - UCS backup/export workflow
    - explicit operational guidance for snapshot use in change and rollback paths
 
-2. Certificate lifecycle automation
+3. Certificate lifecycle automation
    - certificate rotation workflows
    - renewal/expiry detection
 
@@ -128,15 +133,29 @@ These are the highest-value open items.
 
 These are the concrete remaining backlog items.
 
-1. UCS backup/export workflow for configuration snapshots
+1. Add function-level documentation across `filter_plugins/bigip_var_filters.py` and `filter_plugins/bigip_filters/*.py`
+   - document purpose, inputs, outputs, emitted canonical object shapes, and key assumptions
+   - add inline comments where normalization or name generation is non-obvious
+
+2. Add top-level header comments across canonical playbook prep/task files
+   - cover what each file produces or mutates
+   - start with `prep.yml`, `prep/*.yml`, and `tasks/manage.yml`
+
+3. Add targeted inline comments across playbook task/job files in manageable domain batches
+   - batch 1: `bootstrap`, `network`, `system`, `ha`, `tls`
+   - batch 2: `ltm`, `gtm`
+   - batch 3: `security`
+   - focus on task ordering, data reshaping, compiler handoff, lookup building, and delete/apply merging
+
+4. UCS backup/export workflow for configuration snapshots
    - priority: lower than management-plane auth, compliance, and current repo-boundary decisions
    - completion target: `runtime+validation`
 
-2. Certificate rotation automation with renewal detection
+5. Certificate rotation automation with renewal detection
    - priority: lower than management-plane auth, compliance, and current repo-boundary decisions
    - completion target: `runtime+validation+helper-tools` where practical
 
-3. Future deeper helper-tool fidelity
+6. Future deeper helper-tool fidelity
    - if needed, promote selected object families from `basic field drift` toward `model-aware`
    - only pursue this when the operational value is clear
 

@@ -68,8 +68,15 @@
   vars:
     ltm_policy_ops: "{{ (ltm_policies | default([])) | classify_operations(ltm_policy_deletions | default([])) }}"
 
-- name: Compile LTM virtual-server intent shortcuts
-  ansible.builtin.import_tasks: "{{ playbook_dir }}/ltm/prep/intents/inline/compile-virtual-server-intents.yml"
+- name: Build LTM virtual-server intent shortcuts
+  # Inline virtual-server shortcuts are not executed directly by runtime tasks.
+  # This prep step rewrites them into canonical pools and canonical virtual servers
+  # before `tasks/delete.yml` / `tasks/apply.yml` see the data.
+  ansible.builtin.import_tasks: "{{ playbook_dir }}/ltm/prep/intents/inline/build-virtual-server-intents.yml"
 
-- name: Compile dedicated LTM RKE2 server intents
-  ansible.builtin.import_tasks: "{{ playbook_dir }}/ltm/prep/intents/clusters/compile-rke2-server-intents.yml"
+- name: Build dedicated LTM RKE2 server intents
+  # Dedicated cluster intents are handled after the raw intent objects have already been
+  # classified into present/delete buckets above. This import expands each cluster intent
+  # into canonical LTM pools and canonical LTM virtual servers, then merges that output
+  # back into the same runtime collections used by the normal LTM tasks.
+  ansible.builtin.import_tasks: "{{ playbook_dir }}/ltm/prep/intents/clusters/build-rke2-server-intents.yml"

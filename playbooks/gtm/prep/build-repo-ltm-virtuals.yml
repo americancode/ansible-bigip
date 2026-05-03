@@ -10,8 +10,8 @@
   vars:
     repo_ltm_rke2_server_intent_ops: "{{ (repo_ltm_rke2_server_intents | default([])) | classify_operations([]) }}"
 
-- name: Compile repo-known LTM RKE2 intent virtual servers
-  ansible.builtin.import_tasks: "{{ playbook_dir }}/gtm/prep/intents/clusters/compile-repo-ltm-rke2-server-intents.yml"
+- name: Build repo-known LTM RKE2 intent virtual servers
+  ansible.builtin.import_tasks: "{{ playbook_dir }}/gtm/prep/intents/clusters/build-repo-ltm-rke2-server-intents.yml"
 
 - name: Build repo-known LTM virtual server lookup
   ansible.builtin.set_fact:

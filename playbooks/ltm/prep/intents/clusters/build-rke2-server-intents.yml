@@ -1,5 +1,6 @@
 - name: Initialize compiled LTM RKE2 server intent objects
   ansible.builtin.set_fact:
+    # The compiler emits canonical pools and virtual servers into separate present/delete buckets.
     ltm_compiled_rke2_virtual_servers_delete: []
     ltm_compiled_rke2_pools_delete: []
     ltm_compiled_rke2_virtual_servers_present: []
@@ -9,16 +10,20 @@
   ansible.builtin.set_fact:
     ltm_compiled_rke2_virtual_servers_delete: >-
       {{
+        # One intent can emit multiple canonical virtual servers. Append all of them.
         (ltm_compiled_rke2_virtual_servers_delete | default([])) + (ltm_compiled_service.virtual_servers | default([]))
       }}
     ltm_compiled_rke2_pools_delete: >-
       {{
+        # Deletion intents also emit the matching generated pools so delete ordering stays canonical.
         (ltm_compiled_rke2_pools_delete | default([])) + (ltm_compiled_service.pools | default([]))
       }}
   loop: "{{ ltm_rke2_server_intents_delete | default([]) }}"
   vars:
     ltm_rke2_intent_settings_payload: >-
       {{
+        # Re-load layered defaults from the original source path so compilation uses the same
+        # category/leaf settings that were in effect when the intent object was aggregated.
         item.__source_file
         | load_settings_hierarchy(repo_root ~ '/vars/ltm/deletions/intents')
       }}
@@ -37,10 +42,12 @@
   ansible.builtin.set_fact:
     ltm_compiled_rke2_virtual_servers_present: >-
       {{
+        # Active intents emit canonical virtual servers that runtime `apply.yml` already understands.
         (ltm_compiled_rke2_virtual_servers_present | default([])) + (ltm_compiled_service.virtual_servers | default([]))
       }}
     ltm_compiled_rke2_pools_present: >-
       {{
+        # Active intents emit canonical pools into the same pool runtime surface as first-class pool vars.
         (ltm_compiled_rke2_pools_present | default([])) + (ltm_compiled_service.pools | default([]))
       }}
   loop: "{{ ltm_rke2_server_intents_present | default([]) }}"
@@ -63,10 +70,13 @@
 
 - name: Extend canonical LTM virtual server operations with compiled RKE2 intent output
   ansible.builtin.set_fact:
+    # After this merge, runtime tasks no longer care whether the object came from canonical vars
+    # or from an RKE2 intent. Everything is just an LTM virtual server.
     ltm_virtual_servers_delete: "{{ (ltm_virtual_servers_delete | default([])) + (ltm_compiled_rke2_virtual_servers_delete | default([])) }}"
     ltm_virtual_servers_present: "{{ (ltm_virtual_servers_present | default([])) + (ltm_compiled_rke2_virtual_servers_present | default([])) }}"
 
 - name: Extend canonical LTM pool operations with compiled RKE2 intent output
   ansible.builtin.set_fact:
+    # The same merge happens for pools so delete/apply ordering stays based on canonical object families.
     ltm_canonical_pools_delete: "{{ (ltm_canonical_pools_delete | default([])) + (ltm_compiled_rke2_pools_delete | default([])) }}"
     ltm_canonical_pools_present: "{{ (ltm_canonical_pools_present | default([])) + (ltm_compiled_rke2_pools_present | default([])) }}"

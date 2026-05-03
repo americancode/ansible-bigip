@@ -23,8 +23,8 @@
     gtm_topology_region_ops: "{{ (gtm_topology_regions | default([])) | classify_operations(gtm_topology_region_deletions | default([])) }}"
     gtm_topology_record_ops: "{{ (gtm_topology_records | default([])) | classify_operations(gtm_topology_record_deletions | default([])) }}"
 
-- name: Compile GTM server-derived datacenter intents
-  ansible.builtin.import_tasks: "{{ playbook_dir }}/gtm/prep/intents/inline/compile-server-datacenter-intents.yml"
+- name: Build GTM server-derived datacenter intents
+  ansible.builtin.import_tasks: "{{ playbook_dir }}/gtm/prep/intents/inline/build-server-datacenter-intents.yml"
 
-- name: Compile GTM Wide IP intent shortcuts
-  ansible.builtin.import_tasks: "{{ playbook_dir }}/gtm/prep/intents/inline/compile-wide-ip-intents.yml"
+- name: Build GTM Wide IP intent shortcuts
+  ansible.builtin.import_tasks: "{{ playbook_dir }}/gtm/prep/intents/inline/build-wide-ip-intents.yml"

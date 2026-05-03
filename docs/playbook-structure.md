@@ -21,7 +21,7 @@ Canonical playbooks use a consistent split so the entrypoint stays small and the
 - `playbooks/<domain>/prep.yml` is the documented orchestrator for prep flow and should say which major facts or canonical sets it produces
 - when a domain has larger compiler or normalization flows, `prep.yml` may import focused prep snippets such as `playbooks/<domain>/prep/*.yml`
 - repeated fragment discovery, settings-aware aggregation, and present/delete classification should be centralized under `playbooks/shared/prep/*.yml` and backed by shared filters in `filter_plugins/bigip_filters/` instead of being rewritten by hand in each domain
-- common split points are `load-*.yml`, `build-*.yml`, and `compile-*.yml`
+- common split points are `load-*.yml` and `build-*.yml`
 - `playbooks/<domain>/tasks/manage.yml` orchestrates task execution order
 - `playbooks/<domain>/tasks/delete.yml` contains destructive tasks
 - `playbooks/<domain>/tasks/apply.yml` contains present-state create/update tasks

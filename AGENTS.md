@@ -66,6 +66,7 @@ These are also binding. A feature is not complete just because syntax-check pass
   - when prep logic is the same across domains, prefer shared prep snippets under `playbooks/shared/prep/` plus shared Python-backed helpers under `filter_plugins/bigip_filters/` instead of re-implementing the pattern in every domain
   - nested var-tree directories are a supported authoring pattern; loaders should discover fragment files recursively and apply hierarchical `settings.yml` inheritance from the subtree root through intermediate directories, not only the nearest sibling settings file
   - document in top-level `prep.yml` comments which major runtime facts or canonical sets the prep flow produces
+  - keep naming consistent across prep snippets; prefer `load-*.yml` for discovery/aggregation and `build-*.yml` for transformation/runtime-shaping stages, including intent prep flows
 
 - Preserve the separation between canonical runtime objects and higher-level convenience authoring:
   - `playbooks/ltm.yml`, `playbooks/gtm.yml`, and other canonical runtime playbooks should operate on normalized first-class BIG-IP objects
@@ -137,6 +138,20 @@ Update existing `docs/` files when an existing domain changes:
 - `docs/var-layout.md` — add new var trees to the domain trees list
 - `docs/example-models.md` — add a section explaining the new domain's authoring model and cross-file linkages
 - `docs/hybrid-authoring.md` — update if a new hybrid pattern is introduced
+
+### Code And Playbook Commentary
+
+Documentation is not limited to markdown docs. The code paths themselves must stay explorable for new contributors.
+
+- Python helper functions in `filter_plugins/` and split support packages under `filter_plugins/bigip_filters/` should have function-level documentation explaining:
+  - purpose
+  - main inputs
+  - main outputs or emitted object shapes when non-obvious
+  - important constraints or assumptions
+- add inline comments in Python where transformation logic, emitted naming, or normalization behavior would otherwise require reverse-engineering
+- every top-level playbook prep/task file should have a short header comment block that explains what major facts, runtime collections, or side effects it produces
+- add inline playbook comments where task ordering, data reshaping, intent compilation, lookup building, or delete/apply merging would not be obvious to a new contributor
+- do not add noise comments to trivial tasks, but do comment any place where a reader would otherwise need to infer hidden data flow
 
 ### Intent And Shortcut Design
 

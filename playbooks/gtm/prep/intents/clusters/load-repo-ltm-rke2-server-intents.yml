@@ -1,5 +1,8 @@
 - name: Discover repo-known LTM RKE2 server intent fragments
   ansible.builtin.set_fact:
+    # GTM uses this path only to build a repo-known lookup of compiled LTM virtual servers.
+    # It reads active intent files, not deletion intents, because deleted LTM services should
+    # not be candidates for GTM member resolution.
     repo_ltm_rke2_server_intent_files: "{{ (repo_root ~ '/vars/ltm/intents/clusters') | discover_yaml_fragments }}"
 
 - name: Load repo-known LTM RKE2 server intent fragments
@@ -15,6 +18,8 @@
       {{
         repo_ltm_rke2_server_intents | default([]) + [
           (
+            # Apply the same layered intent defaults used by the LTM playbook so GTM resolves
+            # against the exact canonical virtual-server shapes LTM will emit.
             repo_ltm_rke2_server_intent_settings_payload.ltm_rke2_server_intent_defaults
             | default({})
             | combine(item.1, recursive=True)

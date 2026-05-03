@@ -13,7 +13,7 @@ The target design is always the same:
 
 1. author intent data under `vars/<domain>/intents/<category>/...`
 2. load it during `prep.yml`
-3. compile it into canonical BIG-IP objects
+3. build it into canonical BIG-IP objects
 4. merge those canonical objects into the same runtime sets already consumed by `tasks/delete.yml` and `tasks/apply.yml`
 
 ## The Fast Decision Path
@@ -205,12 +205,12 @@ playbooks/<domain>/prep/intents/<category>/
 Typical files:
 
 - `load-<intent-name>.yml`
-- `compile-<intent-name>.yml`
+- `build-<intent-name>.yml`
 
 Keep responsibilities split:
 
 - `load-*.yml` discovers and aggregates raw intent objects
-- `compile-*.yml` emits canonical objects
+- `build-*.yml` emits canonical objects
 
 Use shared recursive discovery and layered settings behavior. Do not re-introduce one-off loader patterns.
 
@@ -222,9 +222,11 @@ Typical pattern:
 
 1. load canonical objects
 2. load intent objects
-3. compile intent into canonical objects
+3. build intent into canonical objects
 4. rebuild any lookup structures that need the compiled objects
 5. publish final `*_present` and `*_delete` runtime collections
+
+The repo filename convention is `build-*.yml` even when the step is conceptually “compiling” intent into canonical objects.
 
 The top-level `prep.yml` comment block should mention the resulting runtime sets if they materially change.
 
@@ -276,7 +278,7 @@ vars/ltm/intents/applications/
 
 playbooks/ltm/prep/intents/applications/
 ├── load-application-intents.yml
-└── compile-application-intents.yml
+└── build-application-intents.yml
 
 filter_plugins/bigip_filters/
 └── intent_ltm.py
@@ -351,7 +353,7 @@ For a new GTM intent:
 3. extend `filter_plugins/bigip_filters/intent_gtm.py`
 4. expose the filter through `__init__.py` and `bigip_var_filters.py`
 5. add `playbooks/gtm/prep/intents/dns_services/load-*.yml`
-6. add `playbooks/gtm/prep/intents/dns_services/compile-*.yml`
+6. add `playbooks/gtm/prep/intents/dns_services/build-*.yml`
 7. import those snippets from `playbooks/gtm/prep.yml` or the relevant sub-flow
 8. merge compiled output into `gtm_pools` and `gtm_wide_ips`
 9. update `tools/validate-vars`
@@ -394,7 +396,7 @@ Use the implemented RKE2 intent as the working reference:
   - `vars/ltm/intents/clusters/settings.yml`
 - prep wiring:
   - `playbooks/ltm/prep/intents/clusters/load-rke2-server-intents.yml`
-  - `playbooks/ltm/prep/intents/clusters/compile-rke2-server-intents.yml`
+  - `playbooks/ltm/prep/intents/clusters/build-rke2-server-intents.yml`
 - compiler:
   - `filter_plugins/bigip_filters/intent_ltm.py`
 

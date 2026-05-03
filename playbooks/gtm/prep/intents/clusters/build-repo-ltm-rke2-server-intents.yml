@@ -1,11 +1,13 @@
 - name: Initialize compiled repo-known LTM RKE2 virtual servers
   ansible.builtin.set_fact:
+    # GTM only needs the compiled virtual servers here; pools are irrelevant for member resolution.
     repo_ltm_compiled_rke2_virtual_servers_present: []
 
 - name: Compile repo-known LTM RKE2 server intents
   ansible.builtin.set_fact:
     repo_ltm_compiled_rke2_virtual_servers_present: >-
       {{
+        # One cluster intent emits several virtual servers (6443, 9345, and worker 443 VIPs).
         (repo_ltm_compiled_rke2_virtual_servers_present | default([])) + (repo_ltm_compiled_service.virtual_servers | default([]))
       }}
   loop: "{{ repo_ltm_rke2_server_intents_present | default([]) }}"
@@ -28,4 +30,6 @@
 
 - name: Extend repo-known LTM virtual servers with compiled RKE2 intent output
   ansible.builtin.set_fact:
+    # Merge compiled intent output into the same repo-known lookup source used by GTM pool member
+    # resolution, so `virtual_server:` references can resolve intent-emitted VIPs transparently.
     repo_ltm_virtual_servers_present: "{{ (repo_ltm_virtual_servers_present | default([])) + (repo_ltm_compiled_rke2_virtual_servers_present | default([])) }}"
