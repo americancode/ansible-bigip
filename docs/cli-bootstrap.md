@@ -2,6 +2,8 @@
 
 This guide covers the chicken-and-egg case where AWX is not the right first control plane because AWX itself depends on BIG-IP being available first.
 
+For the broader first-boot sequence and the GitOps handoff point, see [initial-setup.md](initial-setup.md).
+
 Use this path when:
 
 - AWX is fronted by the BIG-IP estate you are about to build

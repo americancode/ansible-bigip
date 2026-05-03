@@ -120,6 +120,7 @@ Update existing `docs/` files when an existing domain changes:
 - `docs/hybrid-authoring.md` — update if a new hybrid pattern is introduced
 - `docs/security.md` — update when AFM, WAF, or APM object types are added or changed
 - `docs/bootstrap.md` — update when day-0 licensing, first management reachability, or handoff behavior changes
+- `docs/initial-setup.md` — update when first-boot prerequisites, bootstrap sequencing, or AWX handoff behavior changes
 
 ### README.md Updates
 

@@ -13,6 +13,7 @@ Declarative BIG-IP playbooks organized for GitOps-style management.
 | AWX and HA operation | [docs/awx-operation.md](docs/awx-operation.md) |
 | Validation | [docs/validation.md](docs/validation.md) |
 | Day-0 bootstrap | [docs/bootstrap.md](docs/bootstrap.md) |
+| Initial setup | [docs/initial-setup.md](docs/initial-setup.md) |
 | TLS secrets | [docs/tls-secrets.md](docs/tls-secrets.md) |
 | Network objects | [docs/network-objects.md](docs/network-objects.md) |
 | System management | [docs/system-management.md](docs/system-management.md) |

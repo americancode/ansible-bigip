@@ -88,3 +88,5 @@ After `bootstrap.yml` succeeds:
 4. then apply `network`, `tls`, `ltm`, `gtm`, and `security` as needed
 
 This playbook is currently `runtime+validation`, not helper-tool complete. There is no `drift-check` or brownfield import support for bootstrap objects yet because bootstrap is a day-0, apply-only domain whose primary purpose is to establish first reachability and licensing before the steadier Git-managed lifecycle begins.
+
+For the full first-boot sequence and AWX handoff story, see [initial-setup.md](initial-setup.md).

@@ -35,7 +35,7 @@ The repository is already a viable GitOps control plane for BIG-IP runtime confi
 - reusable monitor definitions
 - universal `enabled: true` default where modules support admin state
 - offline validation through `tools/validate-vars` with `make validate` wrapper
-- modular documentation under `docs/` covering playbook structure, var layout, hybrid authoring, deletion workflows, AWX operation, validation, TLS secrets, network objects, bootstrap management, system management, LTM advanced fields, GTM advanced fields, and bootstrap paths
+- modular documentation under `docs/` covering playbook structure, var layout, hybrid authoring, deletion workflows, AWX operation, validation, TLS secrets, network objects, bootstrap management, initial setup, system management, LTM advanced fields, GTM advanced fields, and bootstrap paths
 
 The repo is not yet at full GitOps parity for every lifecycle path. The main remaining work falls into three buckets:
 
@@ -815,7 +815,7 @@ This is the practical next sequence for the current repo.
    - progress: `network_route_domains`, `network_trunks`, `network_snat_translations`, `network_snats`, and `network_nats` now have `runtime+validation+helper-tools` helper coverage with `basic field drift` for core runtime-managed fields
    - remaining scope: GTM, TLS, and newer security families still need deeper field-level drift work where helper tooling is currently only identity-level or otherwise shallower than runtime coverage
 24. [x] Add day-0 BIG-IP onboarding for licensing and initial management bootstrap
-25. [ ] Document initial setup from first boot through handoff to Git-managed operation
+25. [x] Document initial setup from first boot through handoff to Git-managed operation
 
 ### Checked-Off Item Audit Result
 
@@ -829,6 +829,7 @@ Completion-class summary for checked backlog items:
   - 1. Add validation tooling and CI gates
   - 10. Define TLS secret handling approach
   - 11. Complete missing documentation
+  - 25. Document initial setup from first boot through handoff to Git-managed operation
 - `runtime+validation+helper-tools`
   - 2. Add `vars/ltm/nodes` and `vars/ltm/pools`
   - 3. Add `vars/gtm/datacenters` and `vars/gtm/pools`
