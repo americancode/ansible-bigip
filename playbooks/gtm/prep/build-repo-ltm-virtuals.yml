@@ -31,7 +31,7 @@
       }}
 
 - name: Compile repo-known LTM RKE2 intent virtual servers
-  ansible.builtin.import_tasks: "{{ playbook_dir }}/gtm/prep/compile-repo-ltm-rke2-server-intents.yml"
+  ansible.builtin.import_tasks: "{{ playbook_dir }}/gtm/prep/intents/clusters/compile-repo-ltm-rke2-server-intents.yml"
 
 - name: Build repo-known LTM virtual server lookup
   ansible.builtin.set_fact:

@@ -12,6 +12,8 @@
 # - `ltm_rke2_server_intents_present` / `ltm_rke2_server_intents_delete`
 # - `ltm_canonical_pools_present` / `ltm_canonical_pools_delete`
 # The canonical pool sets include first-class pools plus compiler output from virtual-server shortcuts and dedicated LTM intents such as RKE2 server clusters.
+# Intent compiler snippets live under `prep/intents/<category>/...`; current categories include
+# `inline/` for embedded shortcut models and `clusters/` for opinionated cluster bundles.
 
 - name: Load LTM var fragments
   ansible.builtin.import_tasks: "{{ playbook_dir }}/ltm/prep/load-vars.yml"

@@ -345,7 +345,7 @@
       }}
 
 - name: Load dedicated LTM intent var fragments
-  ansible.builtin.import_tasks: "{{ playbook_dir }}/ltm/prep/load-rke2-server-intents.yml"
+  ansible.builtin.import_tasks: "{{ playbook_dir }}/ltm/prep/intents/clusters/load-rke2-server-intents.yml"
 
 - name: Discover LTM persistence profile fragments
   ansible.builtin.set_fact:

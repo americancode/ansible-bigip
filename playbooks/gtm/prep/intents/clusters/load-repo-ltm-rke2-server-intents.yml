@@ -4,7 +4,7 @@
       {{
         lookup(
           'ansible.builtin.pipe',
-          "find {{ repo_root }}/vars/ltm/intents -type f -name '*.yml' ! -name 'settings.yml' 2>/dev/null | sort"
+          "find {{ repo_root }}/vars/ltm/intents/clusters -type f -name '*.yml' ! -name 'settings.yml' 2>/dev/null | sort"
         ).splitlines() | reject('equalto', '') | list
       }}
 
@@ -15,13 +15,14 @@
   loop: "{{ repo_ltm_rke2_server_intent_files }}"
   register: repo_ltm_rke2_server_intent_include_results
 
-- name: Aggregate repo-known LTM RKE2 server intents with directory settings
+- name: Aggregate repo-known LTM RKE2 server intents with layered directory settings
   ansible.builtin.set_fact:
     repo_ltm_rke2_server_intents: >-
       {{
         repo_ltm_rke2_server_intents | default([]) + [
           (
-            repo_ltm_rke2_server_intent_directory_defaults
+            repo_ltm_rke2_server_intent_settings_payload.ltm_rke2_server_intent_defaults
+            | default({})
             | combine(item.1, recursive=True)
             | combine({'__source_file': item.0.item}, recursive=True)
           )
@@ -29,13 +30,8 @@
       }}
   loop: "{{ query('subelements', repo_ltm_rke2_server_intent_include_results.results, 'ansible_facts.repo_ltm_rke2_server_intent_fragment.ltm_rke2_server_intents', {'skip_missing': True}) }}"
   vars:
-    repo_ltm_rke2_server_intent_settings_path: "{{ item.0.item | regex_replace('/[^/]+$', '/settings.yml') }}"
-    repo_ltm_rke2_server_intent_directory_defaults: >-
+    repo_ltm_rke2_server_intent_settings_payload: >-
       {{
-        (
-          lookup('ansible.builtin.file', repo_ltm_rke2_server_intent_settings_path, errors='ignore')
-          | default('{}', true)
-          | from_yaml
-        ).ltm_rke2_server_intent_defaults | default({})
+        item.0.item
+        | load_settings_hierarchy(repo_root ~ '/vars/ltm/intents')
       }}
-

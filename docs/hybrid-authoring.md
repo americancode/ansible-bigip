@@ -20,7 +20,7 @@ Example walkthroughs live in [example-models.md](example-models.md):
 
 These concise paths now compile into canonical pools and pool references during `prep.yml`, so runtime `apply.yml` and `delete.yml` operate on normalized first-class objects rather than mixed inline shortcut shapes.
 
-For known platform patterns that need more structure than a single inline pool, prefer a dedicated intent tree instead of stretching the embedded model further. The first implemented example is the RKE2 cluster intent under `vars/ltm/intents/`.
+For known platform patterns that need more structure than a single inline pool, prefer a dedicated intent tree instead of stretching the embedded model further. The first implemented example is the RKE2 cluster intent under `vars/ltm/intents/clusters/`, with shared category defaults in `vars/ltm/intents/clusters/settings.yml`.
 
 ## First-Class Model (Verbose)
 

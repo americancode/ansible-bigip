@@ -61,22 +61,36 @@ The canonical object model remains:
 
 ## Proposed Repo Structure
 
-The recommended first structure is:
+The recommended first structure is category-first:
 
-- `vars/ltm/intents/`
-- `vars/gtm/intents/`
+- `vars/ltm/intents/<category>/`
+- `vars/gtm/intents/<category>/`
 
 If later needed for cross-domain compositions:
 
 - `vars/platform_apps/`
 
+Examples of category names:
+
+- `clusters/` for platform cluster bundles such as RKE2
+- `applications/` for app-service bundles that emit several related LTM objects
+- `dns_services/` or another documented GTM family name for future dedicated GTM intent trees
+
 The expected implementation boundary is:
 
 - var files describe intent
 - `prep.yml` discovers them
-- focused `prep/*.yml` snippets can own individual compilers for specific patterns
+- focused `prep/intents/<category>/*.yml` snippets can own individual compilers for specific patterns
 - a compiler layer normalizes them into canonical objects
 - runtime tasks remain unchanged except for consuming the normalized canonical sets
+
+Settings can layer at more than one point in the intent tree:
+
+- `vars/<domain>/intents/settings.yml`
+- `vars/<domain>/intents/<category>/settings.yml`
+- `vars/<domain>/intents/<category>/<service>/settings.yml`
+
+Deeper settings override broader category settings.
 
 ## Compiler Layer
 
@@ -154,8 +168,9 @@ The next goal is not to add more convenience cases first. The next goal is to re
 
 The first dedicated intent tree is now in place for RKE2 server clusters:
 
-- `vars/ltm/intents/rke2-east/platform-cluster.yml`
-- `vars/ltm/intents/rke2-west/platform-cluster.yml`
+- `vars/ltm/intents/clusters/rke2-east/platform-cluster.yml`
+- `vars/ltm/intents/clusters/rke2-west/platform-cluster.yml`
+- shared category defaults in `vars/ltm/intents/clusters/settings.yml`
 
 That intent exists because the cluster pattern is more opinionated than the generic inline-pool shortcut:
 
@@ -165,6 +180,8 @@ That intent exists because the cluster pattern is more opinionated than the gene
 - those worker-service pools always target worker nodes on configurable NodePorts in the `30xxx` range
 
 The runtime playbook still does not know anything special about RKE2. The compiler in `filter_plugins/bigip_var_filters.py` expands the intent into canonical `ltm_virtual_servers` and `ltm_pools` before `tasks/apply.yml` runs.
+
+Delete support is still preserved. Deletion entries under `vars/ltm/deletions/intents/clusters/...` compile into absent canonical virtual servers and pools before `tasks/delete.yml` runs.
 
 ## When To Use Which Model
 

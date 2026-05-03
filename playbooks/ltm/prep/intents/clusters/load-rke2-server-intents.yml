@@ -4,14 +4,14 @@
       {{
         lookup(
           'ansible.builtin.pipe',
-          "find {{ repo_root }}/vars/ltm/intents -type f -name '*.yml' ! -name 'settings.yml' 2>/dev/null | sort"
+          "find {{ repo_root }}/vars/ltm/intents/clusters -type f -name '*.yml' ! -name 'settings.yml' 2>/dev/null | sort"
         ).splitlines() | reject('equalto', '') | list
       }}
     ltm_rke2_server_intent_deletion_files: >-
       {{
         lookup(
           'ansible.builtin.pipe',
-          "find {{ repo_root }}/vars/ltm/deletions/intents -type f -name '*.yml' ! -name 'settings.yml' 2>/dev/null | sort"
+          "find {{ repo_root }}/vars/ltm/deletions/intents/clusters -type f -name '*.yml' ! -name 'settings.yml' 2>/dev/null | sort"
         ).splitlines() | reject('equalto', '') | list
       }}
 
@@ -29,13 +29,14 @@
   loop: "{{ ltm_rke2_server_intent_deletion_files }}"
   register: ltm_rke2_server_intent_deletion_include_results
 
-- name: Aggregate LTM RKE2 server intents with directory settings
+- name: Aggregate LTM RKE2 server intents with layered directory settings
   ansible.builtin.set_fact:
     ltm_rke2_server_intents: >-
       {{
         ltm_rke2_server_intents | default([]) + [
           (
-            ltm_rke2_server_intent_directory_defaults
+            ltm_rke2_server_intent_settings_payload.ltm_rke2_server_intent_defaults
+            | default({})
             | combine(item.1, recursive=True)
             | combine({'__source_file': item.0.item}, recursive=True)
           )
@@ -43,24 +44,21 @@
       }}
   loop: "{{ query('subelements', ltm_rke2_server_intent_include_results.results, 'ansible_facts.ltm_rke2_server_intent_fragment.ltm_rke2_server_intents', {'skip_missing': True}) }}"
   vars:
-    ltm_rke2_server_intent_settings_path: "{{ item.0.item | regex_replace('/[^/]+$', '/settings.yml') }}"
-    ltm_rke2_server_intent_directory_defaults: >-
+    ltm_rke2_server_intent_settings_payload: >-
       {{
-        (
-          lookup('ansible.builtin.file', ltm_rke2_server_intent_settings_path, errors='ignore')
-          | default('{}', true)
-          | from_yaml
-        ).ltm_rke2_server_intent_defaults | default({})
+        item.0.item
+        | load_settings_hierarchy(repo_root ~ '/vars/ltm/intents')
       }}
 
-- name: Aggregate LTM RKE2 server intent deletions with directory settings
+- name: Aggregate LTM RKE2 server intent deletions with layered directory settings
   ansible.builtin.set_fact:
     ltm_rke2_server_intent_deletions: >-
       {{
         ltm_rke2_server_intent_deletions | default([]) + [
           (
             (
-              ltm_rke2_server_intent_deletion_directory_defaults
+              ltm_rke2_server_intent_deletion_settings_payload.ltm_rke2_server_intent_defaults
+              | default({})
               | combine(item.1, recursive=True)
               | combine({'state': 'absent'}, recursive=True)
             )
@@ -70,12 +68,8 @@
       }}
   loop: "{{ query('subelements', ltm_rke2_server_intent_deletion_include_results.results, 'ansible_facts.ltm_rke2_server_intent_deletion_fragment.ltm_rke2_server_intents', {'skip_missing': True}) }}"
   vars:
-    ltm_rke2_server_intent_deletion_settings_path: "{{ item.0.item | regex_replace('/[^/]+$', '/settings.yml') }}"
-    ltm_rke2_server_intent_deletion_directory_defaults: >-
+    ltm_rke2_server_intent_deletion_settings_payload: >-
       {{
-        (
-          lookup('ansible.builtin.file', ltm_rke2_server_intent_deletion_settings_path, errors='ignore')
-          | default('{}', true)
-          | from_yaml
-        ).ltm_rke2_server_intent_defaults | default({})
+        item.0.item
+        | load_settings_hierarchy(repo_root ~ '/vars/ltm/deletions/intents')
       }}

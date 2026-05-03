@@ -20,14 +20,10 @@
       }}
   loop: "{{ ltm_virtual_servers_delete | default([]) }}"
   vars:
-    ltm_virtual_server_settings_path: "{{ item.__source_file | regex_replace('/[^/]+$', '/settings.yml') if item.__source_file is defined else '' }}"
     ltm_virtual_server_settings_payload: >-
       {{
-        (
-          lookup('ansible.builtin.file', ltm_virtual_server_settings_path, errors='ignore')
-          | default('{}', true)
-          | from_yaml
-        ) if ltm_virtual_server_settings_path else {}
+        item.__source_file
+        | load_settings_hierarchy(repo_root ~ '/vars/ltm/virtual_servers')
       }}
     ltm_virtual_server_pool_defaults: "{{ ltm_virtual_server_settings_payload.ltm_pool_defaults | default({}) }}"
     ltm_virtual_server_member_defaults: "{{ ltm_virtual_server_settings_payload.ltm_member_defaults | default({}) }}"
@@ -54,14 +50,10 @@
       }}
   loop: "{{ ltm_virtual_servers_present | default([]) }}"
   vars:
-    ltm_virtual_server_settings_path: "{{ item.__source_file | regex_replace('/[^/]+$', '/settings.yml') if item.__source_file is defined else '' }}"
     ltm_virtual_server_settings_payload: >-
       {{
-        (
-          lookup('ansible.builtin.file', ltm_virtual_server_settings_path, errors='ignore')
-          | default('{}', true)
-          | from_yaml
-        ) if ltm_virtual_server_settings_path else {}
+        item.__source_file
+        | load_settings_hierarchy(repo_root ~ '/vars/ltm/virtual_servers')
       }}
     ltm_virtual_server_pool_defaults: "{{ ltm_virtual_server_settings_payload.ltm_pool_defaults | default({}) }}"
     ltm_virtual_server_member_defaults: "{{ ltm_virtual_server_settings_payload.ltm_member_defaults | default({}) }}"

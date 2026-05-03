@@ -142,7 +142,7 @@
       }}
 
 - name: Compile GTM server-derived datacenter intents
-  ansible.builtin.import_tasks: "{{ playbook_dir }}/gtm/prep/compile-server-datacenter-intents.yml"
+  ansible.builtin.import_tasks: "{{ playbook_dir }}/gtm/prep/intents/inline/compile-server-datacenter-intents.yml"
 
 - name: Compile GTM Wide IP intent shortcuts
-  ansible.builtin.import_tasks: "{{ playbook_dir }}/gtm/prep/compile-wide-ip-intents.yml"
+  ansible.builtin.import_tasks: "{{ playbook_dir }}/gtm/prep/intents/inline/compile-wide-ip-intents.yml"

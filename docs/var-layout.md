@@ -70,7 +70,7 @@ The system var tree includes both basic device settings and management-plane adm
 
 Objects can be embedded directly in parent definitions or promoted to first-class trees. See [hybrid-authoring.md](hybrid-authoring.md) for the current model and [intent-authoring.md](intent-authoring.md) for the planned intent/compiler architecture that will absorb the growing shortcut patterns.
 
-The first dedicated intent tree is now live under `vars/ltm/intents/` for RKE2 server clusters. That tree is an authoring abstraction only: `prep.yml` compiles it into canonical `ltm_virtual_servers` and `ltm_pools` before runtime tasks run.
+The first dedicated intent tree is now live under `vars/ltm/intents/clusters/` for RKE2 server clusters. Intent directories should be category-first under `vars/<domain>/intents/<category>/...`, and `settings.yml` can exist at the intent root, category level, or leaf service directory. These trees are authoring abstractions only: `prep.yml` compiles them into canonical runtime objects before tasks run.
 
 ## Deletions
 

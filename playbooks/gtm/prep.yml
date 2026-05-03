@@ -10,6 +10,8 @@
 # - `gtm_canonical_pools_present` / `gtm_canonical_pools_delete`
 # `repo_ltm_virtual_servers_present` can include first-class LTM virtual-server vars plus compiled output from dedicated LTM intents such as RKE2 clusters.
 # The canonical GTM pool sets include both first-class pool vars and compiler output from Wide IP shortcut intents.
+# Intent compiler snippets live under `prep/intents/<category>/...`; current categories include
+# `inline/` for embedded shortcut models and `clusters/` for repo-known RKE2-derived LTM virtuals.
 
 - name: Load repo-known LTM virtual-server fragments
   ansible.builtin.import_tasks: "{{ playbook_dir }}/gtm/prep/load-repo-ltm-virtuals.yml"

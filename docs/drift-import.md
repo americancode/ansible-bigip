@@ -2,7 +2,7 @@
 
 This repository provides two offline tooling scripts for comparing live BIG-IP state against Git-declared configuration and for importing existing BIG-IP estates into the repository's var tree format.
 
-Intent trees such as `vars/ltm/intents/...` are authoring abstractions. These helper tools operate on the canonical BIG-IP object families that the intent layer compiles into, not on the intent files directly.
+Intent trees such as `vars/ltm/intents/clusters/...` are authoring abstractions. These helper tools operate on the canonical BIG-IP object families that the intent layer compiles into, not on the intent files directly.
 
 ## Prerequisites
 

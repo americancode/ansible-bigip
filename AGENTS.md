@@ -70,7 +70,10 @@ These are also binding. A feature is not complete just because syntax-check pass
   - do not keep adding shortcut-specific branching directly into `tasks/apply.yml` or `tasks/delete.yml` for common service patterns
 - when a new “simple thing” or common pattern is needed, prefer adding it as an intent/compiler layer ahead of runtime tasks
 - intent-style inputs should compile into the same canonical object model the runtime already manages
-- when a repeated platform pattern becomes more opinionated than a single embedded object shortcut, prefer a dedicated intent tree such as `vars/<domain>/intents/...` plus a focused compiler snippet in `playbooks/<domain>/prep/*.yml`
+- keep `intent` as the umbrella term for higher-level authoring that compiles into canonical objects
+- do not place concrete intent files directly under `vars/<domain>/intents/`; place them under a first-level category such as `vars/<domain>/intents/clusters/...`, `vars/<domain>/intents/applications/...`, or another documented family name
+- when a repeated platform pattern becomes more opinionated than a single embedded object shortcut, prefer a dedicated intent tree in one of those categories plus a focused compiler snippet in `playbooks/<domain>/prep/*.yml`
+  - put those compiler snippets under `playbooks/<domain>/prep/intents/<category>/...` when they are part of the intent layer
   - runtime task files should remain the stable apply/delete contract; convenience models belong in normalization, prep, or dedicated compiler helpers
   - if an existing shortcut path becomes more complex, refactor it toward the intent/compiler design instead of extending ad hoc hybrid logic in-place
   - document clearly whether a var tree is canonical object data or higher-level intent data, and keep validators aligned to both layers where supported
@@ -140,6 +143,8 @@ When working on convenience patterns, common service templates, or “simple mod
 - keep the canonical object model as the single apply/delete source of truth
 - if you introduce intent trees, document:
   - where the intent vars live
+  - what the first-level intent category means
+  - where category-level `settings.yml` can live and how it layers with deeper settings files
   - which compiler/normalization layer expands them
   - which canonical objects are emitted
   - whether helper tools understand the intent layer directly or only the compiled canonical layer

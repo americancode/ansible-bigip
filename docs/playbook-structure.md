@@ -27,6 +27,8 @@ Canonical playbooks use a consistent split so the entrypoint stays small and the
 
 This pattern is the default for `bootstrap`, `network`, `system`, `ha`, `tls`, `ltm`, `gtm`, and `security`. `bootstrap` is the explicit exception where `tasks/delete.yml` is intentionally empty because the domain is apply-only. If a future playbook stays small enough that splitting it adds no value, document that choice in [ROADMAP.md](../ROADMAP.md) before keeping it monolithic.
 
+When a domain grows a real intent layer, keep those prep snippets under `playbooks/<domain>/prep/intents/<category>/...` instead of leaving them mixed into the prep root.
+
 ## Path Handling
 
 Path handling inside canonical playbooks is anchored from `playbook_dir`, so moving playbooks under `playbooks/` does not break references to `vars/`.

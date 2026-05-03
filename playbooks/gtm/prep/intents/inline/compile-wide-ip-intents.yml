@@ -20,14 +20,10 @@
       }}
   loop: "{{ gtm_wide_ips_delete | default([]) }}"
   vars:
-    gtm_wide_ip_settings_path: "{{ item.__source_file | regex_replace('/[^/]+$', '/settings.yml') if item.__source_file is defined else '' }}"
     gtm_wide_ip_settings_payload: >-
       {{
-        (
-          lookup('ansible.builtin.file', gtm_wide_ip_settings_path, errors='ignore')
-          | default('{}', true)
-          | from_yaml
-        ) if gtm_wide_ip_settings_path else {}
+        item.__source_file
+        | load_settings_hierarchy(repo_root ~ '/vars/gtm/wide_ips')
       }}
     gtm_wide_ip_pool_defaults: "{{ gtm_wide_ip_settings_payload.gtm_pool_defaults | default({}) }}"
     gtm_wide_ip_member_defaults: "{{ gtm_wide_ip_settings_payload.gtm_member_defaults | default({}) }}"
@@ -55,14 +51,10 @@
       }}
   loop: "{{ gtm_wide_ips_present | default([]) }}"
   vars:
-    gtm_wide_ip_settings_path: "{{ item.__source_file | regex_replace('/[^/]+$', '/settings.yml') if item.__source_file is defined else '' }}"
     gtm_wide_ip_settings_payload: >-
       {{
-        (
-          lookup('ansible.builtin.file', gtm_wide_ip_settings_path, errors='ignore')
-          | default('{}', true)
-          | from_yaml
-        ) if gtm_wide_ip_settings_path else {}
+        item.__source_file
+        | load_settings_hierarchy(repo_root ~ '/vars/gtm/wide_ips')
       }}
     gtm_wide_ip_pool_defaults: "{{ gtm_wide_ip_settings_payload.gtm_pool_defaults | default({}) }}"
     gtm_wide_ip_member_defaults: "{{ gtm_wide_ip_settings_payload.gtm_member_defaults | default({}) }}"

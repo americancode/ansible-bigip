@@ -229,7 +229,7 @@
       }}
 
 - name: Compile LTM virtual-server intent shortcuts
-  ansible.builtin.import_tasks: "{{ playbook_dir }}/ltm/prep/compile-virtual-server-intents.yml"
+  ansible.builtin.import_tasks: "{{ playbook_dir }}/ltm/prep/intents/inline/compile-virtual-server-intents.yml"
 
 - name: Compile dedicated LTM RKE2 server intents
-  ansible.builtin.import_tasks: "{{ playbook_dir }}/ltm/prep/compile-rke2-server-intents.yml"
+  ansible.builtin.import_tasks: "{{ playbook_dir }}/ltm/prep/intents/clusters/compile-rke2-server-intents.yml"

@@ -20,10 +20,13 @@ Use the app-local inline model when one file should explain the whole service.
 Use a dedicated intent tree when a known platform pattern should emit several related BIG-IP objects but still be easy to author as one unit.
 
 - Example files:
-  - `vars/ltm/intents/rke2-east/platform-cluster.yml`
-  - `vars/ltm/intents/rke2-west/platform-cluster.yml`
+  - `vars/ltm/intents/clusters/rke2-east/platform-cluster.yml`
+  - `vars/ltm/intents/clusters/rke2-west/platform-cluster.yml`
+- Shared category defaults: `vars/ltm/intents/clusters/settings.yml`
 - Pattern: one `ltm_rke2_server_intents[*]` object compiles into four canonical virtual servers and four canonical pools
 - Compiler behavior: `ltm/prep.yml` compiles the intent into canonical `ltm_virtual_servers` and `ltm_pools` before runtime apply/delete
+- Category behavior: these files live under `intents/clusters/` because they represent an opinionated cluster bundle, not a generic app-local shortcut
+- Delete behavior: entries under `vars/ltm/deletions/intents/clusters/...` still compile into absent canonical pools and virtual servers
 - Linkage behavior:
   - `control_plane_vip` becomes both the `6443` Kubernetes API virtual server destination and the `9345` registration virtual server destination
   - `control_plane_members` are reused for both generated control-plane pools with ports rewritten to `6443` and `9345`

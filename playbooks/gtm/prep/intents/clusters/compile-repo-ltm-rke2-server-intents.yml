@@ -10,14 +10,10 @@
       }}
   loop: "{{ repo_ltm_rke2_server_intents_present | default([]) }}"
   vars:
-    repo_ltm_rke2_intent_settings_path: "{{ item.__source_file | regex_replace('/[^/]+$', '/settings.yml') if item.__source_file is defined else '' }}"
     repo_ltm_rke2_intent_settings_payload: >-
       {{
-        (
-          lookup('ansible.builtin.file', repo_ltm_rke2_intent_settings_path, errors='ignore')
-          | default('{}', true)
-          | from_yaml
-        ) if repo_ltm_rke2_intent_settings_path else {}
+        item.__source_file
+        | load_settings_hierarchy(repo_root ~ '/vars/ltm/intents')
       }}
     repo_ltm_compiled_service: >-
       {{

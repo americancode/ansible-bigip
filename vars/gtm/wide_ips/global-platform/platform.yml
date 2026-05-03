@@ -5,8 +5,8 @@
 # canonical GTM pool objects and rewrites the Wide IP to reference those pools before runtime apply.
 # The embedded `members` point to GTM servers in `vars/gtm/servers/regional-bigips.yml`.
 # The `virtual_server` strings point to repo-known LTM virtual servers in:
-# - `vars/ltm/intents/rke2-east/platform-cluster.yml`
-# - `vars/ltm/intents/rke2-west/platform-cluster.yml`
+# - `vars/ltm/intents/clusters/rke2-east/platform-cluster.yml`
+# - `vars/ltm/intents/clusters/rke2-west/platform-cluster.yml`
 # Here the member `address` and `port` are still shown explicitly for readability, but they could
 # be omitted when the repo-known LTM virtual server should be the source of truth.
 # Monitor aliases such as `platform_https` expand through the sibling `settings.yml`.
