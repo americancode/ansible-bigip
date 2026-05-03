@@ -1,6 +1,7 @@
 ---
-# Traffic-group example for a two-device HA pair.
-# `ha_order` is the failover preference list shared by the pair.
+# Traffic-group examples for a two-device HA pair.
+# `ha_order` is the direct failover preference list shared by the pair.
+# `ha_group` is the indirect failover-score reference to `vars/ha/ha_groups/foundation-ha-groups.yml`.
 # This remains a single-target apply in AWX: run `playbooks/ha.yml` against one designated device
 # in the sync domain and let BIG-IP replicate the shared HA state.
 ha_traffic_groups:
@@ -12,3 +13,7 @@ ha_traffic_groups:
     auto_failback: true
     auto_failback_time: 60
     ha_load_factor: 10
+
+  - name: "traffic-group-scored-apps"
+    partition: "Common"
+    ha_group: "hg_apps_prefer_healthy_pools"

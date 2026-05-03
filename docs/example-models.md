@@ -88,6 +88,22 @@ Linkage works like this:
 - `bootstrap_management[*].address` becomes the management endpoint that AWX inventory `f5_host` or CLI inventory entries should target after bootstrap
 - after that cutover, hostname/DNS/NTP/provisioning/users move into `vars/system/*` and HA setup moves into `vars/ha/*`
 
+## HA Model
+
+The HA tree mixes device-local and shared-pair authoring on purpose.
+
+- Device-local HA connectivity: `vars/ha/device_connectivity/foundation-connectivity.yml`
+- Shared HA groups: `vars/ha/ha_groups/foundation-ha-groups.yml`
+- Shared traffic groups: `vars/ha/traffic_groups/foundation-traffic-groups.yml`
+
+Linkage works like this:
+
+- `ha_device_connectivity[*]` configures the BIG-IP currently targeted by `f5_host`; it is not a shared pair object
+- `ha_groups[*].pools[*].pool_name: "vm-apps-main"` points at a pool in `vars/ltm/pools/`
+- `ha_groups[*].trunks[*].trunk_name: "trunk-uplink-a"` points at a trunk in `vars/network/trunks/`
+- `ha_traffic_groups[*].ha_group: "hg_apps_prefer_healthy_pools"` points at `vars/ha/ha_groups/foundation-ha-groups.yml`
+- `ha_traffic_groups[*].ha_order` is the direct static preference alternative; do not use both `ha_group` and `ha_order` on the same object
+
 ## AFM Security Model
 
 The security playbook uses first-class var trees for address lists, port lists, rules, and policies.

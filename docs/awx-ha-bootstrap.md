@@ -60,6 +60,23 @@ See [awx-operation.md](awx-operation.md) for the full template list.
 
 The repo-side HA vars should be written from the bootstrap device perspective (east → west).
 
+### Device Connectivity
+
+Optional but recommended when you want config sync, failover transport, and connection mirroring to be declared in Git.
+
+`vars/ha/device_connectivity/foundation-connectivity.yml`:
+
+```yaml
+---
+ha_device_connectivity:
+  - config_sync_ip: "10.10.20.11"
+    mirror_primary_address: "10.10.20.11"
+    unicast_failover:
+      - address: "management-ip"
+      - address: "10.10.20.11"
+        port: 1026
+```
+
 ### Device Trust
 
 `vars/ha/device_trust/foundation-peer.yml`:
@@ -119,6 +136,27 @@ ha_traffic_groups:
     ha_load_factor: 10
 ```
 
+### Optional HA Score Group
+
+Use this when you want a traffic group to prefer the unit with healthier pools or trunk members instead of using a fixed `ha_order`.
+
+`vars/ha/ha_groups/foundation-ha-groups.yml`:
+
+```yaml
+---
+ha_groups:
+  - name: "hg_apps_prefer_healthy_pools"
+    active_bonus: 15
+    pools:
+      - pool_name: "vm-apps-main"
+        weight: 60
+        minimum_threshold: 1
+    trunks:
+      - trunk_name: "trunk-uplink-a"
+        weight: 40
+        minimum_threshold: 1
+```
+
 ### Initial Config Sync Action
 
 `vars/ha/configsync_actions/manual-sync.yml`:
@@ -137,9 +175,11 @@ Launch the `BIG-IP HA Bootstrap` template from AWX.
 
 This will:
 
+- configure device-local HA connectivity on east if declared
 - establish device trust from east to west
 - create the sync-failover device group
 - add both devices as members
+- create any HA score groups referenced by traffic groups
 - create the traffic group with failover ordering
 - push config from east into the device group
 

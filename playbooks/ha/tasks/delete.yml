@@ -27,6 +27,15 @@
   loop_control:
     label: "{{ item.partition | default('Common') }}/{{ item.name }}"
 
+- name: Remove HA groups
+  f5networks.f5_modules.bigip_device_ha_group:
+    provider: "{{ provider }}"
+    name: "{{ item.name }}"
+    state: absent
+  loop: "{{ ha_groups_delete | default([]) }}"
+  loop_control:
+    label: "{{ item.name }}"
+
 - name: Remove device trusts
   f5networks.f5_modules.bigip_device_trust:
     provider: "{{ provider }}"
@@ -39,4 +48,3 @@
   loop: "{{ ha_device_trusts_delete | default([]) }}"
   loop_control:
     label: "{{ item.peer_hostname | default(item.peer_server) }}"
-

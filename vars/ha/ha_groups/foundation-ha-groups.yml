@@ -1,0 +1,21 @@
+---
+# HA score-group examples for traffic-group failover decisions.
+# HA groups are referenced by `ha_traffic_groups[*].ha_group` in `vars/ha/traffic_groups/` and may in turn
+# reference LTM pools in `vars/ltm/pools/` or network trunks in `vars/network/trunks/`.
+# Supported fields: `name`, `description`, `active_bonus`, `enable`, `pools`, and `trunks`.
+# Pool entries support `pool_name`, optional `partition`, optional `attribute`, optional `minimum_threshold`,
+# and required `weight`. Trunk entries support `trunk_name`, optional `attribute`, optional
+# `minimum_threshold`, and required `weight`.
+ha_groups:
+  - name: "hg_apps_prefer_healthy_pools"
+    description: "Bias failover toward the unit with healthy application pools and trunk capacity"
+    active_bonus: 15
+    pools:
+      - pool_name: "vm-apps-main"
+        partition: "Common"
+        weight: 60
+        minimum_threshold: 1
+    trunks:
+      - trunk_name: "trunk-uplink-a"
+        weight: 40
+        minimum_threshold: 1

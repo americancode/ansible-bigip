@@ -46,6 +46,15 @@ The bootstrap var tree covers the narrow day-0 layer that exists before normal s
 
 After bootstrap, the source of truth moves to `vars/system/...`, `vars/ha/...`, and the other service-domain trees.
 
+## HA Tree Examples
+
+The HA var tree includes:
+
+- device-local HA connectivity settings for config sync, failover transport, and connection mirroring
+- shared device trust, device groups, and device group memberships
+- HA score groups that reference LTM pools and network trunks
+- traffic groups that can use either direct `ha_order` or indirect `ha_group` scoring
+
 ## Hybrid Authoring
 
 Objects can be embedded directly in parent definitions or promoted to first-class trees. See [hybrid-authoring.md](hybrid-authoring.md) for the full model and examples.

@@ -17,7 +17,7 @@ The repo already manages the main BIG-IP runtime domains through canonical playb
 - `bootstrap` for day-0 licensing and first management reachability
 - `network` for VLANs, trunks, route domains, self IPs, routes, SNAT translations, SNAT pools, and NATs
 - `system` for hostname, DNS, NTP/timezone, provisioning, users, and config save
-- `ha` for trust, sync groups, traffic groups, and config sync actions
+- `ha` for device connectivity, trust, sync groups, HA groups, traffic groups, and config sync actions
 - `ltm` for monitors, profiles, nodes, pools, virtual servers, persistence, iRules, data groups, and policies
 - `gtm` for monitors, datacenters, servers, pools, Wide IPs, regions, and topology records
 - `tls` for keys, certificates, CA bundles, and SSL profiles
@@ -47,6 +47,7 @@ These boundaries must stay explicit.
   - drift/import coverage is intentionally not part of its current scope
 - `system` and `ha` are currently `runtime+validation`
   - they are operationally useful, but not yet helper-tool complete
+  - `ha_device_connectivity` is additionally an apply-oriented sub-surface whose deletion trees remain intentionally unsupported
 - the broader service/runtime domains are generally `runtime+validation+helper-tools`
   - helper-tool fidelity varies by object family
   - newer families are generally closed at `basic field drift`, not universal full semantic parity
@@ -107,10 +108,7 @@ Do not call work complete when any of the following is true:
 
 These are the highest-value open items.
 
-1. Deeper HA lifecycle management
-   - connection mirroring
-   - failover metadata
-   - automated failover testing workflows
+1. Automated HA failover testing workflows
 
 2. Configuration snapshot and recovery workflows
    - UCS backup/export workflow
@@ -135,7 +133,7 @@ These are the highest-value open items.
 
 These are the concrete remaining backlog items.
 
-1. Deeper HA lifecycle management
+1. Automated HA failover testing workflows
    - completion target: `runtime+validation`
 
 2. UCS backup/export workflow for configuration snapshots

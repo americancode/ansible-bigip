@@ -17,7 +17,7 @@ For a normal BIG-IP sync-failover pair, most shared configuration should be appl
 Safe defaults:
 
 - for `playbooks/network.yml`, `playbooks/ltm.yml`, and `playbooks/tls.yml`, target one sync-owner device per HA pair
-- use `playbooks/ha.yml` to establish or change trust, device groups, members, traffic groups, and config sync actions
+- use `playbooks/ha.yml` to establish or change device connectivity, trust, device groups, members, HA groups, traffic groups, and config sync actions
 - do not target both peers in the same HA pair for routine shared-config jobs unless you explicitly mean to
 
 ## HA Vars Perspective
@@ -25,7 +25,9 @@ Safe defaults:
 The HA example vars under `vars/ha/...` are written from the target device perspective:
 
 - `device_trust` examples are authored from the current target device toward its peer
+- `device_connectivity` examples are authored from the current target device's local management and failover-network perspective
 - `device_groups`, `device_group_members`, and `traffic_groups` describe shared HA state, but are meant to be applied from one designated device in the sync domain
+- `ha_groups` are shared HA score objects that traffic groups may reference through `ha_group`
 - `configsync_actions.sync_device_to_group: true` means "push from the device currently selected as the execution target"
 
 ## AWX Inventory Pattern

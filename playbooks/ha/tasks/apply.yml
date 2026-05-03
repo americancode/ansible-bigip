@@ -1,3 +1,19 @@
+- name: Configure HA device connectivity
+  f5networks.f5_modules.bigip_device_connectivity:
+    provider: "{{ provider }}"
+    config_sync_ip: "{{ item.config_sync_ip | default(omit) }}"
+    mirror_primary_address: "{{ item.mirror_primary_address | default(omit) }}"
+    mirror_secondary_address: "{{ item.mirror_secondary_address | default(omit) }}"
+    unicast_failover: "{{ item.unicast_failover | default(omit) }}"
+    failover_multicast: "{{ item.failover_multicast | default(omit) }}"
+    multicast_interface: "{{ item.multicast_interface | default(omit) }}"
+    multicast_address: "{{ item.multicast_address | default(omit) }}"
+    multicast_port: "{{ item.multicast_port | default(omit) }}"
+    cluster_mirroring: "{{ item.cluster_mirroring | default(omit) }}"
+  loop: "{{ ha_device_connectivity_present | default([]) }}"
+  loop_control:
+    label: "{{ item.config_sync_ip | default('device-connectivity') }}"
+
 - name: Create device trusts
   f5networks.f5_modules.bigip_device_trust:
     provider: "{{ provider }}"
@@ -37,6 +53,20 @@
   loop: "{{ ha_device_group_members_present | default([]) }}"
   loop_control:
     label: "{{ item.device_group }}/{{ item.name }}"
+
+- name: Create HA groups
+  f5networks.f5_modules.bigip_device_ha_group:
+    provider: "{{ provider }}"
+    name: "{{ item.name }}"
+    description: "{{ item.description | default(omit) }}"
+    active_bonus: "{{ item.active_bonus | default(omit) }}"
+    enable: "{{ item.enable | default(omit) }}"
+    pools: "{{ item.pools | default(omit) }}"
+    trunks: "{{ item.trunks | default(omit) }}"
+    state: present
+  loop: "{{ ha_groups_present | default([]) }}"
+  loop_control:
+    label: "{{ item.name }}"
 
 - name: Create traffic groups
   f5networks.f5_modules.bigip_device_traffic_group:

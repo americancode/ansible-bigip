@@ -7,7 +7,7 @@ Canonical playbooks live under `playbooks/`. Root-level `*.yml` files are compat
 - `playbooks/network.yml`: VLANs, trunks, route domains, self IPs, static routes, SNAT translations, SNAT pools, and NATs
 - `playbooks/bootstrap.yml`: BIG-IP day-0 licensing and first management reachability
 - `playbooks/system.yml`: base system settings like hostname, DNS, NTP, provisioning, users
-- `playbooks/ha.yml`: device trust, device groups, traffic groups, config sync actions
+- `playbooks/ha.yml`: device connectivity, device trust, device groups, HA groups, traffic groups, config sync actions
 - `playbooks/ltm.yml`: LTM monitors, non-TLS profiles, nodes, pools, virtual servers
 - `playbooks/gtm.yml`: GTM monitors, datacenters, servers, pools, Wide IPs, regions, and topology records
 - `playbooks/tls.yml`: SSL keys, certificates, CA bundles, client SSL profiles, server SSL profiles

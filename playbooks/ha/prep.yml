@@ -242,6 +242,128 @@
         ).ha_traffic_group_defaults | default({})
       }}
 
+- name: Discover HA device connectivity fragments
+  ansible.builtin.set_fact:
+    ha_device_connectivity_files: >-
+      {{
+        lookup(
+          'ansible.builtin.pipe',
+          "find {{ repo_root }}/vars/ha/device_connectivity -type f -name '*.yml' ! -name 'settings.yml' 2>/dev/null | sort"
+        ).splitlines() | reject('equalto', '') | list
+      }}
+    ha_device_connectivity_deletion_files: >-
+      {{
+        lookup(
+          'ansible.builtin.pipe',
+          "find {{ repo_root }}/vars/ha/deletions/device_connectivity -type f -name '*.yml' ! -name 'settings.yml' 2>/dev/null | sort"
+        ).splitlines() | reject('equalto', '') | list
+      }}
+
+- name: Load HA device connectivity fragments
+  ansible.builtin.include_vars:
+    file: "{{ item }}"
+    name: ha_device_connectivity_fragment
+  loop: "{{ ha_device_connectivity_files }}"
+  register: ha_device_connectivity_include_results
+
+- name: Load HA device connectivity deletion fragments
+  ansible.builtin.include_vars:
+    file: "{{ item }}"
+    name: ha_device_connectivity_deletion_fragment
+  loop: "{{ ha_device_connectivity_deletion_files }}"
+  register: ha_device_connectivity_deletion_include_results
+
+- name: Aggregate HA device connectivity with directory settings
+  ansible.builtin.set_fact:
+    ha_device_connectivity: "{{ ha_device_connectivity | default([]) + [ ha_device_connectivity_directory_defaults | combine(item.1, recursive=True) ] }}"
+  loop: "{{ query('subelements', ha_device_connectivity_include_results.results, 'ansible_facts.ha_device_connectivity_fragment.ha_device_connectivity', {'skip_missing': True}) }}"
+  vars:
+    ha_device_connectivity_settings_path: "{{ item.0.item | regex_replace('/[^/]+$', '/settings.yml') }}"
+    ha_device_connectivity_directory_defaults: >-
+      {{
+        (
+          lookup('ansible.builtin.file', ha_device_connectivity_settings_path, errors='ignore')
+          | default('{}', true)
+          | from_yaml
+        ).ha_device_connectivity_defaults | default({})
+      }}
+
+- name: Aggregate HA device connectivity deletions with directory settings
+  ansible.builtin.set_fact:
+    ha_device_connectivity_deletions: "{{ ha_device_connectivity_deletions | default([]) + [ (ha_device_connectivity_deletion_directory_defaults | combine(item.1, recursive=True)) | combine({'state': 'absent'}, recursive=True) ] }}"
+  loop: "{{ query('subelements', ha_device_connectivity_deletion_include_results.results, 'ansible_facts.ha_device_connectivity_deletion_fragment.ha_device_connectivity', {'skip_missing': True}) }}"
+  vars:
+    ha_device_connectivity_deletion_settings_path: "{{ item.0.item | regex_replace('/[^/]+$', '/settings.yml') }}"
+    ha_device_connectivity_deletion_directory_defaults: >-
+      {{
+        (
+          lookup('ansible.builtin.file', ha_device_connectivity_deletion_settings_path, errors='ignore')
+          | default('{}', true)
+          | from_yaml
+        ).ha_device_connectivity_defaults | default({})
+      }}
+
+- name: Discover HA group fragments
+  ansible.builtin.set_fact:
+    ha_group_files: >-
+      {{
+        lookup(
+          'ansible.builtin.pipe',
+          "find {{ repo_root }}/vars/ha/ha_groups -type f -name '*.yml' ! -name 'settings.yml' 2>/dev/null | sort"
+        ).splitlines() | reject('equalto', '') | list
+      }}
+    ha_group_deletion_files: >-
+      {{
+        lookup(
+          'ansible.builtin.pipe',
+          "find {{ repo_root }}/vars/ha/deletions/ha_groups -type f -name '*.yml' ! -name 'settings.yml' 2>/dev/null | sort"
+        ).splitlines() | reject('equalto', '') | list
+      }}
+
+- name: Load HA group fragments
+  ansible.builtin.include_vars:
+    file: "{{ item }}"
+    name: ha_group_fragment
+  loop: "{{ ha_group_files }}"
+  register: ha_group_include_results
+
+- name: Load HA group deletion fragments
+  ansible.builtin.include_vars:
+    file: "{{ item }}"
+    name: ha_group_deletion_fragment
+  loop: "{{ ha_group_deletion_files }}"
+  register: ha_group_deletion_include_results
+
+- name: Aggregate HA groups with directory settings
+  ansible.builtin.set_fact:
+    ha_groups: "{{ ha_groups | default([]) + [ ha_group_directory_defaults | combine(item.1, recursive=True) ] }}"
+  loop: "{{ query('subelements', ha_group_include_results.results, 'ansible_facts.ha_group_fragment.ha_groups', {'skip_missing': True}) }}"
+  vars:
+    ha_group_settings_path: "{{ item.0.item | regex_replace('/[^/]+$', '/settings.yml') }}"
+    ha_group_directory_defaults: >-
+      {{
+        (
+          lookup('ansible.builtin.file', ha_group_settings_path, errors='ignore')
+          | default('{}', true)
+          | from_yaml
+        ).ha_group_defaults | default({})
+      }}
+
+- name: Aggregate HA group deletions with directory settings
+  ansible.builtin.set_fact:
+    ha_group_deletions: "{{ ha_group_deletions | default([]) + [ (ha_group_deletion_directory_defaults | combine(item.1, recursive=True)) | combine({'state': 'absent'}, recursive=True) ] }}"
+  loop: "{{ query('subelements', ha_group_deletion_include_results.results, 'ansible_facts.ha_group_deletion_fragment.ha_groups', {'skip_missing': True}) }}"
+  vars:
+    ha_group_deletion_settings_path: "{{ item.0.item | regex_replace('/[^/]+$', '/settings.yml') }}"
+    ha_group_deletion_directory_defaults: >-
+      {{
+        (
+          lookup('ansible.builtin.file', ha_group_deletion_settings_path, errors='ignore')
+          | default('{}', true)
+          | from_yaml
+        ).ha_group_defaults | default({})
+      }}
+
 - name: Discover HA config sync action fragments
   ansible.builtin.set_fact:
     ha_configsync_action_files: >-
@@ -356,4 +478,43 @@
           | list
         )
       }}
-
+    ha_device_connectivity_delete: >-
+      {{
+        ((ha_device_connectivity | default([])) + (ha_device_connectivity_deletions | default([])))
+        | selectattr('state', 'defined')
+        | selectattr('state', 'equalto', 'absent')
+        | list
+      }}
+    ha_device_connectivity_present: >-
+      {{
+        (ha_device_connectivity | default([]))
+        | rejectattr('state', 'defined')
+        | list
+        +
+        (
+          (ha_device_connectivity | default([]))
+          | selectattr('state', 'defined')
+          | rejectattr('state', 'equalto', 'absent')
+          | list
+        )
+      }}
+    ha_groups_delete: >-
+      {{
+        ((ha_groups | default([])) + (ha_group_deletions | default([])))
+        | selectattr('state', 'defined')
+        | selectattr('state', 'equalto', 'absent')
+        | list
+      }}
+    ha_groups_present: >-
+      {{
+        (ha_groups | default([]))
+        | rejectattr('state', 'defined')
+        | list
+        +
+        (
+          (ha_groups | default([]))
+          | selectattr('state', 'defined')
+          | rejectattr('state', 'equalto', 'absent')
+          | list
+        )
+      }}

@@ -118,6 +118,20 @@ class Validator:
                 settings_key="ha_traffic_group_defaults",
             ),
             TreeSpec(
+                name="ha_device_connectivity",
+                active_dir=VARS_DIR / "ha" / "device_connectivity",
+                deletion_dir=VARS_DIR / "ha" / "deletions" / "device_connectivity",
+                top_key="ha_device_connectivity",
+                settings_key="ha_device_connectivity_defaults",
+            ),
+            TreeSpec(
+                name="ha_groups",
+                active_dir=VARS_DIR / "ha" / "ha_groups",
+                deletion_dir=VARS_DIR / "ha" / "deletions" / "ha_groups",
+                top_key="ha_groups",
+                settings_key="ha_group_defaults",
+            ),
+            TreeSpec(
                 name="ha_configsync_actions",
                 active_dir=VARS_DIR / "ha" / "configsync_actions",
                 deletion_dir=VARS_DIR / "ha" / "deletions" / "configsync_actions",
@@ -864,9 +878,132 @@ class Validator:
         groups = self.objects.get("ha_device_groups", [])
         members = self.objects.get("ha_device_group_members", [])
         traffic_groups = self.objects.get("ha_traffic_groups", [])
+        device_connectivity = self.objects.get("ha_device_connectivity", [])
+        ha_groups = self.objects.get("ha_groups", [])
         configsync_actions = self.objects.get("ha_configsync_actions", [])
 
         active_group_names = set()
+        active_ha_group_names = set()
+
+        active_device_connectivity = [obj for obj in device_connectivity if obj.effective_state != "absent"]
+        if len(active_device_connectivity) > 1:
+            self.error(
+                active_device_connectivity[1].relpath,
+                "HA device connectivity is device-local and supports only one active declaration per target BIG-IP",
+            )
+
+        for obj in device_connectivity:
+            if obj.from_deletions:
+                self.error(obj.relpath, "HA device connectivity does not support deletion trees; use desired replacement values instead")
+            if obj.effective_state == "absent":
+                self.error(obj.relpath, "HA device connectivity does not support `state: absent`")
+
+            if not any(
+                obj.data.get(field) is not None
+                for field in (
+                    "config_sync_ip",
+                    "mirror_primary_address",
+                    "mirror_secondary_address",
+                    "unicast_failover",
+                    "failover_multicast",
+                    "multicast_interface",
+                    "multicast_address",
+                    "multicast_port",
+                    "cluster_mirroring",
+                )
+            ):
+                self.error(obj.relpath, "HA device connectivity must define at least one managed field")
+
+            for field in ("config_sync_ip", "mirror_primary_address", "mirror_secondary_address"):
+                value = obj.data.get(field)
+                if value is not None:
+                    self.validate_ip_like(obj.relpath, value, f"HA device connectivity `{field}`")
+
+            cluster_mirroring = obj.data.get("cluster_mirroring")
+            if cluster_mirroring is not None and cluster_mirroring not in ("between-clusters", "within-cluster"):
+                self.error(obj.relpath, "`cluster_mirroring` must be `between-clusters` or `within-cluster`")
+
+            failover_multicast = obj.data.get("failover_multicast")
+            if failover_multicast is not None and not isinstance(failover_multicast, bool):
+                self.error(obj.relpath, "`failover_multicast` must be a boolean")
+
+            multicast_address = obj.data.get("multicast_address")
+            if multicast_address is not None:
+                self.validate_ip_like(obj.relpath, multicast_address, "HA device connectivity `multicast_address`")
+
+            multicast_port = obj.data.get("multicast_port")
+            if multicast_port is not None:
+                if not isinstance(multicast_port, int):
+                    self.error(obj.relpath, "`multicast_port` must be an integer")
+                elif multicast_port < 0 or multicast_port > 65535:
+                    self.error(obj.relpath, "`multicast_port` must be between 0 and 65535")
+
+            unicast_failover = obj.data.get("unicast_failover")
+            if unicast_failover is not None:
+                if not isinstance(unicast_failover, list):
+                    self.error(obj.relpath, "`unicast_failover` must be a list")
+                else:
+                    for idx, entry in enumerate(unicast_failover):
+                        if not isinstance(entry, dict):
+                            self.error(obj.relpath, f"`unicast_failover[{idx}]` must be a mapping")
+                            continue
+                        if not entry.get("address"):
+                            self.error(obj.relpath, f"`unicast_failover[{idx}]` must define `address`")
+                        else:
+                            self.validate_ip_like(
+                                obj.relpath,
+                                entry.get("address"),
+                                f"HA device connectivity `unicast_failover[{idx}].address`",
+                            )
+                        port = entry.get("port")
+                        if port is not None:
+                            if not isinstance(port, int):
+                                self.error(obj.relpath, f"`unicast_failover[{idx}].port` must be an integer")
+                            elif port < 0 or port > 65535:
+                                self.error(obj.relpath, f"`unicast_failover[{idx}].port` must be between 0 and 65535")
+
+        for obj in ha_groups:
+            self.require_fields(obj, ["name"])
+            if obj.effective_state == "absent":
+                continue
+            active_ha_group_names.add(str(obj.data["name"]))
+
+            active_bonus = obj.data.get("active_bonus")
+            if active_bonus is not None:
+                if not isinstance(active_bonus, int):
+                    self.error(obj.relpath, f"HA group `{obj.data.get('name')}` `active_bonus` must be an integer")
+                elif active_bonus < 0:
+                    self.error(obj.relpath, f"HA group `{obj.data.get('name')}` `active_bonus` must be zero or greater")
+
+            enable = obj.data.get("enable")
+            if enable is not None and not isinstance(enable, bool):
+                self.error(obj.relpath, f"HA group `{obj.data.get('name')}` `enable` must be a boolean")
+
+            for field, name_key in (("pools", "pool_name"), ("trunks", "trunk_name")):
+                members_list = obj.data.get(field)
+                if members_list is None:
+                    continue
+                if not isinstance(members_list, list):
+                    self.error(obj.relpath, f"HA group `{obj.data.get('name')}` `{field}` must be a list")
+                    continue
+                for idx, member in enumerate(members_list):
+                    if not isinstance(member, dict):
+                        self.error(obj.relpath, f"HA group `{obj.data.get('name')}` `{field}[{idx}]` must be a mapping")
+                        continue
+                    if not member.get(name_key):
+                        self.error(obj.relpath, f"HA group `{obj.data.get('name')}` `{field}[{idx}]` must define `{name_key}`")
+                    if member.get("weight") is None:
+                        self.error(obj.relpath, f"HA group `{obj.data.get('name')}` `{field}[{idx}]` must define `weight`")
+                    elif not isinstance(member.get("weight"), int):
+                        self.error(obj.relpath, f"HA group `{obj.data.get('name')}` `{field}[{idx}].weight` must be an integer")
+                    attribute = member.get("attribute")
+                    if attribute is not None and attribute != "percent-up-members":
+                        self.error(obj.relpath, f"HA group `{obj.data.get('name')}` `{field}[{idx}].attribute` must be `percent-up-members`")
+                    minimum_threshold = member.get("minimum_threshold")
+                    if minimum_threshold is not None and not isinstance(minimum_threshold, int):
+                        self.error(obj.relpath, f"HA group `{obj.data.get('name')}` `{field}[{idx}].minimum_threshold` must be an integer")
+
+        self.check_duplicates(ha_groups, lambda obj: ("ha_group", obj.data.get("name")), "HA group")
 
         for obj in trusts:
             self.require_fields(obj, ["peer_server"])
@@ -908,6 +1045,8 @@ class Validator:
                 self.error(obj.relpath, f"HA traffic group `{obj.data.get('name')}` sets `auto_failback_time` without `auto_failback`")
             if obj.data.get("ha_group") not in (None, "") and obj.data.get("ha_order") not in (None, ""):
                 self.error(obj.relpath, f"HA traffic group `{obj.data.get('name')}` cannot set both `ha_group` and `ha_order`")
+            if obj.data.get("ha_group") not in (None, "") and str(obj.data.get("ha_group")) not in active_ha_group_names:
+                self.error(obj.relpath, f"HA traffic group `{obj.data.get('name')}` references undefined HA group `{obj.data.get('ha_group')}`")
 
         self.check_duplicates(
             traffic_groups,
@@ -2260,6 +2399,17 @@ class Validator:
     def error(self, source: Path | str, message: str) -> None:
         rel = str(source.relative_to(ROOT)) if isinstance(source, Path) else source
         self.errors.append(f"{rel}: {message}")
+
+    def validate_ip_like(self, source: Path | str, value: Any, label: str) -> None:
+        if not isinstance(value, str):
+            self.error(source, f"{label} must be a string")
+            return
+        if value == "management-ip":
+            return
+        try:
+            ipaddress.ip_address(value)
+        except ValueError:
+            self.error(source, f"{label} must be a valid IPv4 or IPv6 address")
 
     def normalize_route_domain_id(self, value: Any) -> int | None:
         if isinstance(value, int):

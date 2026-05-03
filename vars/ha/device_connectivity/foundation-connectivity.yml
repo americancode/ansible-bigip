@@ -1,0 +1,15 @@
+---
+# HA device connectivity example for sync, failover, and connection mirroring on the current BIG-IP target.
+# This file configures device-local HA transport settings and is applied from the BIG-IP currently selected by
+# `f5_host` / `F5_HOST`; it does not describe shared pair state like `vars/ha/device_groups/`.
+# Supported fields: `config_sync_ip`, `mirror_primary_address`, `mirror_secondary_address`,
+# `unicast_failover` (list of `address` / optional `port` mappings), `failover_multicast`,
+# `multicast_interface`, `multicast_address`, `multicast_port`, and `cluster_mirroring`.
+ha_device_connectivity:
+  - config_sync_ip: "10.10.20.11"
+    mirror_primary_address: "10.10.20.11"
+    unicast_failover:
+      - address: "management-ip"
+      - address: "10.10.20.11"
+        port: 1026
+    failover_multicast: false

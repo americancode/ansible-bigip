@@ -32,6 +32,7 @@ Current lifecycle boundaries:
 | TLS secrets | [docs/tls-secrets.md](docs/tls-secrets.md) |
 | Network objects | [docs/network-objects.md](docs/network-objects.md) |
 | System management | [docs/system-management.md](docs/system-management.md) |
+| HA lifecycle | [docs/ha.md](docs/ha.md) |
 | LTM advanced fields | [docs/ltm-advanced.md](docs/ltm-advanced.md) |
 | GTM advanced fields | [docs/gtm-advanced.md](docs/gtm-advanced.md) |
 | AFM security | [docs/security.md](docs/security.md) |
@@ -56,7 +57,7 @@ Canonical playbooks live under `playbooks/`. Root-level `*.yml` files are compat
 | `playbooks/network.yml` | VLANs, trunks, route domains, self IPs, routes, SNATs, NATs |
 | `playbooks/bootstrap.yml` | device licensing and initial management IP/default-route bootstrap |
 | `playbooks/system.yml` | hostname, DNS, NTP, provisioning, users |
-| `playbooks/ha.yml` | device trust, device groups, traffic groups, config sync |
+| `playbooks/ha.yml` | device connectivity, device trust, device groups, HA groups, traffic groups, config sync |
 | `playbooks/ltm.yml` | monitors, profiles, nodes, pools, virtual servers |
 | `playbooks/gtm.yml` | monitors, datacenters, servers, pools, Wide IPs, topology |
 | `playbooks/tls.yml` | keys, certificates, CA bundles, SSL profiles |
@@ -66,7 +67,7 @@ Canonical playbooks live under `playbooks/`. Root-level `*.yml` files are compat
 
 The main remaining roadmap items are:
 
-- deeper HA lifecycle management
+- automated HA failover testing workflows
 - UCS backup/export workflow
 - certificate rotation automation
 - BIG-IP management-plane admin auth providers
