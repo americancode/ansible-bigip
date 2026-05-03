@@ -39,6 +39,8 @@ The current preferred split is:
 - `playbooks/shared/prep/classify-operations.yml` for publishing `*_present` and `*_delete` collections from the canonical object lists
 - domain-specific `prep/*.yml` snippets only where the prep flow is genuinely specialized, such as intent compilation or lookup-building
 
+Nested directory trees are part of the supported model. Prep loaders should discover fragment files recursively and apply layered `settings.yml` defaults from the relevant subtree root down through intermediate directories before merging the object-level values.
+
 ## Path Handling
 
 Path handling inside canonical playbooks is anchored from `playbook_dir`, so moving playbooks under `playbooks/` does not break references to `vars/`.

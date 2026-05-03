@@ -40,6 +40,7 @@ The repo also has first-class helper tooling:
 - `tools/import-from-bigip` for brownfield import
 - Python-backed prep/compiler helpers under `filter_plugins/bigip_filters/`, with `filter_plugins/bigip_var_filters.py` kept as the Ansible filter entrypoint
 - shared prep snippets under `playbooks/shared/prep/` for fragment discovery, settings-aware aggregation, and present/delete classification across the standard domains
+- recursive nested var-tree discovery and hierarchical multi-level `settings.yml` inheritance across canonical playbooks, including the older specialized LTM/GTM loaders
 
 ## Capability Boundaries
 
@@ -115,22 +116,15 @@ Do not call work complete when any of the following is true:
 
 These are the highest-value open items.
 
-1. Finish the repo-wide prep refactor into shared Python-backed helpers
-   - the split filter/helper module structure is in place
-   - shared prep snippets now cover fragment discovery, settings-aware aggregation, and present/delete classification across `bootstrap`, `network`, `system`, `ha`, `tls`, and `security`
-   - the remaining scope is the more specialized LTM/GTM prep logic that still has domain-specific loader/build behavior beyond the shared helper layer
-   - nested directory discovery already works repo-wide, but hierarchical multi-level `settings.yml` inheritance is not yet universal in the older specialized LTM/GTM loaders
-   - this refactor still applies everywhere it makes sense across canonical playbooks, but the open work is now concentrated in the specialized canonical and intent-heavy domains
-
-2. Helper-tool maturity decisions for `system` and `ha`
+1. Helper-tool maturity decisions for `system` and `ha`
    - either add drift/import coverage
    - or keep them explicitly documented as `runtime+validation` for the current phase
 
-3. Configuration snapshot and recovery workflows
+2. Configuration snapshot and recovery workflows
    - UCS backup/export workflow
    - explicit operational guidance for snapshot use in change and rollback paths
 
-4. Certificate lifecycle automation
+3. Certificate lifecycle automation
    - certificate rotation workflows
    - renewal/expiry detection
 
@@ -138,26 +132,19 @@ These are the highest-value open items.
 
 These are the concrete remaining backlog items.
 
-1. Finish refactoring repeated prep loading, discovery, settings aggregation, and classification logic into shared Python-backed helpers while keeping `prep.yml` as the orchestration layer
-   - the shared prep helper layer is now established under `playbooks/shared/prep/`
-   - most standard fragment-loading domains already use it
-   - the remaining work is to push the same architecture deeper into the specialized LTM/GTM prep flows where canonical loading, lookup building, and intent compilation still require custom YAML
-   - as part of that work, make nested directories and hierarchical `settings.yml` inheritance behave the same way across all canonical playbooks, including older LTM/GTM trees such as `vars/ltm/nodes/<team>/<site>/...`
-   - top-level `prep.yml` and focused prep snippets should remain the readable orchestration layer
-
-2. Decide the helper-tool lifecycle target for `system` and `ha`
+1. Decide the helper-tool lifecycle target for `system` and `ha`
    - either implement drift/import support
    - or document them as intentional `runtime+validation` boundaries in long-term steady state
 
-3. UCS backup/export workflow for configuration snapshots
+2. UCS backup/export workflow for configuration snapshots
    - priority: lower than management-plane auth, compliance, and current repo-boundary decisions
    - completion target: `runtime+validation`
 
-4. Certificate rotation automation with renewal detection
+3. Certificate rotation automation with renewal detection
    - priority: lower than management-plane auth, compliance, and current repo-boundary decisions
    - completion target: `runtime+validation+helper-tools` where practical
 
-5. Future deeper helper-tool fidelity
+4. Future deeper helper-tool fidelity
    - if needed, promote selected object families from `basic field drift` toward `model-aware`
    - only pursue this when the operational value is clear
 

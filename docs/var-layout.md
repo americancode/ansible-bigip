@@ -18,6 +18,14 @@ The repo uses split trees under `vars/` so large estates can be managed by domai
 
 Each subtree can use a sibling `settings.yml` to provide defaults for objects in that directory.
 
+Nested directories are supported. You can organize trees like:
+
+- `vars/ltm/nodes/postgres/`
+- `vars/ltm/nodes/postgres/dc1/`
+- `vars/gtm/pools/platform/us-east/`
+
+The loaders discover YAML fragments recursively, and the canonical playbooks now apply hierarchical `settings.yml` inheritance from the subtree root down to the leaf directory that contains the fragment.
+
 Precedence is:
 
 1. object-level value

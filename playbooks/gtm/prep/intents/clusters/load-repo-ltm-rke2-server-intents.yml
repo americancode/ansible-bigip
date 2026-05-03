@@ -1,12 +1,6 @@
 - name: Discover repo-known LTM RKE2 server intent fragments
   ansible.builtin.set_fact:
-    repo_ltm_rke2_server_intent_files: >-
-      {{
-        lookup(
-          'ansible.builtin.pipe',
-          "find {{ repo_root }}/vars/ltm/intents/clusters -type f -name '*.yml' ! -name 'settings.yml' 2>/dev/null | sort"
-        ).splitlines() | reject('equalto', '') | list
-      }}
+    repo_ltm_rke2_server_intent_files: "{{ (repo_root ~ '/vars/ltm/intents/clusters') | discover_yaml_fragments }}"
 
 - name: Load repo-known LTM RKE2 server intent fragments
   ansible.builtin.include_vars:

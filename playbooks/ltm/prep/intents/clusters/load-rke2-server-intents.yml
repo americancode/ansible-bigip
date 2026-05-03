@@ -1,19 +1,7 @@
 - name: Discover LTM RKE2 server intent fragments
   ansible.builtin.set_fact:
-    ltm_rke2_server_intent_files: >-
-      {{
-        lookup(
-          'ansible.builtin.pipe',
-          "find {{ repo_root }}/vars/ltm/intents/clusters -type f -name '*.yml' ! -name 'settings.yml' 2>/dev/null | sort"
-        ).splitlines() | reject('equalto', '') | list
-      }}
-    ltm_rke2_server_intent_deletion_files: >-
-      {{
-        lookup(
-          'ansible.builtin.pipe',
-          "find {{ repo_root }}/vars/ltm/deletions/intents/clusters -type f -name '*.yml' ! -name 'settings.yml' 2>/dev/null | sort"
-        ).splitlines() | reject('equalto', '') | list
-      }}
+    ltm_rke2_server_intent_files: "{{ (repo_root ~ '/vars/ltm/intents/clusters') | discover_yaml_fragments }}"
+    ltm_rke2_server_intent_deletion_files: "{{ (repo_root ~ '/vars/ltm/deletions/intents/clusters') | discover_yaml_fragments }}"
 
 - name: Load LTM RKE2 server intent fragments
   ansible.builtin.include_vars:

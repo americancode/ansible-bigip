@@ -64,6 +64,7 @@ These are also binding. A feature is not complete just because syntax-check pass
   - keep example var files, docs, and helper tools aligned with the canonical playbook behavior
   - keep top-level `prep.yml` files as documented orchestrators when prep logic grows; split heavy discovery/loading/classification/compiler flows into focused `prep/*.yml` snippets
   - when prep logic is the same across domains, prefer shared prep snippets under `playbooks/shared/prep/` plus shared Python-backed helpers under `filter_plugins/bigip_filters/` instead of re-implementing the pattern in every domain
+  - nested var-tree directories are a supported authoring pattern; loaders should discover fragment files recursively and apply hierarchical `settings.yml` inheritance from the subtree root through intermediate directories, not only the nearest sibling settings file
   - document in top-level `prep.yml` comments which major runtime facts or canonical sets the prep flow produces
 
 - Preserve the separation between canonical runtime objects and higher-level convenience authoring:
