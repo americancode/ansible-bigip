@@ -464,7 +464,7 @@ IMPORT_SPECS: dict[str, ImportSpec] = {
         },
     ),
     "tls_ca_bundles": ImportSpec(
-        endpoint="sys/crypto/ca_bundle",
+        endpoint="sys/crypto/ca-bundle",
         top_key="tls_ca_bundles",
         output_dir="tls/ca_bundles",
         extract={

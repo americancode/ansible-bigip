@@ -285,6 +285,16 @@ class DriftChecker:
         "network_nats",
     }
 
+    GTM_DEEP_DRIFT_TYPES = {
+        "gtm_topology_regions",
+    }
+
+    TLS_DEEP_DRIFT_TYPES = {
+        "tls_ca_bundles",
+        "tls_client_ssl_profiles",
+        "tls_server_ssl_profiles",
+    }
+
     def __init__(self, conn: BigIPConnection, var_loader: VarTreeLoader) -> None:
         self.conn = conn
         self.var_loader = var_loader
@@ -397,6 +407,10 @@ class DriftChecker:
     def _find_value_drift(self, declared: dict, live: dict, obj_type: str) -> list[str]:
         if obj_type in self.NETWORK_DEEP_DRIFT_TYPES:
             return self._find_network_value_drift(declared, live, obj_type)
+        if obj_type in self.GTM_DEEP_DRIFT_TYPES:
+            return self._find_gtm_value_drift(declared, live, obj_type)
+        if obj_type in self.TLS_DEEP_DRIFT_TYPES:
+            return self._find_tls_value_drift(declared, live, obj_type)
 
         drifts: list[str] = []
         comparisons = {
@@ -451,6 +465,20 @@ class DriftChecker:
             return self._find_snat_pool_drift(declared, live)
         if obj_type == "network_nats":
             return self._find_nat_drift(declared, live)
+        return []
+
+    def _find_gtm_value_drift(self, declared: dict[str, Any], live: dict[str, Any], obj_type: str) -> list[str]:
+        if obj_type == "gtm_topology_regions":
+            return self._find_gtm_topology_region_drift(declared, live)
+        return []
+
+    def _find_tls_value_drift(self, declared: dict[str, Any], live: dict[str, Any], obj_type: str) -> list[str]:
+        if obj_type == "tls_ca_bundles":
+            return self._find_tls_ca_bundle_drift(declared, live)
+        if obj_type == "tls_client_ssl_profiles":
+            return self._find_tls_client_ssl_profile_drift(declared, live)
+        if obj_type == "tls_server_ssl_profiles":
+            return self._find_tls_server_ssl_profile_drift(declared, live)
         return []
 
     def _find_route_domain_drift(self, declared: dict[str, Any], live: dict[str, Any]) -> list[str]:
@@ -553,6 +581,148 @@ class DriftChecker:
                 )
         return drifts
 
+    def _find_gtm_topology_region_drift(self, declared: dict[str, Any], live: dict[str, Any]) -> list[str]:
+        drifts: list[str] = []
+        self._compare_field(drifts, "description", declared.get("description"), live.get("description"))
+        self._compare_optional_live_field(
+            drifts,
+            "region_members",
+            declared.get("region_members"),
+            live,
+            ("regionMembers", "region_members"),
+            self._normalize_member_list,
+        )
+        return drifts
+
+    def _find_tls_ca_bundle_drift(self, declared: dict[str, Any], live: dict[str, Any]) -> list[str]:
+        drifts: list[str] = []
+        self._compare_field(drifts, "description", declared.get("description"), live.get("description"))
+        self._compare_optional_live_field(
+            drifts, "issuer_cert", declared.get("issuer_cert"), live, ("issuerCert", "issuer_cert"), self._normalize_reference
+        )
+        self._compare_optional_live_field(
+            drifts, "true_names", declared.get("true_names"), live, ("trueNames", "true_names"), self._normalize_bool
+        )
+        return drifts
+
+    def _find_tls_client_ssl_profile_drift(self, declared: dict[str, Any], live: dict[str, Any]) -> list[str]:
+        drifts: list[str] = []
+        self._compare_field(drifts, "parent", declared.get("parent"), live.get("defaultsFrom"), self._normalize_reference)
+        self._compare_field(drifts, "ciphers", declared.get("ciphers"), live.get("ciphers"))
+        self._compare_optional_live_field(
+            drifts, "cipher_group", declared.get("cipher_group"), live, ("cipherGroup", "cipher_group"), self._normalize_reference
+        )
+        self._compare_optional_live_field(
+            drifts, "options", declared.get("options"), live, ("options",), self._normalize_string_list
+        )
+        self._compare_optional_live_field(
+            drifts,
+            "secure_renegotiation",
+            declared.get("secure_renegotiation"),
+            live,
+            ("secureRenegotiation", "secure_renegotiation"),
+        )
+        self._compare_optional_live_field(
+            drifts, "allow_non_ssl", declared.get("allow_non_ssl"), live, ("allowNonSsl", "allow_non_ssl"), self._normalize_bool
+        )
+        self._compare_optional_live_field(
+            drifts, "cache_size", declared.get("cache_size"), live, ("cacheSize", "cache_size"), self._normalize_int
+        )
+        self._compare_optional_live_field(
+            drifts, "cache_timeout", declared.get("cache_timeout"), live, ("cacheTimeout", "cache_timeout"), self._normalize_int
+        )
+        self._compare_optional_live_field(
+            drifts, "client_certificate", declared.get("client_certificate"), live, ("clientCertificate", "client_certificate")
+        )
+        self._compare_optional_live_field(
+            drifts, "client_auth_frequency", declared.get("client_auth_frequency"), live, ("clientAuthFrequency", "client_auth_frequency")
+        )
+        self._compare_optional_live_field(
+            drifts, "cert_auth_depth", declared.get("cert_auth_depth"), live, ("certAuthDepth", "cert_auth_depth"), self._normalize_int
+        )
+        self._compare_optional_live_field(
+            drifts, "trusted_cert_authority", declared.get("trusted_cert_authority"), live, ("trustedCertAuthority", "trusted_cert_authority"), self._normalize_reference
+        )
+        self._compare_optional_live_field(
+            drifts, "advertised_cert_authority", declared.get("advertised_cert_authority"), live, ("advertisedCertAuthority", "advertised_cert_authority"), self._normalize_reference
+        )
+        self._compare_optional_live_field(
+            drifts, "client_auth_crl", declared.get("client_auth_crl"), live, ("clientAuthCrl", "client_auth_crl"), self._normalize_reference
+        )
+        self._compare_optional_live_field(
+            drifts, "allow_expired_crl", declared.get("allow_expired_crl"), live, ("allowExpiredCrl", "allow_expired_crl"), self._normalize_bool
+        )
+        self._compare_optional_live_field(
+            drifts, "renegotiation", declared.get("renegotiation"), live, ("renegotiation",)
+        )
+        self._compare_optional_live_field(
+            drifts, "retain_certificate", declared.get("retain_certificate"), live, ("retainCertificate", "retain_certificate"), self._normalize_bool
+        )
+        self._compare_optional_live_field(
+            drifts, "server_name", declared.get("server_name"), live, ("serverName", "server_name")
+        )
+        self._compare_optional_live_field(
+            drifts, "sni_default", declared.get("sni_default"), live, ("sniDefault", "sni_default"), self._normalize_bool
+        )
+        self._compare_optional_live_field(
+            drifts, "sni_require", declared.get("sni_require"), live, ("sniRequire", "sni_require"), self._normalize_bool
+        )
+        self._compare_optional_live_field(
+            drifts, "strict_resume", declared.get("strict_resume"), live, ("strictResume", "strict_resume"), self._normalize_bool
+        )
+        self._compare_optional_live_field(
+            drifts, "cert_key_chain", declared.get("cert_key_chain"), live, ("certKeyChain", "cert_key_chain"), self._normalize_cert_key_chain
+        )
+        return drifts
+
+    def _find_tls_server_ssl_profile_drift(self, declared: dict[str, Any], live: dict[str, Any]) -> list[str]:
+        drifts: list[str] = []
+        self._compare_field(drifts, "parent", declared.get("parent"), live.get("defaultsFrom"), self._normalize_reference)
+        self._compare_optional_live_field(
+            drifts, "certificate", declared.get("certificate"), live, ("cert", "certificate"), self._normalize_reference
+        )
+        self._compare_optional_live_field(
+            drifts, "key", declared.get("key"), live, ("key",), self._normalize_reference
+        )
+        self._compare_optional_live_field(
+            drifts, "chain", declared.get("chain"), live, ("chain",), self._normalize_reference
+        )
+        self._compare_field(drifts, "ciphers", declared.get("ciphers"), live.get("ciphers"))
+        self._compare_optional_live_field(
+            drifts, "cipher_group", declared.get("cipher_group"), live, ("cipherGroup", "cipher_group"), self._normalize_reference
+        )
+        self._compare_optional_live_field(
+            drifts, "options", declared.get("options"), live, ("options",), self._normalize_string_list
+        )
+        self._compare_optional_live_field(
+            drifts, "secure_renegotiation", declared.get("secure_renegotiation"), live, ("secureRenegotiation", "secure_renegotiation")
+        )
+        self._compare_optional_live_field(
+            drifts, "authenticate_name", declared.get("authenticate_name"), live, ("authenticateName", "authenticate_name")
+        )
+        self._compare_optional_live_field(
+            drifts, "ca_file", declared.get("ca_file"), live, ("caFile", "ca_file"), self._normalize_reference
+        )
+        self._compare_optional_live_field(
+            drifts, "ocsp_profile", declared.get("ocsp_profile"), live, ("ocspProfile", "ocsp_profile"), self._normalize_reference
+        )
+        self._compare_optional_live_field(
+            drifts, "renegotiation", declared.get("renegotiation"), live, ("renegotiation",)
+        )
+        self._compare_optional_live_field(
+            drifts, "server_certificate", declared.get("server_certificate"), live, ("serverCertificate", "server_certificate")
+        )
+        self._compare_optional_live_field(
+            drifts, "server_name", declared.get("server_name"), live, ("serverName", "server_name")
+        )
+        self._compare_optional_live_field(
+            drifts, "sni_default", declared.get("sni_default"), live, ("sniDefault", "sni_default"), self._normalize_bool
+        )
+        self._compare_optional_live_field(
+            drifts, "sni_require", declared.get("sni_require"), live, ("sniRequire", "sni_require"), self._normalize_bool
+        )
+        return drifts
+
     def _compare_optional_live_field(
         self,
         drifts: list[str],
@@ -610,6 +780,72 @@ class DriftChecker:
         if isinstance(value, str):
             return sorted([self._normalize_short_name(value)])
         return value
+
+    def _normalize_string_list(self, value: Any) -> Any:
+        if value is None:
+            return None
+        if isinstance(value, list):
+            return sorted(str(item) for item in value if item not in (None, ""))
+        if isinstance(value, str):
+            return sorted(part for part in value.split() if part)
+        return value
+
+    def _normalize_reference(self, value: Any) -> Any:
+        if value is None:
+            return None
+        if isinstance(value, str):
+            return self._normalize_short_name(value)
+        return value
+
+    def _normalize_member_list(self, value: Any) -> Any:
+        if value is None:
+            return None
+        if not isinstance(value, list):
+            return value
+
+        normalized = []
+        for item in value:
+            if not isinstance(item, dict):
+                normalized.append(str(item))
+                continue
+            normalized_item = {}
+            for key in sorted(item):
+                member_value = item[key]
+                if key in {"datacenter", "pool", "region"}:
+                    normalized_item[key] = self._normalize_reference(member_value)
+                elif key == "negate":
+                    normalized_item[key] = self._normalize_bool(member_value)
+                else:
+                    normalized_item[key] = member_value
+            normalized.append(tuple(sorted(normalized_item.items())))
+        return sorted(normalized)
+
+    def _normalize_cert_key_chain(self, value: Any) -> Any:
+        if value is None:
+            return None
+        if not isinstance(value, list):
+            return value
+
+        normalized = []
+        for item in value:
+            if not isinstance(item, dict):
+                normalized.append(str(item))
+                continue
+            normalized_item = {}
+            for key in ("name", "cert", "key", "chain", "passphrase"):
+                if item.get(key) in (None, ""):
+                    continue
+                chain_value = item.get(key)
+                if key in {"cert", "key", "chain"}:
+                    normalized_item[key] = self._normalize_reference(chain_value)
+                else:
+                    normalized_item[key] = chain_value
+            if "trueNames" in item and item.get("trueNames") not in (None, ""):
+                normalized_item["true_names"] = self._normalize_bool(item.get("trueNames"))
+            if "true_names" in item and item.get("true_names") not in (None, ""):
+                normalized_item["true_names"] = self._normalize_bool(item.get("true_names"))
+            normalized.append(tuple(sorted(normalized_item.items())))
+        return sorted(normalized)
 
     def _normalize_int(self, value: Any) -> Any:
         if value in (None, ""):
