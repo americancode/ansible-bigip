@@ -339,10 +339,7 @@ IMPORT_SPECS: dict[str, ImportSpec] = {
         endpoint="gtm/topology",
         top_key="gtm_topology_records",
         output_dir="gtm/topology",
-        extract={
-            "name": "name",
-            "description": "description",
-        },
+        extract={},
     ),
     "afm_address_lists": ImportSpec(
         endpoint="security/firewall/address-list",
@@ -420,6 +417,15 @@ IMPORT_SPECS: dict[str, ImportSpec] = {
         extract={
             "name": "name",
             "description": "description",
+            "default_access_policy": "defaultAccessPolicy",
+            "default_per_session_policy": "defaultPerSessionPolicy",
+            "sso_configuration": "ssoConfiguration",
+            "domain": "domain",
+            "agent_cap": "agentCap",
+            "session_timeout": "sessionTimeout",
+            "idle_timeout": "idleTimeout",
+            "max_sessions": "maxSessions",
+            "cookie_fallback": "cookieFallback",
         },
     ),
     "apm_per_session_policies": ImportSpec(
@@ -529,8 +535,12 @@ class Importer:
     def _import_type(self, obj_type: str, spec: ImportSpec) -> int:
         if obj_type == "waf_server_technologies":
             return self._import_waf_server_technologies(spec)
+        if obj_type == "apm_sso_configs":
+            return self._import_apm_sso_configs(spec)
         if obj_type == "apm_policy_nodes":
             return self._import_apm_policy_nodes(spec)
+        if obj_type == "gtm_topology_records":
+            return self._import_gtm_topology_records(spec)
 
         items = self.conn.get_all(spec.endpoint)
         if not items:
@@ -592,6 +602,19 @@ class Importer:
 
         return self._write_import_objects("waf_server_technologies", spec, objects)
 
+    def _import_apm_sso_configs(self, spec: ImportSpec) -> int:
+        items = self.conn.get_all(spec.endpoint)
+        if not items:
+            return 0
+
+        objects: list[dict[str, Any]] = []
+        for item in items:
+            obj = self._transform_apm_sso_config(item)
+            if obj:
+                objects.append(obj)
+
+        return self._write_import_objects("apm_sso_configs", spec, objects)
+
     def _import_apm_policy_nodes(self, spec: ImportSpec) -> int:
         policies = self.conn.get_all(spec.endpoint)
         if not policies:
@@ -620,11 +643,38 @@ class Importer:
                 node_type = item.get("type") or item.get("itemType") or item.get("item_type")
                 if node_type:
                     obj["type"] = node_type
+                properties = self._extract_apm_policy_node_properties(item)
+                if properties:
+                    obj["properties"] = properties
                 if partition != "Common":
                     obj["partition"] = partition
                 objects.append(obj)
 
         return self._write_import_objects("apm_policy_nodes", spec, objects)
+
+    def _import_gtm_topology_records(self, spec: ImportSpec) -> int:
+        records = self.conn.get_all(spec.endpoint)
+        if not records:
+            return 0
+
+        objects: list[dict[str, Any]] = []
+        for record in records:
+            source = self._normalize_topology_side(record.get("source"))
+            destination = self._normalize_topology_side(record.get("destination"))
+            if not source or not destination:
+                continue
+            obj: dict[str, Any] = {
+                "source": source,
+                "destination": destination,
+            }
+            if record.get("weight") not in (None, ""):
+                obj["weight"] = self._normalize_value("weight", record.get("weight"), spec)
+            partition = record.get("partition", "Common")
+            if partition != "Common":
+                obj["partition"] = partition
+            objects.append(obj)
+
+        return self._write_import_objects("gtm_topology_records", spec, objects)
 
     def _write_import_objects(self, obj_type: str, spec: ImportSpec, objects: list[dict[str, Any]]) -> int:
         if not objects:
@@ -713,13 +763,257 @@ class Importer:
                 return int(value)
             except (ValueError, TypeError):
                 return value
+        if key in {"session_timeout", "idle_timeout", "max_sessions", "weight"}:
+            try:
+                return int(value)
+            except (ValueError, TypeError):
+                return value
         if key == "arp":
+            if isinstance(value, str):
+                return value.lower() == "enabled"
+            return bool(value)
+        if key in {"agent_cap", "cookie_fallback"}:
+            if isinstance(value, str):
+                return value.lower() == "enabled"
+            return bool(value)
+        if key in {"use_session_creds", "use_machine_account", "sign_assertion", "encrypt_assertion"}:
             if isinstance(value, str):
                 return value.lower() == "enabled"
             return bool(value)
         if key == "traffic_group" and isinstance(value, str):
             return value.split("/")[-1] if value.startswith("/") else value
+        if key in {
+            "default_access_policy",
+            "default_per_session_policy",
+            "sso_configuration",
+            "signing_cert",
+            "signing_key",
+        } and isinstance(value, str):
+            return value if value.startswith("/") else value.split("/")[-1]
+        if key == "scopes":
+            if isinstance(value, list):
+                return [str(item) for item in value if item not in (None, "")]
+            if isinstance(value, str):
+                return [part for part in value.split() if part]
         return value
+
+    def _transform_apm_sso_config(self, item: dict[str, Any]) -> dict[str, Any] | None:
+        name = item.get("name")
+        if not name:
+            return None
+
+        sso_type = self._derive_apm_sso_type(item)
+        if not sso_type:
+            return None
+
+        obj: dict[str, Any] = {
+            "name": name.split("/")[-1] if "/" in str(name) else name,
+            "type": sso_type,
+        }
+        description = item.get("description")
+        if description not in (None, "", "none"):
+            obj["description"] = description
+
+        for field_name, live_keys in self._apm_sso_field_specs(sso_type):
+            live_value = self._first_present(item, live_keys)
+            if live_value in (None, "", []):
+                continue
+            obj[field_name] = self._normalize_value(field_name, live_value, IMPORT_SPECS["apm_sso_configs"])
+
+        partition = item.get("partition", "Common")
+        if partition != "Common":
+            obj["partition"] = partition
+        return obj
+
+    def _derive_apm_sso_type(self, item: dict[str, Any]) -> str | None:
+        type_value = self._first_present(item, ("type", "ssoType", "sso_type"))
+        if isinstance(type_value, str) and type_value:
+            return type_value.replace("-", "_")
+
+        kind = item.get("kind")
+        if isinstance(kind, str):
+            parts = kind.lower().split(":")
+            if "sso" in parts:
+                idx = parts.index("sso")
+                if idx + 1 < len(parts):
+                    raw = parts[idx + 1].split("state")[0].replace("-", "_")
+                    if raw:
+                        return raw
+
+        if any(self._first_present(item, keys) is not None for keys in (("keytab",), ("servicePrincipalName", "spn"), ("kdcServers", "kdc"))):
+            return "kerberos"
+        if any(self._first_present(item, keys) is not None for keys in (("formActionUrl", "form_action_url"), ("loginSuccessRegex", "login_success_regex"))):
+            return "form_based"
+        if self._first_present(item, ("storefrontUrl", "storefront_url")) is not None:
+            return "citrix"
+        if any(self._first_present(item, keys) is not None for keys in (("idpMetadataUrl", "idp_metadata_url"), ("spEntityId", "sp_entity_id"))):
+            return "saml"
+        if any(self._first_present(item, keys) is not None for keys in (("providerUrl", "provider_url"), ("tokenEndpoint", "token_endpoint"))):
+            return "oauth"
+        if self._first_present(item, ("useMachineAccount", "use_machine_account")) is not None:
+            return "ntlm"
+        if self._first_present(item, ("useSessionCredentials", "use_session_creds")) is not None:
+            return "http_basic"
+        if self._first_present(item, ("server",)) is not None and self._first_present(item, ("domain",)) is not None:
+            return "domain_join"
+        return None
+
+    def _apm_sso_field_specs(self, sso_type: str) -> list[tuple[str, tuple[str, ...]]]:
+        return {
+            "kerberos": [
+                ("keytab", ("keytab",)),
+                ("spn", ("servicePrincipalName", "spn")),
+                ("kdc", ("kdcServers", "kdc")),
+                ("realm", ("realm",)),
+                ("method", ("method",)),
+                ("upn_domain", ("upnDomain", "upn_domain")),
+            ],
+            "form_based": [
+                ("form_action_url", ("formActionUrl", "form_action_url")),
+                ("username_field", ("usernameField", "username_field")),
+                ("password_field", ("passwordField", "password_field")),
+                ("submit_button", ("submitButton", "submit_button")),
+                ("login_success_regex", ("loginSuccessRegex", "login_success_regex")),
+                ("login_failure_regex", ("loginFailureRegex", "login_failure_regex")),
+            ],
+            "http_basic": [
+                ("domain", ("domain",)),
+                ("use_session_creds", ("useSessionCredentials", "use_session_creds")),
+            ],
+            "ntlm": [
+                ("server", ("server",)),
+                ("domain", ("domain",)),
+                ("use_machine_account", ("useMachineAccount", "use_machine_account")),
+            ],
+            "saml": [
+                ("idp_metadata_url", ("idpMetadataUrl", "idp_metadata_url")),
+                ("sp_entity_id", ("spEntityId", "sp_entity_id")),
+                ("assertion_consumer_url", ("assertionConsumerUrl", "assertion_consumer_url")),
+                ("nameid_format", ("nameidFormat", "nameid_format")),
+                ("sign_assertion", ("signAssertion", "sign_assertion")),
+                ("encrypt_assertion", ("encryptAssertion", "encrypt_assertion")),
+                ("signing_cert", ("signingCert", "signing_cert")),
+                ("signing_key", ("signingKey", "signing_key")),
+            ],
+            "oauth": [
+                ("provider_url", ("providerUrl", "provider_url")),
+                ("client_id", ("clientId", "client_id")),
+                ("client_secret", ("clientSecret", "client_secret")),
+                ("authorization_endpoint", ("authorizationEndpoint", "authorization_endpoint")),
+                ("token_endpoint", ("tokenEndpoint", "token_endpoint")),
+                ("scopes", ("scopes",)),
+            ],
+            "citrix": [
+                ("storefront_url", ("storefrontUrl", "storefront_url")),
+                ("username_field", ("usernameField", "username_field")),
+                ("password_field", ("passwordField", "password_field")),
+                ("domain_field", ("domainField", "domain_field")),
+                ("use_session_creds", ("useSessionCredentials", "use_session_creds")),
+            ],
+            "domain_join": [
+                ("domain", ("domain",)),
+                ("server", ("server",)),
+            ],
+        }.get(sso_type, [])
+
+    def _extract_apm_policy_node_properties(self, item: dict[str, Any]) -> dict[str, Any]:
+        ignored_keys = {
+            "name",
+            "partition",
+            "tmPartition",
+            "policy",
+            "subPath",
+            "appService",
+            "fullPath",
+            "generation",
+            "kind",
+            "selfLink",
+            "type",
+            "itemType",
+            "item_type",
+        }
+        properties: dict[str, Any] = {}
+        for key, value in item.items():
+            if key in ignored_keys or value in (None, "", []):
+                continue
+            if isinstance(key, str) and key.endswith("Reference"):
+                continue
+            property_key = self._normalize_apm_property_key(key)
+            properties[property_key] = self._normalize_apm_policy_property_value(property_key, value)
+        return properties
+
+    def _normalize_apm_property_key(self, key: Any) -> str:
+        if not isinstance(key, str):
+            return str(key)
+        text = key.replace("-", "_")
+        output = []
+        for idx, char in enumerate(text):
+            if char.isupper() and idx > 0 and text[idx - 1] != "_":
+                output.append("_")
+            output.append(char.lower())
+        return "".join(output)
+
+    def _normalize_apm_policy_property_value(self, key: str, value: Any) -> Any:
+        if value is None:
+            return None
+        if key == "rules":
+            return self._normalize_apm_rules(value)
+        if key in {
+            "ad_server",
+            "ldap_server",
+            "kerberos_sso_object",
+            "sso_config",
+            "auth_server",
+            "saml_sso",
+            "oauth_sso",
+            "form_based_sso",
+            "http_basic_sso",
+            "ntlm_sso",
+        } and isinstance(value, str):
+            return value if value.startswith("/") else value.split("/")[-1]
+        if isinstance(value, list):
+            return [self._normalize_apm_policy_property_value(key, item) for item in value]
+        if isinstance(value, dict):
+            normalized: dict[str, Any] = {}
+            for subkey, subvalue in value.items():
+                if subvalue in (None, ""):
+                    continue
+                repo_subkey = self._normalize_apm_property_key(subkey)
+                normalized[repo_subkey] = self._normalize_apm_policy_property_value(repo_subkey, subvalue)
+            return normalized
+        if isinstance(value, str):
+            lowered = value.lower()
+            if lowered in {"true", "yes", "enabled", "enable", "on"}:
+                return True
+            if lowered in {"false", "no", "disabled", "disable", "off"}:
+                return False
+            if value.isdigit():
+                return int(value)
+        return value
+
+    def _normalize_apm_rules(self, value: Any) -> Any:
+        if not isinstance(value, list):
+            return value
+        normalized = []
+        for item in value:
+            if not isinstance(item, dict):
+                normalized.append(item)
+                continue
+            rule: dict[str, Any] = {}
+            for key, subvalue in item.items():
+                if subvalue in (None, ""):
+                    continue
+                repo_key = self._normalize_apm_property_key(key)
+                rule[repo_key] = self._normalize_apm_policy_property_value(repo_key, subvalue)
+            if rule:
+                normalized.append(rule)
+        return normalized
+
+    def _first_present(self, item: dict[str, Any], keys: tuple[str, ...]) -> Any:
+        for key in keys:
+            if key in item and item.get(key) not in (None, ""):
+                return item.get(key)
+        return None
 
     def _transform_pool(self, item: dict, obj: dict) -> None:
         monitors = item.get("monitors", "")
@@ -885,6 +1179,29 @@ class Importer:
                     normalized_members.append(member.split("/")[-1] if "/" in member else member)
             if normalized_members:
                 obj["members"] = normalized_members
+
+    def _normalize_topology_side(self, value: Any) -> Any:
+        if value is None:
+            return None
+        items = [value] if isinstance(value, dict) else value
+        if not isinstance(items, list):
+            return value
+
+        normalized = []
+        for item in items:
+            if not isinstance(item, dict):
+                normalized.append(item)
+                continue
+            normalized_item = {}
+            for key, member_value in item.items():
+                if key in {"datacenter", "pool", "region"} and isinstance(member_value, str):
+                    normalized_item[key] = member_value if member_value.startswith("/") else member_value.split("/")[-1]
+                elif key == "negate":
+                    normalized_item[key] = bool(member_value)
+                else:
+                    normalized_item[key] = member_value
+            normalized.append(normalized_item)
+        return normalized
 
 
 def main() -> int:

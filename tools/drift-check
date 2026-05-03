@@ -287,12 +287,19 @@ class DriftChecker:
 
     GTM_DEEP_DRIFT_TYPES = {
         "gtm_topology_regions",
+        "gtm_topology_records",
     }
 
     TLS_DEEP_DRIFT_TYPES = {
         "tls_ca_bundles",
         "tls_client_ssl_profiles",
         "tls_server_ssl_profiles",
+    }
+
+    APM_DEEP_DRIFT_TYPES = {
+        "apm_sso_configs",
+        "apm_access_profiles",
+        "apm_policy_nodes",
     }
 
     def __init__(self, conn: BigIPConnection, var_loader: VarTreeLoader) -> None:
@@ -313,6 +320,9 @@ class DriftChecker:
                 continue
             if obj_type == "apm_policy_nodes":
                 self._check_apm_policy_nodes()
+                continue
+            if obj_type == "gtm_topology_records":
+                self._check_gtm_topology_records(endpoint)
                 continue
             self._check_type(obj_type, endpoint)
 
@@ -411,6 +421,8 @@ class DriftChecker:
             return self._find_gtm_value_drift(declared, live, obj_type)
         if obj_type in self.TLS_DEEP_DRIFT_TYPES:
             return self._find_tls_value_drift(declared, live, obj_type)
+        if obj_type in self.APM_DEEP_DRIFT_TYPES:
+            return self._find_apm_value_drift(declared, live, obj_type)
 
         drifts: list[str] = []
         comparisons = {
@@ -470,6 +482,8 @@ class DriftChecker:
     def _find_gtm_value_drift(self, declared: dict[str, Any], live: dict[str, Any], obj_type: str) -> list[str]:
         if obj_type == "gtm_topology_regions":
             return self._find_gtm_topology_region_drift(declared, live)
+        if obj_type == "gtm_topology_records":
+            return self._find_gtm_topology_record_drift(declared, live)
         return []
 
     def _find_tls_value_drift(self, declared: dict[str, Any], live: dict[str, Any], obj_type: str) -> list[str]:
@@ -479,6 +493,15 @@ class DriftChecker:
             return self._find_tls_client_ssl_profile_drift(declared, live)
         if obj_type == "tls_server_ssl_profiles":
             return self._find_tls_server_ssl_profile_drift(declared, live)
+        return []
+
+    def _find_apm_value_drift(self, declared: dict[str, Any], live: dict[str, Any], obj_type: str) -> list[str]:
+        if obj_type == "apm_sso_configs":
+            return self._find_apm_sso_config_drift(declared, live)
+        if obj_type == "apm_access_profiles":
+            return self._find_apm_access_profile_drift(declared, live)
+        if obj_type == "apm_policy_nodes":
+            return self._find_apm_policy_node_drift(declared, live)
         return []
 
     def _find_route_domain_drift(self, declared: dict[str, Any], live: dict[str, Any]) -> list[str]:
@@ -591,6 +614,27 @@ class DriftChecker:
             live,
             ("regionMembers", "region_members"),
             self._normalize_member_list,
+        )
+        return drifts
+
+    def _find_gtm_topology_record_drift(self, declared: dict[str, Any], live: dict[str, Any]) -> list[str]:
+        drifts: list[str] = []
+        self._compare_field(
+            drifts,
+            "source",
+            declared.get("source"),
+            live.get("source"),
+            self._normalize_topology_side,
+        )
+        self._compare_field(
+            drifts,
+            "destination",
+            declared.get("destination"),
+            live.get("destination"),
+            self._normalize_topology_side,
+        )
+        self._compare_optional_live_field(
+            drifts, "weight", declared.get("weight"), live, ("weight",), self._normalize_int
         )
         return drifts
 
@@ -723,6 +767,70 @@ class DriftChecker:
         )
         return drifts
 
+    def _find_apm_access_profile_drift(self, declared: dict[str, Any], live: dict[str, Any]) -> list[str]:
+        drifts: list[str] = []
+        self._compare_field(drifts, "description", declared.get("description"), live.get("description"))
+        self._compare_optional_live_field(
+            drifts, "default_access_policy", declared.get("default_access_policy"), live, ("defaultAccessPolicy", "default_access_policy"), self._normalize_reference
+        )
+        self._compare_optional_live_field(
+            drifts, "default_per_session_policy", declared.get("default_per_session_policy"), live, ("defaultPerSessionPolicy", "default_per_session_policy"), self._normalize_reference
+        )
+        self._compare_optional_live_field(
+            drifts, "sso_configuration", declared.get("sso_configuration"), live, ("ssoConfiguration", "sso_configuration"), self._normalize_reference
+        )
+        self._compare_optional_live_field(
+            drifts, "domain", declared.get("domain"), live, ("domain",)
+        )
+        self._compare_optional_live_field(
+            drifts, "agent_cap", declared.get("agent_cap"), live, ("agentCap", "agent_cap"), self._normalize_bool
+        )
+        self._compare_optional_live_field(
+            drifts, "session_timeout", declared.get("session_timeout"), live, ("sessionTimeout", "session_timeout"), self._normalize_int
+        )
+        self._compare_optional_live_field(
+            drifts, "idle_timeout", declared.get("idle_timeout"), live, ("idleTimeout", "idle_timeout"), self._normalize_int
+        )
+        self._compare_optional_live_field(
+            drifts, "max_sessions", declared.get("max_sessions"), live, ("maxSessions", "max_sessions"), self._normalize_int
+        )
+        self._compare_optional_live_field(
+            drifts, "cookie_fallback", declared.get("cookie_fallback"), live, ("cookieFallback", "cookie_fallback"), self._normalize_bool
+        )
+        return drifts
+
+    def _find_apm_sso_config_drift(self, declared: dict[str, Any], live: dict[str, Any]) -> list[str]:
+        drifts: list[str] = []
+        self._compare_field(drifts, "description", declared.get("description"), live.get("description"))
+        live_type = self._derive_apm_sso_type(live)
+        if declared.get("type") is not None and live_type is not None:
+            self._compare_field(drifts, "type", declared.get("type"), live_type)
+
+        for field_name, live_keys, normalizer in self._apm_sso_field_specs(declared.get("type") or live_type):
+            self._compare_optional_live_field(drifts, field_name, declared.get(field_name), live, live_keys, normalizer)
+        return drifts
+
+    def _find_apm_policy_node_drift(self, declared: dict[str, Any], live: dict[str, Any]) -> list[str]:
+        drifts: list[str] = []
+        self._compare_field(drifts, "type", declared.get("type"), live.get("type"))
+
+        declared_properties = declared.get("properties")
+        live_properties = live.get("properties")
+        if declared_properties is None:
+            return drifts
+        if not isinstance(declared_properties, dict):
+            drifts.append(f"properties: declared={declared_properties} vs live={live_properties}")
+            return drifts
+        if not isinstance(live_properties, dict):
+            live_properties = {}
+
+        for key, declared_value in declared_properties.items():
+            normalized_declared = self._normalize_apm_policy_property_value(key, declared_value)
+            normalized_live = self._normalize_apm_policy_property_value(key, live_properties.get(key))
+            if normalized_declared != normalized_live:
+                drifts.append(f"properties.{key}: declared={normalized_declared} vs live={normalized_live}")
+        return drifts
+
     def _compare_optional_live_field(
         self,
         drifts: list[str],
@@ -847,6 +955,222 @@ class DriftChecker:
             normalized.append(tuple(sorted(normalized_item.items())))
         return sorted(normalized)
 
+    def _normalize_topology_side(self, value: Any) -> Any:
+        if value is None:
+            return None
+        items = [value] if isinstance(value, dict) else value
+        if not isinstance(items, list):
+            return value
+
+        normalized = []
+        for item in items:
+            if not isinstance(item, dict):
+                normalized.append(str(item))
+                continue
+            normalized_item = {}
+            for key in sorted(item):
+                member_value = item[key]
+                if key in {"datacenter", "pool", "region"}:
+                    normalized_item[key] = self._normalize_reference(member_value)
+                elif key == "negate":
+                    normalized_item[key] = self._normalize_bool(member_value)
+                else:
+                    normalized_item[key] = member_value
+            normalized.append(tuple(sorted(normalized_item.items())))
+        return tuple(sorted(normalized))
+
+    def _derive_apm_sso_type(self, live: dict[str, Any]) -> str | None:
+        type_value = self._first_present(live, ("type", "ssoType", "sso_type"))
+        if isinstance(type_value, str) and type_value:
+            return type_value.replace("-", "_")
+
+        kind = live.get("kind")
+        if isinstance(kind, str):
+            parts = kind.lower().split(":")
+            if "sso" in parts:
+                idx = parts.index("sso")
+                if idx + 1 < len(parts):
+                    raw = parts[idx + 1].split("state")[0].replace("-", "_")
+                    if raw:
+                        return raw
+
+        if any(self._first_present(live, keys) is not None for keys in (("keytab",), ("servicePrincipalName", "spn"), ("kdcServers", "kdc"))):
+            return "kerberos"
+        if any(self._first_present(live, keys) is not None for keys in (("formActionUrl", "form_action_url"), ("loginSuccessRegex", "login_success_regex"))):
+            return "form_based"
+        if self._first_present(live, ("storefrontUrl", "storefront_url")) is not None:
+            return "citrix"
+        if any(self._first_present(live, keys) is not None for keys in (("idpMetadataUrl", "idp_metadata_url"), ("spEntityId", "sp_entity_id"))):
+            return "saml"
+        if any(self._first_present(live, keys) is not None for keys in (("providerUrl", "provider_url"), ("tokenEndpoint", "token_endpoint"))):
+            return "oauth"
+        if self._first_present(live, ("useMachineAccount", "use_machine_account")) is not None:
+            return "ntlm"
+        if self._first_present(live, ("useSessionCredentials", "use_session_creds")) is not None:
+            return "http_basic"
+        if self._first_present(live, ("server",)) is not None and self._first_present(live, ("domain",)) is not None:
+            return "domain_join"
+        return None
+
+    def _apm_sso_field_specs(self, sso_type: Any) -> list[tuple[str, tuple[str, ...], Any]]:
+        field_specs: dict[str, list[tuple[str, tuple[str, ...], Any]]] = {
+            "kerberos": [
+                ("keytab", ("keytab",), None),
+                ("spn", ("servicePrincipalName", "spn"), None),
+                ("kdc", ("kdcServers", "kdc"), None),
+                ("realm", ("realm",), None),
+                ("method", ("method",), None),
+                ("upn_domain", ("upnDomain", "upn_domain"), None),
+            ],
+            "form_based": [
+                ("form_action_url", ("formActionUrl", "form_action_url"), None),
+                ("username_field", ("usernameField", "username_field"), None),
+                ("password_field", ("passwordField", "password_field"), None),
+                ("submit_button", ("submitButton", "submit_button"), None),
+                ("login_success_regex", ("loginSuccessRegex", "login_success_regex"), None),
+                ("login_failure_regex", ("loginFailureRegex", "login_failure_regex"), None),
+            ],
+            "http_basic": [
+                ("domain", ("domain",), None),
+                ("use_session_creds", ("useSessionCredentials", "use_session_creds"), self._normalize_bool),
+            ],
+            "ntlm": [
+                ("server", ("server",), None),
+                ("domain", ("domain",), None),
+                ("use_machine_account", ("useMachineAccount", "use_machine_account"), self._normalize_bool),
+            ],
+            "saml": [
+                ("idp_metadata_url", ("idpMetadataUrl", "idp_metadata_url"), None),
+                ("sp_entity_id", ("spEntityId", "sp_entity_id"), None),
+                ("assertion_consumer_url", ("assertionConsumerUrl", "assertion_consumer_url"), None),
+                ("nameid_format", ("nameidFormat", "nameid_format"), None),
+                ("sign_assertion", ("signAssertion", "sign_assertion"), self._normalize_bool),
+                ("encrypt_assertion", ("encryptAssertion", "encrypt_assertion"), self._normalize_bool),
+                ("signing_cert", ("signingCert", "signing_cert"), self._normalize_reference),
+                ("signing_key", ("signingKey", "signing_key"), self._normalize_reference),
+            ],
+            "oauth": [
+                ("provider_url", ("providerUrl", "provider_url"), None),
+                ("client_id", ("clientId", "client_id"), None),
+                ("client_secret", ("clientSecret", "client_secret"), None),
+                ("authorization_endpoint", ("authorizationEndpoint", "authorization_endpoint"), None),
+                ("token_endpoint", ("tokenEndpoint", "token_endpoint"), None),
+                ("scopes", ("scopes",), self._normalize_string_list),
+            ],
+            "citrix": [
+                ("storefront_url", ("storefrontUrl", "storefront_url"), None),
+                ("username_field", ("usernameField", "username_field"), None),
+                ("password_field", ("passwordField", "password_field"), None),
+                ("domain_field", ("domainField", "domain_field"), None),
+                ("use_session_creds", ("useSessionCredentials", "use_session_creds"), self._normalize_bool),
+            ],
+            "domain_join": [
+                ("domain", ("domain",), None),
+                ("server", ("server",), None),
+            ],
+        }
+        return field_specs.get(str(sso_type), [])
+
+    def _extract_apm_policy_node_properties(self, item: dict[str, Any]) -> dict[str, Any]:
+        ignored_keys = {
+            "name",
+            "partition",
+            "tmPartition",
+            "policy",
+            "subPath",
+            "appService",
+            "fullPath",
+            "generation",
+            "kind",
+            "selfLink",
+            "type",
+            "itemType",
+            "item_type",
+        }
+        properties: dict[str, Any] = {}
+        for key, value in item.items():
+            if key in ignored_keys or value in (None, "", []):
+                continue
+            if isinstance(key, str) and key.endswith("Reference"):
+                continue
+            property_key = self._normalize_apm_property_key(key)
+            properties[property_key] = self._normalize_apm_policy_property_value(property_key, value)
+        return properties
+
+    def _normalize_apm_property_key(self, key: Any) -> str:
+        if not isinstance(key, str):
+            return str(key)
+        text = key.replace("-", "_")
+        output = []
+        for idx, char in enumerate(text):
+            if char.isupper() and idx > 0 and text[idx - 1] != "_":
+                output.append("_")
+            output.append(char.lower())
+        return "".join(output)
+
+    def _normalize_apm_policy_property_value(self, key: str, value: Any) -> Any:
+        if value is None:
+            return None
+        if key == "rules":
+            return self._normalize_apm_rules(value)
+        if key in {
+            "ad_server",
+            "ldap_server",
+            "kerberos_sso_object",
+            "sso_config",
+            "auth_server",
+            "saml_sso",
+            "oauth_sso",
+            "form_based_sso",
+            "http_basic_sso",
+            "ntlm_sso",
+        }:
+            return self._normalize_reference(value)
+        if isinstance(value, list):
+            return tuple(self._normalize_apm_policy_property_value(key, item) for item in value)
+        if isinstance(value, dict):
+            return tuple(
+                sorted(
+                    (
+                        self._normalize_apm_property_key(subkey),
+                        self._normalize_apm_policy_property_value(self._normalize_apm_property_key(subkey), subvalue),
+                    )
+                    for subkey, subvalue in value.items()
+                    if subvalue not in (None, "")
+                )
+            )
+        normalized_bool = self._normalize_bool(value)
+        if isinstance(normalized_bool, bool):
+            return normalized_bool
+        normalized_int = self._normalize_int(value)
+        if isinstance(normalized_int, int):
+            return normalized_int
+        return value
+
+    def _normalize_apm_rules(self, value: Any) -> Any:
+        if value is None:
+            return None
+        if not isinstance(value, list):
+            return value
+        normalized = []
+        for item in value:
+            if not isinstance(item, dict):
+                normalized.append(str(item))
+                continue
+            normalized.append(
+                tuple(
+                    sorted(
+                        (
+                            self._normalize_apm_property_key(key),
+                            item.get(key),
+                        )
+                        for key in item
+                        if item.get(key) not in (None, "")
+                    )
+                )
+            )
+        return tuple(sorted(normalized))
+
     def _normalize_int(self, value: Any) -> Any:
         if value in (None, ""):
             return value
@@ -949,10 +1273,35 @@ class DriftChecker:
                         "name": node_name.split("/")[-1] if "/" in str(node_name) else node_name,
                         "policy": policy_name.split("/")[-1] if "/" in str(policy_name) else policy_name,
                         "type": item.get("type") or item.get("itemType") or item.get("item_type") or "",
+                        "properties": self._extract_apm_policy_node_properties(item),
                     }
                 )
 
         self._compare_custom_objects("apm_policy_nodes", live_objects, ("partition", "policy", "name"))
+
+    def _check_gtm_topology_records(self, endpoint: str) -> None:
+        try:
+            records = self.conn.get_all(endpoint)
+        except Exception as exc:
+            print(f"WARN: could not query {endpoint} for gtm_topology_records: {exc}", file=sys.stderr)
+            return
+
+        live_objects: list[dict[str, Any]] = []
+        for record in records:
+            source = self._normalize_topology_side(record.get("source"))
+            destination = self._normalize_topology_side(record.get("destination"))
+            if not source or not destination:
+                continue
+            live_objects.append(
+                {
+                    "partition": record.get("partition", "Common"),
+                    "source": record.get("source"),
+                    "destination": record.get("destination"),
+                    "weight": record.get("weight"),
+                }
+            )
+
+        self._compare_custom_objects("gtm_topology_records", live_objects, ("partition", "source", "destination"))
 
     def _compare_custom_objects(
         self,
@@ -990,6 +1339,8 @@ class DriftChecker:
                 detail = f"policy={identity[1]} exists on device but not declared in vars/"
             elif obj_type == "apm_policy_nodes":
                 detail = f"policy={identity[1]} exists on device but not declared in vars/"
+            elif obj_type == "gtm_topology_records":
+                detail = f"source={identity[1]} destination={identity[2]} exists on device but not declared in vars/"
             self.report.missing_from_git.append(
                 DriftEntry(object_type=obj_type, name=name, partition=partition, detail=detail)
             )
@@ -1002,6 +1353,8 @@ class DriftChecker:
                 detail = f"policy={identity[1]} declared in vars/ but not found on device"
             elif obj_type == "apm_policy_nodes":
                 detail = f"policy={identity[1]} declared in vars/ but not found on device"
+            elif obj_type == "gtm_topology_records":
+                detail = f"source={identity[1]} destination={identity[2]} declared in vars/ but not found on device"
             self.report.missing_from_device.append(
                 DriftEntry(object_type=obj_type, name=name, partition=partition, detail=detail)
             )

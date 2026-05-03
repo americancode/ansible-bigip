@@ -105,14 +105,14 @@ For several newer supported families, drift/import is present but still not full
 Current helper-tool fidelity notes:
 
 - `network_route_domains`, `network_trunks`, `network_snat_translations`, `network_snats`, and `network_nats` now have `basic field drift` coverage for the core fields the runtime playbooks manage directly.
-- `gtm_topology_regions`, `tls_ca_bundles`, `tls_client_ssl_profiles`, and `tls_server_ssl_profiles` now have `basic field drift` coverage for their core runtime-managed fields.
+- `gtm_topology_regions`, `gtm_topology_records`, `tls_ca_bundles`, `tls_client_ssl_profiles`, `tls_server_ssl_profiles`, `apm_sso_configs`, `apm_access_profiles`, and `apm_policy_nodes` now have `basic field drift` coverage for their core runtime-managed fields.
 - `system` and `ha` remain runtime-managed only.
 - other newer families may still have helper coverage that is shallower than the runtime field model.
 
 This is especially true for:
 
-- GTM topology records, where helper tooling still does not have model-aware source/destination identity handling
-- APM policy nodes, where helper tooling currently flattens parent access-policy items to `name`, `policy`, optional `partition`, and basic `type`
+- APM SSO configs, where helper tooling compares the main declarative type-specific fields but should still be treated as review-first when secrets or masked values are involved
+- APM policy nodes, where helper tooling compares declared `properties` keys with normalized scalar, reference, and `rules` handling but is not a full semantic diff of every possible VPE graph behavior
 - any object family where nested child properties or subcollections are represented more richly in runtime than in import output
 
 ## Import from BIG-IP

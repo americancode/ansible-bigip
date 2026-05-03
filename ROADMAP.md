@@ -811,10 +811,10 @@ This is the practical next sequence for the current repo.
 20. [x] Correct drift/import endpoint and var-key mappings for newly added object families
 21. [x] Align runtime, validator, docs, and example vars where field models drifted apart
 22. [x] Complete exhaustive drift/import parity for every newest object tree
-23. [ ] Deepen drift detection to compare meaningful fields for newly added object families
-   - progress: `network_route_domains`, `network_trunks`, `network_snat_translations`, `network_snats`, and `network_nats` now have `runtime+validation+helper-tools` helper coverage with `basic field drift` for core runtime-managed fields
-   - progress: `gtm_topology_regions`, `tls_ca_bundles`, `tls_client_ssl_profiles`, and `tls_server_ssl_profiles` now also have `runtime+validation+helper-tools` helper coverage with `basic field drift` for core runtime-managed fields
-   - remaining scope: GTM topology records and newer security families still need deeper field-level drift work where helper tooling is currently only identity-level or otherwise shallower than runtime coverage
+23. [x] Deepen drift detection to compare meaningful fields for newly added object families
+   - delivered: `network_route_domains`, `network_trunks`, `network_snat_translations`, `network_snats`, and `network_nats` now have `runtime+validation+helper-tools` helper coverage with `basic field drift` for core runtime-managed fields
+   - delivered: `gtm_topology_regions`, `gtm_topology_records`, `tls_ca_bundles`, `tls_client_ssl_profiles`, `tls_server_ssl_profiles`, `apm_sso_configs`, `apm_access_profiles`, and `apm_policy_nodes` now also have `runtime+validation+helper-tools` helper coverage with `basic field drift` for core runtime-managed fields
+   - boundary: this closes the backlog item at `basic field drift`; `system` and `ha` remain intentionally `runtime+validation`, and helper tooling for nested or secret-heavy object families still requires review-first operator judgment rather than assuming perfect round-trip parity
 24. [x] Add day-0 BIG-IP onboarding for licensing and initial management bootstrap
 25. [x] Document initial setup from first boot through handoff to Git-managed operation
 
@@ -854,8 +854,7 @@ Completion-class summary for checked backlog items:
 Audit findings captured as remaining work:
 
 - item 21 remains open because future field-model drift must still be detected and corrected as implementations evolve
-- item 23 remains open because helper-tool object coverage is broader now, but field-level drift fidelity is still shallow for many newer object types
-- item 23 now has its network, GTM topology-region, and TLS profile slices implemented at `basic field drift`, but the broader backlog item remains open until the same depth is added to the remaining newer families that need it
+- item 23 is now complete at `basic field drift` for the newer runtime-managed service families; deeper semantic comparison beyond the declared field model can be tracked as future enhancement work if needed
 - milestone 16 item on `system` and `ha` helper-tool support remains open because those domains are currently intentionally `runtime+validation`, not `full parity`
 
 Endpoint/var-key audit result:
