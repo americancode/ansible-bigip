@@ -30,7 +30,7 @@ tls_keys:
 
 ## Validation Behavior
 
-- `tools/validate-vars` accepts inline Ansible YAML tags such as `!vault`.
+- `tools/validate-vars.py` accepts inline Ansible YAML tags such as `!vault`.
 - `make validate` continues to work with vaulted TLS payloads in place.
 - Reference validation still operates on object names and profile wiring even when payload content is encrypted.
 

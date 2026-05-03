@@ -1547,7 +1547,7 @@ def main() -> int:
         Prints drift report to stdout in human-readable or JSON format.
 
     Example:
-        F5_HOST=10.1.1.1 F5_PASSWORD=secret python tools/drift-check --types ltm_pools
+        F5_HOST=10.1.1.1 F5_PASSWORD=secret python tools/drift-check.py --types ltm_pools
     """
     import argparse
 

@@ -96,12 +96,12 @@ UCS restore should be the last resort. Prefer Git revert + playbook re-apply whe
 
 Before rolling back a production change:
 
-- [ ] Confirm the incident is caused by the recent change (check `tools/drift-check`)
+- [ ] Confirm the incident is caused by the recent change (check `tools/drift-check.py`)
 - [ ] Identify the exact commit(s) to revert
 - [ ] Review the revert diff: `git revert <commit> --no-commit` then `git diff --cached`
 - [ ] Notify the team and open an incident ticket
 - [ ] Execute the revert during the change window
-- [ ] Redeploy and verify via `tools/drift-check`
+- [ ] Redeploy and verify via `tools/drift-check.py`
 - [ ] Validate application traffic and health checks
 - [ ] Document the rollback in the incident ticket
 - [ ] After stabilization, investigate root cause on the feature branch
@@ -123,10 +123,10 @@ The playbooks include a `bigip_config` save step after changes. This means each 
 
 ## Rollback and Drift Detection
 
-After a rollback, run `tools/drift-check` to confirm the device matches the reverted Git state:
+After a rollback, run `tools/drift-check.py` to confirm the device matches the reverted Git state:
 
 ```sh
-F5_HOST=prod-bigip F5_PASSWORD=secret python3 tools/drift-check
+F5_HOST=prod-bigip F5_PASSWORD=secret python3 tools/drift-check.py
 ```
 
 If drift is still reported, investigate whether:

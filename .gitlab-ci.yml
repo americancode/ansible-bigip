@@ -42,7 +42,7 @@ drift-check:
     - python -m pip install --upgrade pip
     - python -m pip install requests PyYAML
   script:
-    - python3 tools/drift-check --json > drift-report.json || true
+    - python3 tools/drift-check.py --json > drift-report.json || true
   artifacts:
     when: always
     reports:

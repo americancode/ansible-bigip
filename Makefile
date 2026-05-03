@@ -8,7 +8,7 @@ VALIDATION_IMAGE ?= ansible-bigip-validation:latest
 validate: validate-vars validate-ansible
 
 validate-vars:
-	$(PYTHON) tools/validate-vars
+	$(PYTHON) tools/validate-vars.py
 
 validate-ansible:
 	mkdir -p $(ANSIBLE_LOCAL_TEMP) $(ANSIBLE_REMOTE_TEMP)

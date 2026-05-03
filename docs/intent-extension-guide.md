@@ -65,7 +65,7 @@ If your new pattern needs custom logic, that logic belongs in:
 
 - `playbooks/<domain>/prep/intents/<category>/...`
 - `filter_plugins/bigip_filters/...`
-- `tools/validate-vars`
+- `tools/validate-vars.py`
 
 Also: do not create a new playbook for a convenience pattern unless you are truly introducing a new runtime domain. Convenience belongs under the existing canonical domain.
 
@@ -245,7 +245,7 @@ Intent output should disappear into the canonical model before runtime task file
 
 ### 7. Update Validation
 
-Update `tools/validate-vars` to cover:
+Update `tools/validate-vars.py` to cover:
 
 - the new intent tree itself
 - field validation for the intent shape
@@ -356,7 +356,7 @@ For a new GTM intent:
 6. add `playbooks/gtm/prep/intents/dns_services/build-*.yml`
 7. import those snippets from `playbooks/gtm/prep.yml` or the relevant sub-flow
 8. merge compiled output into `gtm_pools` and `gtm_wide_ips`
-9. update `tools/validate-vars`
+9. update `tools/validate-vars.py`
 10. update example docs and README links
 11. run validation
 
@@ -365,7 +365,7 @@ For a new GTM intent:
 After adding a new intent/customization path, run at least:
 
 ```sh
-python3 tools/validate-vars
+python3 tools/validate-vars.py
 ansible-playbook --syntax-check playbooks/<domain>.yml
 make validate
 ```
@@ -373,7 +373,7 @@ make validate
 If Python helpers changed, also run:
 
 ```sh
-python3 -m py_compile filter_plugins/bigip_var_filters.py filter_plugins/bigip_filters/*.py tools/validate-vars
+python3 -m py_compile filter_plugins/bigip_var_filters.py filter_plugins/bigip_filters/*.py tools/validate-vars.py
 ```
 
 ## Anti-Patterns

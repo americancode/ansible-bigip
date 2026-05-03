@@ -23,19 +23,19 @@ pip install requests
 
 ## Drift Detection
 
-`tools/drift-check` queries the live BIG-IP running configuration, compares it against objects declared in the repository's var trees, and reports differences.
+`tools/drift-check.py` queries the live BIG-IP running configuration, compares it against objects declared in the repository's var trees, and reports differences.
 
 ### Usage
 
 ```sh
 # Check all object types
-F5_HOST=10.0.0.1 F5_PASSWORD=secret python3 tools/drift-check
+F5_HOST=10.0.0.1 F5_PASSWORD=secret python3 tools/drift-check.py
 
 # Check specific object types only
-F5_HOST=10.0.0.1 F5_PASSWORD=secret python3 tools/drift-check --types ltm_nodes ltm_pools ltm_virtual_servers
+F5_HOST=10.0.0.1 F5_PASSWORD=secret python3 tools/drift-check.py --types ltm_nodes ltm_pools ltm_virtual_servers
 
 # Output as JSON for CI integration
-F5_HOST=10.0.0.1 F5_PASSWORD=secret python3 tools/drift-check --json
+F5_HOST=10.0.0.1 F5_PASSWORD=secret python3 tools/drift-check.py --json
 ```
 
 ### Report Categories
@@ -119,16 +119,16 @@ This is especially true for:
 
 ## Import from BIG-IP
 
-`tools/import-from-bigip` queries a live BIG-IP device and generates YAML files matching the repository's var tree structure. Output is written to a target directory for review before committing.
+`tools/import-from-bigip.py` queries a live BIG-IP device and generates YAML files matching the repository's var tree structure. Output is written to a target directory for review before committing.
 
 ### Usage
 
 ```sh
 # Import all supported object types
-F5_HOST=10.0.0.1 F5_PASSWORD=secret python3 tools/import-from-bigip --out imported/
+F5_HOST=10.0.0.1 F5_PASSWORD=secret python3 tools/import-from-bigip.py --out imported/
 
 # Import specific object types only
-F5_HOST=10.0.0.1 F5_PASSWORD=secret python3 tools/import-from-bigip --out imported/ --types ltm_nodes ltm_pools ltm_virtual_servers
+F5_HOST=10.0.0.1 F5_PASSWORD=secret python3 tools/import-from-bigip.py --out imported/ --types ltm_nodes ltm_pools ltm_virtual_servers
 ```
 
 ### Output Structure
@@ -187,7 +187,7 @@ drift-check:
   stage: test
   script:
     - pip install requests
-    - python3 tools/drift-check --json > drift-report.json
+    - python3 tools/drift-check.py --json > drift-report.json
   artifacts:
     reports:
       drift: drift-report.json

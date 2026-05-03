@@ -185,7 +185,7 @@ The delete order is the reverse.
 
 ## Drift and Import
 
-`tools/drift-check` and `tools/import-from-bigip` now cover:
+`tools/drift-check.py` and `tools/import-from-bigip.py` now cover:
 
 - VLANs
 - trunks

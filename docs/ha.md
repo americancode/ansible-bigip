@@ -19,10 +19,10 @@ This domain is currently `runtime+validation`, not helper-tool complete. Drift/i
 For the current phase, that boundary is intentional:
 
 - runtime playbook support is first-class
-- `tools/validate-vars` supports the HA trees and cross-references
+- `tools/validate-vars.py` supports the HA trees and cross-references
 - helper-tool drift/import support is intentionally not implemented for HA objects
 
-Treat `ha.yml` as a Git-authored runtime workflow, but do not expect `tools/drift-check` or `tools/import-from-bigip` to round-trip HA state today.
+Treat `ha.yml` as a Git-authored runtime workflow, but do not expect `tools/drift-check.py` or `tools/import-from-bigip.py` to round-trip HA state today.
 
 ## Playbook Structure
 

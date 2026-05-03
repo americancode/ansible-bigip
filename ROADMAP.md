@@ -35,9 +35,9 @@ The repo structure is standardized:
 
 The repo also has first-class helper tooling:
 
-- `tools/validate-vars` for offline validation
-- `tools/drift-check` for live-vs-Git comparison
-- `tools/import-from-bigip` for brownfield import
+- `tools/validate-vars.py` for offline validation
+- `tools/drift-check.py` for live-vs-Git comparison
+- `tools/import-from-bigip.py` for brownfield import
 - Python-backed prep/compiler helpers under `filter_plugins/bigip_filters/`, with `filter_plugins/bigip_var_filters.py` kept as the Ansible filter entrypoint
 - shared prep snippets under `playbooks/shared/prep/` for fragment discovery, settings-aware aggregation, and present/delete classification across the standard domains
 - recursive nested var-tree discovery and hierarchical multi-level `settings.yml` inheritance across canonical playbooks, including the older specialized LTM/GTM loaders
@@ -70,12 +70,12 @@ These rules define what "done" means for roadmap work.
   - playbook behavior exists, but validator and/or helper-tool lifecycle support is intentionally incomplete
 - `runtime+validation`
   - runtime exists
-  - `tools/validate-vars` supports the object tree and references
+  - `tools/validate-vars.py` supports the object tree and references
   - helper-tool lifecycle support is intentionally incomplete and documented
 - `runtime+validation+helper-tools`
   - runtime exists
   - validator exists
-  - `tools/drift-check` and `tools/import-from-bigip` support the object family at an explicitly stated fidelity level
+  - `tools/drift-check.py` and `tools/import-from-bigip.py` support the object family at an explicitly stated fidelity level
 - `full parity`
   - runtime, validator, helper tools, docs, example vars, README, and roadmap are aligned
 
@@ -206,23 +206,23 @@ These are the concrete remaining backlog items.
      - [ ] Lookup building (how are cross-object references resolved?)
      - [ ] Delete/apply merging (how does classification route objects?)
 
-5. **Refactor `tools/validate-vars` into a modular package after the documentation hardening work**
+5. **Refactor `tools/validate-vars.py` into a modular package after the documentation hardening work**
    - split monolithic validator logic into focused modules under a dedicated `tools/validate_vars/` package
    - extract shared YAML loading, tree walking, defaults handling, and reference helpers into common utilities
    - split domain validation into separate modules where it improves readability (`network`, `system`, `ha`, `tls`, `ltm`, `gtm`, `security`, `bootstrap`)
-   - keep the CLI entrypoint stable as `tools/validate-vars`
+   - keep the CLI entrypoint stable as `tools/validate-vars.py`
    - update docs/comments as part of the refactor so contributors can navigate the new structure without AI assistance
 
-6. **Refactor `tools/drift-check` into a modular package after the documentation hardening work**
+6. **Refactor `tools/drift-check.py` into a modular package after the documentation hardening work**
    - split connection/client logic, var-tree loading, endpoint mappings, normalization helpers, and drift comparison logic into dedicated modules under `tools/drift_check/`
    - separate generic comparison helpers from domain-specific drift logic (`network`, `gtm`, `tls`, `apm`, etc.)
-   - keep the CLI entrypoint stable as `tools/drift-check`
+   - keep the CLI entrypoint stable as `tools/drift-check.py`
    - prefer reusable classes and utility functions over one large script body
 
-7. **Refactor `tools/import-from-bigip` into a modular package after the documentation hardening work**
+7. **Refactor `tools/import-from-bigip.py` into a modular package after the documentation hardening work**
    - split connection/client logic, import specs, field transformation helpers, file-output writers, and object-family-specific import routines into dedicated modules under `tools/import_from_bigip/`
    - separate generic import plumbing from domain-specific transforms (`ltm`, `gtm`, `network`, `security`, `tls`)
-   - keep the CLI entrypoint stable as `tools/import-from-bigip`
+   - keep the CLI entrypoint stable as `tools/import-from-bigip.py`
    - prefer reusable classes and shared normalization utilities over repeated inline transformations
 
 8. UCS backup/export workflow for configuration snapshots

@@ -513,7 +513,7 @@ apm_sso_configs:
 
 ## Validation
 
-`tools/validate-vars` validates:
+`tools/validate-vars.py` validates:
 - Auth servers: required fields by type, supported types, server lists
 - SSO configs: required fields by type, supported types
 - Policy nodes: cross-reference validation against declared auth servers and SSO configs

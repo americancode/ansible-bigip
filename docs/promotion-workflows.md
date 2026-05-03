@@ -42,7 +42,7 @@ git commit -m "feat: add pool and virtual server for new-app"
 Before merging to `dev`:
 
 - `make validate` must pass
-- `tools/drift-check` should be run against the dev BIG-IP to surface existing drift
+- `tools/drift-check.py` should be run against the dev BIG-IP to surface existing drift
 - PR review by at least one other team member
 
 ### Step 2: Promote to Dev
@@ -59,7 +59,7 @@ git push origin dev
 Validate on the dev BIG-IP:
 
 - Test application traffic
-- Run `tools/drift-check` to confirm the device matches Git
+- Run `tools/drift-check.py` to confirm the device matches Git
 
 ### Step 3: Promote to Test
 
@@ -138,7 +138,7 @@ git push origin dev
 
 ## Drift Detection in Promotion
 
-Run `tools/drift-check` at key points in the promotion flow:
+Run `tools/drift-check.py` at key points in the promotion flow:
 
 | Stage | Action | Purpose |
 |---|---|---|
@@ -157,10 +157,10 @@ Recommended branch protection settings:
 
 ## Importing from Production
 
-When onboarding an existing BIG-IP estate, use `tools/import-from-bigip` to seed the initial var tree:
+When onboarding an existing BIG-IP estate, use `tools/import-from-bigip.py` to seed the initial var tree:
 
 ```sh
-F5_HOST=prod-bigip F5_PASSWORD=secret python3 tools/import-from-bigip --out imported/
+F5_HOST=prod-bigip F5_PASSWORD=secret python3 tools/import-from-bigip.py --out imported/
 ```
 
 Review the imported files, merge them into the appropriate `vars/` locations, commit to `main`, and apply to the device to establish the baseline. After this point, all changes go through the promotion flow.

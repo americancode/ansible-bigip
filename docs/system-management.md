@@ -231,10 +231,10 @@ For environments with multiple HA pairs, system settings are typically applied p
 The `system` domain is intentionally `runtime+validation` for the current phase.
 
 - runtime playbook support is first-class
-- `tools/validate-vars` supports the tree and references
+- `tools/validate-vars.py` supports the tree and references
 - helper-tool drift/import support is intentionally not implemented yet for `system`
 
-Treat `system.yml` as the Git-authored runtime source of truth, but do not expect `tools/drift-check` or `tools/import-from-bigip` to round-trip these objects today.
+Treat `system.yml` as the Git-authored runtime source of truth, but do not expect `tools/drift-check.py` or `tools/import-from-bigip.py` to round-trip these objects today.
 
 ## Deletion
 

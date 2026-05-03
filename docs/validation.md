@@ -8,7 +8,7 @@ make validate
 
 This runs:
 
-- `python3 tools/validate-vars` — YAML/schema/reference validation and duplicate detection
+- `python3 tools/validate-vars.py` — YAML/schema/reference validation and duplicate detection
 - `ansible-playbook --syntax-check` — syntax check for all canonical playbooks under `playbooks/`
 
 ## What the Validator Checks

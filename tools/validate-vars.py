@@ -3157,7 +3157,7 @@ def main() -> int:
         Returns 0 if validation passes, 1 if errors are found.
 
     Example:
-        python tools/validate-vars
+        python tools/validate-vars.py
     """
     return Validator().run()
 

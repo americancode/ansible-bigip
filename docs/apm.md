@@ -355,7 +355,7 @@ The `security.yml` playbook handles this ordering automatically.
 
 ## Validation
 
-`tools/validate-vars` validates:
+`tools/validate-vars.py` validates:
 - Auth servers: required fields by type, supported types, server list validation, encryption validation
 - SSO configs: required fields by type, supported types
 - Resources: type-specific field validation (address_spaces for network_access, items for webtops)
@@ -368,7 +368,7 @@ The `security.yml` playbook handles this ordering automatically.
 
 ## Drift Detection
 
-`tools/drift-check` compares live BIG-IP APM state against declared var trees:
+`tools/drift-check.py` compares live BIG-IP APM state against declared var trees:
 - ACLs via `access/policy/acl` endpoint
 - Auth servers via `auth/remote-server` endpoint
 - SSO configs via `apm/sso` endpoint
@@ -384,10 +384,10 @@ Current limitation:
 
 ## Import
 
-`tools/import-from-bigip` can import live APM objects:
+`tools/import-from-bigip.py` can import live APM objects:
 
 ```sh
-F5_HOST=bigip.example.com F5_PASSWORD=secret python3 tools/import-from-bigip --out imported/ --types apm_acls apm_auth_servers apm_sso_configs apm_resources apm_access_profiles apm_per_session_policies apm_macros apm_policy_nodes
+F5_HOST=bigip.example.com F5_PASSWORD=secret python3 tools/import-from-bigip.py --out imported/ --types apm_acls apm_auth_servers apm_sso_configs apm_resources apm_access_profiles apm_per_session_policies apm_macros apm_policy_nodes
 ```
 
 Current limitation:

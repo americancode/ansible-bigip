@@ -12,8 +12,8 @@ Environment variables:
     F5_SERVER_PORT  — BIG-IP port (default: 443)
 
 Usage:
-    F5_HOST=10.0.0.1 F5_PASSWORD=secret python3 tools/import-from-bigip --out imported/
-    F5_HOST=10.0.0.1 F5_PASSWORD=secret python3 tools/import-from-bigip --out imported/ --types ltm_nodes ltm_pools
+    F5_HOST=10.0.0.1 F5_PASSWORD=secret python3 tools/import-from-bigip.py --out imported/
+    F5_HOST=10.0.0.1 F5_PASSWORD=secret python3 tools/import-from-bigip.py --out imported/ --types ltm_nodes ltm_pools
 """
 
 from __future__ import annotations
@@ -1530,7 +1530,7 @@ def main() -> int:
         Writes YAML files to the specified output directory.
 
     Example:
-        F5_HOST=10.1.1.1 F5_PASSWORD=secret python tools/import-from-bigip --out /tmp/vars
+        F5_HOST=10.1.1.1 F5_PASSWORD=secret python tools/import-from-bigip.py --out /tmp/vars
     """
     import argparse
 

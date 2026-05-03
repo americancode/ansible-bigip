@@ -24,7 +24,7 @@ These are also binding. A feature is not complete just because syntax-check pass
 
 - Every implementation must declare its completion class in repo terms:
   - `runtime-only` — playbook behavior exists, but validator and/or helper-tool lifecycle support is intentionally incomplete
-  - `runtime+validation` — playbook behavior and `tools/validate-vars` support exist, but helper-tool lifecycle support is intentionally incomplete
+  - `runtime+validation` — playbook behavior and `tools/validate-vars.py` support exist, but helper-tool lifecycle support is intentionally incomplete
   - `runtime+validation+helper-tools` — runtime, validator, drift detection, and import coverage exist
   - `full parity` — runtime, validator, helper tools, docs, examples, README, and roadmap are all aligned
 
@@ -36,9 +36,9 @@ These are also binding. A feature is not complete just because syntax-check pass
 - Do not silently upgrade a feature's claimed completion class or helper-tool fidelity. If the repo only supports `runtime-only` or `identity-only`, that limitation must remain explicit in `ROADMAP.md` and the relevant docs.
 
 - For every normal feature change, all repo Python tooling must be considered part of the implementation surface:
-  - `tools/validate-vars`
-  - `tools/drift-check`
-  - `tools/import-from-bigip`
+  - `tools/validate-vars.py`
+  - `tools/drift-check.py`
+  - `tools/import-from-bigip.py`
   - any supporting Python filter or helper modules such as `filter_plugins/bigip_var_filters.py` and split support packages under `filter_plugins/bigip_filters/`
   A feature is not complete if those layers were skipped without an explicitly documented exception.
 
@@ -47,8 +47,8 @@ These are also binding. A feature is not complete just because syntax-check pass
   - `tasks/apply.yml` supports create/update behavior
   - `tasks/delete.yml` supports reverse-order deletion behavior
   - `tasks/manage.yml` preserves repo-standard ordering and config save behavior
-  - `tools/validate-vars` validates the tree and its references
-  - `tools/drift-check` and `tools/import-from-bigip` are updated when the repo expects GitOps lifecycle coverage for that object family
+  - `tools/validate-vars.py` validates the tree and its references
+  - `tools/drift-check.py` and `tools/import-from-bigip.py` are updated when the repo expects GitOps lifecycle coverage for that object family
   - docs and example var files describe the same field model that the runtime tasks actually use
 
 - Do not claim “feature coverage” for an object family if only one half exists.
@@ -229,24 +229,24 @@ These updates are **required after every feature change** (new object types, new
 
 ### Validation
 
-- [ ] `tools/validate-vars` — add `TreeSpec` entry, type-specific validation in `validate_<domain>()`, duplicate checks, cross-reference validation, and field validation
+- [ ] `tools/validate-vars.py` — add `TreeSpec` entry, type-specific validation in `validate_<domain>()`, duplicate checks, cross-reference validation, and field validation
 - [ ] `Makefile` — ensure `validate-ansible` target includes the affected playbook
 - [ ] run `make validate` and confirm it passes
 - [ ] record which validation commands passed in the final closeout
 
 ### Drift Detection
 
-- [ ] `tools/drift-check` — add a `load` entry in `VarTreeLoader.load()` for the new var tree directory
-- [ ] `tools/drift-check` — add a BIG-IP REST endpoint mapping in `DriftChecker.BIGIP_ENDPOINTS`
-- [ ] `tools/drift-check` — add non-standard name fields to `DriftChecker.NAME_FIELDS` if applicable
-- [ ] `tools/drift-check` — add value drift comparisons in `_find_value_drift` for the new type's fields
+- [ ] `tools/drift-check.py` — add a `load` entry in `VarTreeLoader.load()` for the new var tree directory
+- [ ] `tools/drift-check.py` — add a BIG-IP REST endpoint mapping in `DriftChecker.BIGIP_ENDPOINTS`
+- [ ] `tools/drift-check.py` — add non-standard name fields to `DriftChecker.NAME_FIELDS` if applicable
+- [ ] `tools/drift-check.py` — add value drift comparisons in `_find_value_drift` for the new type's fields
 - [ ] explicitly classify the resulting drift support as `identity-only`, `basic field drift`, or `model-aware`
 - [ ] if drift tooling is intentionally not updated, document the exception in `ROADMAP.md` and the relevant domain doc before calling the work complete
 
 ### Import Tooling
 
-- [ ] `tools/import-from-bigip` — add an `ImportSpec` entry in `IMPORT_SPECS` with endpoint, output directory, top-level key, and field extraction
-- [ ] `tools/import-from-bigip` — add type-specific transformation logic in `_transform_item` (pool members, virtual server references, etc.) if needed
+- [ ] `tools/import-from-bigip.py` — add an `ImportSpec` entry in `IMPORT_SPECS` with endpoint, output directory, top-level key, and field extraction
+- [ ] `tools/import-from-bigip.py` — add type-specific transformation logic in `_transform_item` (pool members, virtual server references, etc.) if needed
 - [ ] explicitly classify the resulting import fidelity as `identity-only`, `basic field drift`, or `model-aware`
 - [ ] if import tooling is intentionally not updated, document the exception in `ROADMAP.md` and the relevant domain doc before calling the work complete
 

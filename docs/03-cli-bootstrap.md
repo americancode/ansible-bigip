@@ -99,7 +99,7 @@ ansible-galaxy collection install -r collections/requirements.yml
 python3 --version
 ansible-playbook --version
 ansible-galaxy collection list | grep f5networks
-make validate 2>/dev/null || python3 tools/validate-vars
+make validate 2>/dev/null || python3 tools/validate-vars.py
 ```
 
 ### Alternative: Quick One-Liner Setup
@@ -193,7 +193,7 @@ Those examples mean:
 ### 1. Validate the repo first
 
 ```sh
-python3 tools/validate-vars
+python3 tools/validate-vars.py
 ```
 
 ### 2. Syntax-check the bootstrap and HA playbooks
@@ -284,7 +284,7 @@ export F5_PASSWORD='your-password'
 export F5_SERVER_PORT='443'
 export F5_VALIDATE_CERTS='false'
 
-python3 tools/validate-vars
+python3 tools/validate-vars.py
 ansible-playbook --syntax-check -i inventory/bootstrap.ini playbooks/bootstrap.yml
 ansible-playbook --syntax-check -i inventory/bootstrap.ini playbooks/ha.yml
 ansible-playbook -i inventory/bootstrap.ini playbooks/bootstrap.yml --limit bigip-east-sync-owner

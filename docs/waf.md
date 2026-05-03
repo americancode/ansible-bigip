@@ -144,7 +144,7 @@ ltm_virtual_servers:
 
 ## Validation
 
-`tools/validate-vars` validates:
+`tools/validate-vars.py` validates:
 - Required fields (`name` for policies, `name` + `policy_name` for server technologies)
 - Template names against supported built-in templates
 - `active` and `apply` fields must be booleans
@@ -153,7 +153,7 @@ ltm_virtual_servers:
 
 ## Drift Detection
 
-`tools/drift-check` compares:
+`tools/drift-check.py` compares:
 - WAF policies against live ASM policies using the `asm/policies` endpoint
 - WAF server technologies by traversing each policy's `serverTechnologyReference` subcollection and flattening it into the repo's `policy_name` + `name` model
 
@@ -162,14 +162,14 @@ Current limitation:
 
 ## Import
 
-`tools/import-from-bigip` can import live ASM policies into `vars/security/waf/policies/` using the `waf_policies` type:
+`tools/import-from-bigip.py` can import live ASM policies into `vars/security/waf/policies/` using the `waf_policies` type:
 
 ```sh
-F5_HOST=bigip.example.com F5_PASSWORD=secret python3 tools/import-from-bigip --out imported/ --types waf_policies
+F5_HOST=bigip.example.com F5_PASSWORD=secret python3 tools/import-from-bigip.py --out imported/ --types waf_policies
 ```
 
-`tools/import-from-bigip` can also import WAF server technologies by traversing each policy's server-technology subcollection and generating files under `vars/security/waf/server_technologies/`:
+`tools/import-from-bigip.py` can also import WAF server technologies by traversing each policy's server-technology subcollection and generating files under `vars/security/waf/server_technologies/`:
 
 ```sh
-F5_HOST=bigip.example.com F5_PASSWORD=secret python3 tools/import-from-bigip --out imported/ --types waf_policies waf_server_technologies
+F5_HOST=bigip.example.com F5_PASSWORD=secret python3 tools/import-from-bigip.py --out imported/ --types waf_policies waf_server_technologies
 ```
