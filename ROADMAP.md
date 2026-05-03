@@ -60,7 +60,7 @@ These items are the top priority before more feature expansion.
 - deeper HA lifecycle (connection mirroring, failover metadata, automated testing)
 - UCS backup/export workflow
 - certificate rotation automation
-- auth provider integration for system users
+- auth provider integration for BIG-IP management-plane admin login, separate from APM end-user identity
 - login banner management
 
 ## Current Implementation Audit
@@ -186,7 +186,7 @@ Not implemented yet:
 - Automated failover testing workflows
 - UCS backup/export workflow
 - Certificate rotation automation
-- Auth provider integration for BIG-IP admin users
+- Auth provider integration for BIG-IP admin users on the management plane, separate from APM end-user identity flows
 - Login banner management
 
 ## Coverage Status By Layer
@@ -875,7 +875,7 @@ These are valuable enhancements identified during implementation:
 26. [ ] Deeper HA lifecycle management (connection mirroring, failover metadata, automated failover testing)
 27. [ ] UCS backup/export workflow for configuration snapshots
 28. [ ] Certificate rotation automation with renewal detection
-29. [ ] Auth provider integration for system users (LDAP/AD/RADIUS for BIG-IP admin auth)
+29. [ ] Auth provider integration for BIG-IP management-plane admin login (LDAP/AD/RADIUS/TACACS for BIG-IP admin auth, separate from APM end-user identity)
 30. [ ] Login banner management for system compliance
 
 ## Issue-Sized Execution Plan
@@ -1021,7 +1021,7 @@ These are the first concrete tickets I would open.
 - [ ] Add automated failover testing workflows
 - [ ] Add UCS backup/export workflow to `system.yml` or dedicated playbook
 - [ ] Add certificate rotation automation with expiry detection
-- [ ] Add auth provider integration for BIG-IP admin users (LDAP/AD/RADIUS)
+- [ ] Add auth provider integration for BIG-IP admin users on the management plane (LDAP/AD/RADIUS/TACACS), explicitly separate from APM end-user identity and SSO configuration
 - [ ] Add login banner management to `system.yml`
 
 ### Milestone 16: Coverage Stabilization
