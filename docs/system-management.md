@@ -226,6 +226,16 @@ For environments with multiple auth methods defined in Git, only one of LDAP, TA
 
 For environments with multiple HA pairs, system settings are typically applied per device rather than synced. Run `system.yml` against each device individually when settings differ between peers.
 
+## Current Lifecycle Boundary
+
+The `system` domain is intentionally `runtime+validation` for the current phase.
+
+- runtime playbook support is first-class
+- `tools/validate-vars` supports the tree and references
+- helper-tool drift/import support is intentionally not implemented yet for `system`
+
+Treat `system.yml` as the Git-authored runtime source of truth, but do not expect `tools/drift-check` or `tools/import-from-bigip` to round-trip these objects today.
+
 ## Deletion
 
 Users, management-plane auth objects, and login banners can be removed with `state: absent` or the matching `vars/system/deletions/...` tree. DNS and NTP objects use a present-state model where the last declaration wins. See [deletion-workflows.md](deletion-workflows.md).

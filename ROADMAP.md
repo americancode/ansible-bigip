@@ -116,15 +116,11 @@ Do not call work complete when any of the following is true:
 
 These are the highest-value open items.
 
-1. Helper-tool maturity decisions for `system` and `ha`
-   - either add drift/import coverage
-   - or keep them explicitly documented as `runtime+validation` for the current phase
-
-2. Configuration snapshot and recovery workflows
+1. Configuration snapshot and recovery workflows
    - UCS backup/export workflow
    - explicit operational guidance for snapshot use in change and rollback paths
 
-3. Certificate lifecycle automation
+2. Certificate lifecycle automation
    - certificate rotation workflows
    - renewal/expiry detection
 
@@ -132,19 +128,15 @@ These are the highest-value open items.
 
 These are the concrete remaining backlog items.
 
-1. Decide the helper-tool lifecycle target for `system` and `ha`
-   - either implement drift/import support
-   - or document them as intentional `runtime+validation` boundaries in long-term steady state
-
-2. UCS backup/export workflow for configuration snapshots
+1. UCS backup/export workflow for configuration snapshots
    - priority: lower than management-plane auth, compliance, and current repo-boundary decisions
    - completion target: `runtime+validation`
 
-3. Certificate rotation automation with renewal detection
+2. Certificate rotation automation with renewal detection
    - priority: lower than management-plane auth, compliance, and current repo-boundary decisions
    - completion target: `runtime+validation+helper-tools` where practical
 
-4. Future deeper helper-tool fidelity
+3. Future deeper helper-tool fidelity
    - if needed, promote selected object families from `basic field drift` toward `model-aware`
    - only pursue this when the operational value is clear
 

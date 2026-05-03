@@ -16,6 +16,14 @@ This domain covers:
 
 This domain is currently `runtime+validation`, not helper-tool complete. Drift/import support for HA objects is still a separate roadmap decision.
 
+For the current phase, that boundary is intentional:
+
+- runtime playbook support is first-class
+- `tools/validate-vars` supports the HA trees and cross-references
+- helper-tool drift/import support is intentionally not implemented for HA objects
+
+Treat `ha.yml` as a Git-authored runtime workflow, but do not expect `tools/drift-check` or `tools/import-from-bigip` to round-trip HA state today.
+
 ## Playbook Structure
 
 ```text

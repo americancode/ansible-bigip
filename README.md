@@ -25,7 +25,7 @@ The repo already manages the main BIG-IP runtime domains through Git:
 Current lifecycle boundaries:
 
 - `bootstrap` is intentionally `runtime+validation` only
-- `system` and `ha` are currently `runtime+validation`
+- `system` and `ha` are intentionally `runtime+validation` for the current phase
 - the broader service domains are generally `runtime+validation+helper-tools`, usually at `basic field drift` fidelity for helper-tool comparisons
 
 ## Quick Links
