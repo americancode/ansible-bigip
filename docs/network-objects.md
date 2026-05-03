@@ -198,4 +198,5 @@ The delete order is the reverse.
 
 Current limitation:
 
-- helper-tool parity for these network objects is object-type complete, but field-level drift comparison is still shallower than runtime coverage for some advanced attributes
+- helper-tool parity for these network objects is now `basic field drift` for the core route domain, trunk, SNAT translation, SNAT pool, and NAT fields managed by the runtime playbook
+- some advanced live-state attributes may still be richer on the device than what helper tooling can round-trip or compare today

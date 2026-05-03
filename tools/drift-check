@@ -277,6 +277,14 @@ class DriftChecker:
         "ltm_profiles": "name",
     }
 
+    NETWORK_DEEP_DRIFT_TYPES = {
+        "network_route_domains",
+        "network_trunks",
+        "network_snat_translations",
+        "network_snats",
+        "network_nats",
+    }
+
     def __init__(self, conn: BigIPConnection, var_loader: VarTreeLoader) -> None:
         self.conn = conn
         self.var_loader = var_loader
@@ -302,20 +310,21 @@ class DriftChecker:
 
     def _check_type(self, obj_type: str, endpoint: str) -> None:
         try:
-            live_data = self.conn.get(endpoint, params={"$select": "name,partition", "$top": 1000})
+            live_items = self._fetch_live_items(obj_type, endpoint)
         except Exception as exc:
             print(f"WARN: could not query {endpoint}: {exc}", file=sys.stderr)
             return
 
-        live_items = live_data.get("items", []) if isinstance(live_data, dict) else []
+        live_by_name: dict[tuple[str, str], dict[str, Any]] = {}
         live_names = set()
         for item in live_items:
-            partition = item.get("partition", "Common")
-            name_field = self.NAME_FIELDS.get(obj_type, "name")
-            name = item.get(name_field, item.get("fullPath", ""))
-            if "/" in name:
-                name = name.split("/")[-1]
-            live_names.add((partition, name))
+            partition = item.get("partition") or item.get("tmPartition") or "Common"
+            name = self._extract_live_name(obj_type, item)
+            if not name:
+                continue
+            key = (partition, name)
+            live_names.add(key)
+            live_by_name[key] = item
 
         declared = self.var_loader.objects.get(obj_type, [])
         declared_names = set()
@@ -346,13 +355,7 @@ class DriftChecker:
         for key in declared_names & live_names:
             partition, name = key
             declared_obj = declared_by_name[key]
-            live_obj = next(
-                (item for item in live_items
-                 if item.get("partition", "Common") == partition
-                 and (item.get(self.NAME_FIELDS.get(obj_type, "name"), "") == name
-                      or (item.get("fullPath", "").rsplit("/", 1)[-1] if "/" in item.get("fullPath", "") else item.get("fullPath", "")) == name)),
-                {},
-            )
+            live_obj = live_by_name.get(key, {})
             drift_fields = self._find_value_drift(declared_obj, live_obj, obj_type)
             if drift_fields:
                 self.report.value_drift.append(DriftEntry(
@@ -362,7 +365,39 @@ class DriftChecker:
             else:
                 self.report.unchanged += 1
 
+    def _fetch_live_items(self, obj_type: str, endpoint: str) -> list[dict[str, Any]]:
+        items = self.conn.get_all(endpoint)
+        if obj_type == "network_trunks":
+            for item in items:
+                self._hydrate_trunk_interfaces(item)
+        return items
+
+    def _hydrate_trunk_interfaces(self, item: dict[str, Any]) -> None:
+        interfaces = item.get("interfacesReference", {}).get("link", "")
+        if not interfaces:
+            return
+        try:
+            iface_data = self.conn.get_all(interfaces.split("/mgmt/tm/")[-1])
+        except Exception:
+            return
+
+        members = []
+        for iface in iface_data:
+            name = iface.get("name", "")
+            if name:
+                members.append(self._normalize_short_name(name))
+        if members:
+            item["interfaces"] = members
+
+    def _extract_live_name(self, obj_type: str, item: dict[str, Any]) -> str:
+        name_field = self.NAME_FIELDS.get(obj_type, "name")
+        name = item.get(name_field, item.get("fullPath", ""))
+        return self._normalize_short_name(name)
+
     def _find_value_drift(self, declared: dict, live: dict, obj_type: str) -> list[str]:
+        if obj_type in self.NETWORK_DEEP_DRIFT_TYPES:
+            return self._find_network_value_drift(declared, live, obj_type)
+
         drifts: list[str] = []
         comparisons = {
             "description": ("description", ""),
@@ -404,6 +439,216 @@ class DriftChecker:
                 drifts.append(f"monitors: declared {declared_monitors} vs live {live_monitors}")
 
         return drifts
+
+    def _find_network_value_drift(self, declared: dict[str, Any], live: dict[str, Any], obj_type: str) -> list[str]:
+        if obj_type == "network_route_domains":
+            return self._find_route_domain_drift(declared, live)
+        if obj_type == "network_trunks":
+            return self._find_trunk_drift(declared, live)
+        if obj_type == "network_snat_translations":
+            return self._find_snat_translation_drift(declared, live)
+        if obj_type == "network_snats":
+            return self._find_snat_pool_drift(declared, live)
+        if obj_type == "network_nats":
+            return self._find_nat_drift(declared, live)
+        return []
+
+    def _find_route_domain_drift(self, declared: dict[str, Any], live: dict[str, Any]) -> list[str]:
+        drifts: list[str] = []
+        self._compare_field(drifts, "description", declared.get("description"), live.get("description"))
+        self._compare_field(drifts, "id", declared.get("id"), live.get("id"), self._normalize_int)
+        self._compare_field(drifts, "parent", declared.get("parent"), live.get("parent"), self._normalize_short_name)
+        self._compare_field(drifts, "strict", declared.get("strict"), live.get("strict"), self._normalize_bool)
+        self._compare_field(drifts, "vlans", declared.get("vlans"), live.get("vlans"), self._normalize_name_list)
+        return drifts
+
+    def _find_trunk_drift(self, declared: dict[str, Any], live: dict[str, Any]) -> list[str]:
+        drifts: list[str] = []
+        self._compare_field(drifts, "description", declared.get("description"), live.get("description"))
+        self._compare_field(drifts, "interfaces", declared.get("interfaces"), live.get("interfaces"), self._normalize_name_list)
+        self._compare_optional_live_field(
+            drifts, "lacp_enabled", declared.get("lacp_enabled"), live, ("lacpEnabled", "lacp"), self._normalize_bool
+        )
+        self._compare_optional_live_field(
+            drifts, "lacp_mode", declared.get("lacp_mode"), live, ("lacpMode", "lacp-mode")
+        )
+        self._compare_optional_live_field(
+            drifts, "lacp_timeout", declared.get("lacp_timeout"), live, ("lacpTimeout", "timeout")
+        )
+        self._compare_optional_live_field(
+            drifts, "link_selection_policy", declared.get("link_selection_policy"), live, ("linkSelectionPolicy",)
+        )
+        self._compare_optional_live_field(
+            drifts, "frame_distribution_hash", declared.get("frame_distribution_hash"), live, ("distributionHash",)
+        )
+        self._compare_optional_live_field(
+            drifts, "qinq_ethertype", declared.get("qinq_ethertype"), live, ("qinqEthertype",)
+        )
+        return drifts
+
+    def _find_snat_translation_drift(self, declared: dict[str, Any], live: dict[str, Any]) -> list[str]:
+        drifts: list[str] = []
+        self._compare_field(drifts, "address", declared.get("address"), live.get("address"))
+        self._compare_field(drifts, "arp", declared.get("arp"), live.get("arp"), self._normalize_bool)
+        self._compare_field(
+            drifts, "connection_limit", declared.get("connection_limit"), live.get("connectionLimit"), self._normalize_int
+        )
+        self._compare_field(drifts, "description", declared.get("description"), live.get("description"))
+        self._compare_field(
+            drifts, "ip_idle_timeout", declared.get("ip_idle_timeout"), live.get("ipIdleTimeout"), self._normalize_int
+        )
+        self._compare_field(
+            drifts, "tcp_idle_timeout", declared.get("tcp_idle_timeout"), live.get("tcpIdleTimeout"), self._normalize_int
+        )
+        self._compare_field(
+            drifts, "udp_idle_timeout", declared.get("udp_idle_timeout"), live.get("udpIdleTimeout"), self._normalize_int
+        )
+        self._compare_field(
+            drifts, "traffic_group", declared.get("traffic_group"), live.get("trafficGroup"), self._normalize_short_name
+        )
+        return drifts
+
+    def _find_snat_pool_drift(self, declared: dict[str, Any], live: dict[str, Any]) -> list[str]:
+        drifts: list[str] = []
+        self._compare_field(drifts, "description", declared.get("description"), live.get("description"))
+        self._compare_field(drifts, "members", declared.get("members"), live.get("members"), self._normalize_name_list)
+        return drifts
+
+    def _find_nat_drift(self, declared: dict[str, Any], live: dict[str, Any]) -> list[str]:
+        drifts: list[str] = []
+        self._compare_field(drifts, "description", declared.get("description"), live.get("description"))
+        self._compare_field(
+            drifts,
+            "originating_address",
+            declared.get("originating_address"),
+            self._first_present(live, ("originatingAddress", "originating-address")),
+        )
+        self._compare_field(
+            drifts,
+            "translation_address",
+            declared.get("translation_address"),
+            self._first_present(live, ("translationAddress", "translation-address")),
+        )
+        self._compare_optional_live_field(
+            drifts, "traffic_group", declared.get("traffic_group"), live, ("trafficGroup",), self._normalize_short_name
+        )
+        self._compare_optional_live_field(
+            drifts, "auto_lasthop", declared.get("auto_lasthop"), live, ("autoLasthop", "auto-lasthop")
+        )
+        self._compare_optional_live_field(
+            drifts, "arp", declared.get("arp"), live, ("arp",), self._normalize_bool
+        )
+        if declared.get("enabled") is not None:
+            live_enabled = self._derive_enabled(live)
+            if live_enabled is not None:
+                self._compare_field(drifts, "enabled", declared.get("enabled"), live_enabled, self._normalize_bool)
+        self._compare_optional_live_field(
+            drifts, "vlans", declared.get("vlans"), live, ("vlans",), self._normalize_name_list
+        )
+        if declared.get("vlans_enabled") is not None:
+            live_vlans_enabled = self._derive_vlans_enabled(live)
+            if live_vlans_enabled is not None:
+                self._compare_field(
+                    drifts, "vlans_enabled", declared.get("vlans_enabled"), live_vlans_enabled, self._normalize_bool
+                )
+        return drifts
+
+    def _compare_optional_live_field(
+        self,
+        drifts: list[str],
+        field_name: str,
+        declared_value: Any,
+        live: dict[str, Any],
+        live_keys: tuple[str, ...],
+        normalizer: Any = None,
+    ) -> None:
+        if declared_value is None:
+            return
+        live_value = self._first_present(live, live_keys)
+        if live_value is None:
+            return
+        self._compare_field(drifts, field_name, declared_value, live_value, normalizer)
+
+    def _compare_field(
+        self,
+        drifts: list[str],
+        field_name: str,
+        declared_value: Any,
+        live_value: Any,
+        normalizer: Any = None,
+    ) -> None:
+        if declared_value is None:
+            return
+        normalize = normalizer or (lambda value: value)
+        normalized_declared = normalize(declared_value)
+        normalized_live = normalize(live_value)
+        if normalized_declared != normalized_live:
+            drifts.append(f"{field_name}: declared={normalized_declared} vs live={normalized_live}")
+
+    def _first_present(self, item: dict[str, Any], keys: tuple[str, ...]) -> Any:
+        for key in keys:
+            if key in item and item.get(key) not in (None, ""):
+                return item.get(key)
+        return None
+
+    def _normalize_short_name(self, value: Any) -> Any:
+        if not isinstance(value, str):
+            return value
+        text = value.strip()
+        if not text:
+            return text
+        if text.startswith("/"):
+            return text.split("/")[-1]
+        return text
+
+    def _normalize_name_list(self, value: Any) -> Any:
+        if value is None:
+            return None
+        if isinstance(value, list):
+            normalized = [self._normalize_short_name(item) for item in value if item not in (None, "")]
+            return sorted(normalized)
+        if isinstance(value, str):
+            return sorted([self._normalize_short_name(value)])
+        return value
+
+    def _normalize_int(self, value: Any) -> Any:
+        if value in (None, ""):
+            return value
+        try:
+            return int(value)
+        except (TypeError, ValueError):
+            return value
+
+    def _normalize_bool(self, value: Any) -> Any:
+        if isinstance(value, bool):
+            return value
+        if isinstance(value, (int, float)):
+            return bool(value)
+        if isinstance(value, str):
+            text = value.strip().lower()
+            if text in {"true", "yes", "enabled", "enable", "on"}:
+                return True
+            if text in {"false", "no", "disabled", "disable", "off"}:
+                return False
+        return value
+
+    def _derive_enabled(self, live: dict[str, Any]) -> bool | None:
+        if "enabled" in live and live.get("enabled") not in (None, ""):
+            return self._normalize_bool(live.get("enabled"))
+        if "disabled" in live and live.get("disabled") not in (None, ""):
+            disabled = self._normalize_bool(live.get("disabled"))
+            if isinstance(disabled, bool):
+                return not disabled
+        return None
+
+    def _derive_vlans_enabled(self, live: dict[str, Any]) -> bool | None:
+        if "vlansEnabled" in live and live.get("vlansEnabled") not in (None, ""):
+            return self._normalize_bool(live.get("vlansEnabled"))
+        if "vlansDisabled" in live and live.get("vlansDisabled") not in (None, ""):
+            disabled = self._normalize_bool(live.get("vlansDisabled"))
+            if isinstance(disabled, bool):
+                return not disabled
+        return None
 
     def _check_waf_server_technologies(self) -> None:
         try:

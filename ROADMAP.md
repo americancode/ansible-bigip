@@ -779,6 +779,8 @@ This is the practical next sequence for the current repo.
 21. [x] Align runtime, validator, docs, and example vars where field models drifted apart
 22. [x] Complete exhaustive drift/import parity for every newest object tree
 23. [ ] Deepen drift detection to compare meaningful fields for newly added object families
+   - progress: `network_route_domains`, `network_trunks`, `network_snat_translations`, `network_snats`, and `network_nats` now have `runtime+validation+helper-tools` helper coverage with `basic field drift` for core runtime-managed fields
+   - remaining scope: GTM, TLS, and newer security families still need deeper field-level drift work where helper tooling is currently only identity-level or otherwise shallower than runtime coverage
 24. [ ] Add day-0 BIG-IP onboarding for licensing and initial management bootstrap
 25. [ ] Document initial setup from first boot through handoff to Git-managed operation
 
@@ -817,6 +819,7 @@ Audit findings captured as remaining work:
 
 - item 21 remains open because future field-model drift must still be detected and corrected as implementations evolve
 - item 23 remains open because helper-tool object coverage is broader now, but field-level drift fidelity is still shallow for many newer object types
+- item 23 now has its network slice implemented at `basic field drift`, but the broader backlog item remains open until the same depth is added to the remaining newer families that need it
 - milestone 16 item on `system` and `ha` helper-tool support remains open because those domains are currently intentionally `runtime+validation`, not `full parity`
 
 Endpoint/var-key audit result:

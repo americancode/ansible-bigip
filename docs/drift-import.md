@@ -100,7 +100,15 @@ Runtime playbook coverage is broader than helper-tool coverage. The following ob
 
 - `system` and `ha` domain objects
 
-For several newer supported families, drift/import is present but still not full-fidelity. Treat generated output as a starting point for review, not as an authoritative round-trip export of every field. This is especially true for:
+For several newer supported families, drift/import is present but still not full-fidelity. Treat generated output as a starting point for review, not as an authoritative round-trip export of every field.
+
+Current helper-tool fidelity notes:
+
+- `network_route_domains`, `network_trunks`, `network_snat_translations`, `network_snats`, and `network_nats` now have `basic field drift` coverage for the core fields the runtime playbooks manage directly.
+- `system` and `ha` remain runtime-managed only.
+- other newer families may still have helper coverage that is shallower than the runtime field model.
+
+This is especially true for:
 
 - APM policy nodes, where helper tooling currently flattens parent access-policy items to `name`, `policy`, optional `partition`, and basic `type`
 - any object family where nested child properties or subcollections are represented more richly in runtime than in import output
