@@ -2,6 +2,8 @@
 
 This repository intentionally shows both concise and verbose authoring models.
 
+These examples reflect the current runtime-facing shortcuts. The roadmap direction is to move common convenience patterns into a dedicated intent/compiler layer documented in [intent-authoring.md](intent-authoring.md), while keeping the canonical object model as the stable apply/delete contract.
+
 ## Concise LTM Model
 
 Use the app-local inline model when one file should explain the whole service.

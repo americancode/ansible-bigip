@@ -108,24 +108,19 @@ Do not call work complete when any of the following is true:
 
 These are the highest-value open items.
 
-1. Intent-layer architecture for simple and common service patterns
-   - add a pluggable intent/compiler layer for high-level authoring patterns
-   - keep `ltm.yml` and `gtm.yml` runtime tasks focused on canonical BIG-IP objects
-   - prevent future shortcut growth from turning runtime playbooks into branching special-case engines
-
-2. Refactor existing LTM and GTM shortcut patterns onto the intent-layer design
+1. Refactor existing LTM and GTM shortcut patterns onto the documented intent-layer design
    - migrate current inline/nested shortcut handling out of runtime-task logic and into the proposed normalization/compiler layer
    - preserve the existing canonical object model as the apply/delete contract
 
-3. Helper-tool maturity decisions for `system` and `ha`
+2. Helper-tool maturity decisions for `system` and `ha`
    - either add drift/import coverage
    - or keep them explicitly documented as `runtime+validation` for the current phase
 
-4. Configuration snapshot and recovery workflows
+3. Configuration snapshot and recovery workflows
    - UCS backup/export workflow
    - explicit operational guidance for snapshot use in change and rollback paths
 
-5. Certificate lifecycle automation
+4. Certificate lifecycle automation
    - certificate rotation workflows
    - renewal/expiry detection
 
@@ -133,29 +128,25 @@ These are the highest-value open items.
 
 These are the concrete remaining backlog items.
 
-1. Design and document an intent/compiler layer for common service use cases
-   - add a pluggable or modular authoring layer for higher-level “simple thing” declarations
-   - keep runtime playbooks operating on normalized canonical objects only
-   - define where intent vars live, how they compile, and how validators/docs should treat them
-
-2. Refactor existing LTM and GTM shortcut models onto the intent/compiler design
+1. Refactor existing LTM and GTM shortcut models onto the intent/compiler design
    - move the current LTM inline pool/member shortcut behavior into the new design
    - move the current GTM inline/derived shortcut behavior into the new design
    - keep `playbooks/ltm.yml` and `playbooks/gtm.yml` structurally simpler after the refactor
+   - the architecture target is documented in `docs/intent-authoring.md`
 
-3. Decide the helper-tool lifecycle target for `system` and `ha`
+2. Decide the helper-tool lifecycle target for `system` and `ha`
    - either implement drift/import support
    - or document them as intentional `runtime+validation` boundaries in long-term steady state
 
-4. UCS backup/export workflow for configuration snapshots
+3. UCS backup/export workflow for configuration snapshots
    - priority: lower than management-plane auth, compliance, and current repo-boundary decisions
    - completion target: `runtime+validation`
 
-5. Certificate rotation automation with renewal detection
+4. Certificate rotation automation with renewal detection
    - priority: lower than management-plane auth, compliance, and current repo-boundary decisions
    - completion target: `runtime+validation+helper-tools` where practical
 
-6. Future deeper helper-tool fidelity
+5. Future deeper helper-tool fidelity
    - if needed, promote selected object families from `basic field drift` toward `model-aware`
    - only pursue this when the operational value is clear
 

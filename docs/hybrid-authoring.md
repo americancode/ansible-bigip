@@ -1,10 +1,14 @@
 # Hybrid Authoring Model
 
-The preferred authoring model is hybrid: embed app-local objects when a single file should describe one service clearly, and promote shared or reused objects into first-class trees when multiple apps depend on them.
+The current preferred authoring model is hybrid: embed app-local objects when a single file should describe one service clearly, and promote shared or reused objects into first-class trees when multiple apps depend on them.
+
+This document describes the current runtime-facing authoring model. The roadmap direction is to evolve the embedded shortcut paths into a dedicated intent/compiler layer documented in [intent-authoring.md](intent-authoring.md), so runtime playbooks do not keep accumulating shortcut-specific logic.
 
 ## Embedded Model (Concise)
 
-Use when one file should explain the whole service:
+Use when one file should explain the whole service.
+
+This model is currently supported, but it should be treated as transitional for LTM and GTM convenience cases that may later move into first-class intent trees:
 
 - LTM virtual servers can embed their own pool definitions
 - GTM Wide IPs can embed their own GTM pools
@@ -37,3 +41,5 @@ Cross-file references work by name:
 - `gtm_pools[*].members[*].virtual_server: "vs_inventory_east_443"` points at `vars/ltm/virtual_servers/`
 
 Monitor aliases (e.g., `standard_https`, `platform_https`) expand through sibling `settings.yml` files. Out-of-the-box BIG-IP references use fully-qualified names such as `/Common/https`.
+
+As the repo grows, do not assume every new convenience case should be added here as more embedded runtime behavior. New "simple mode" patterns should prefer the intent/compiler design in [intent-authoring.md](intent-authoring.md).

@@ -68,7 +68,7 @@ The system var tree includes both basic device settings and management-plane adm
 
 ## Hybrid Authoring
 
-Objects can be embedded directly in parent definitions or promoted to first-class trees. See [hybrid-authoring.md](hybrid-authoring.md) for the full model and examples.
+Objects can be embedded directly in parent definitions or promoted to first-class trees. See [hybrid-authoring.md](hybrid-authoring.md) for the current model and [intent-authoring.md](intent-authoring.md) for the planned intent/compiler architecture that will absorb the growing shortcut patterns.
 
 ## Deletions
 

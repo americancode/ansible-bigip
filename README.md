@@ -31,6 +31,7 @@ Current lifecycle boundaries:
 | Playbook layout | [docs/playbook-structure.md](docs/playbook-structure.md) |
 | Variables and precedence | [docs/var-layout.md](docs/var-layout.md) |
 | Hybrid authoring | [docs/hybrid-authoring.md](docs/hybrid-authoring.md) |
+| Intent authoring | [docs/intent-authoring.md](docs/intent-authoring.md) |
 | Deletion workflows | [docs/deletion-workflows.md](docs/deletion-workflows.md) |
 | AWX and HA operation | [docs/04-awx-operation.md](docs/04-awx-operation.md) |
 | Validation | [docs/validation.md](docs/validation.md) |
@@ -74,6 +75,7 @@ Canonical playbooks live under `playbooks/`. Root-level `*.yml` files are compat
 
 The main remaining roadmap items are:
 
+- refactoring existing LTM and GTM shortcuts onto the documented intent/compiler design
 - deciding whether `system` and `ha` should gain full drift/import support
 - lower-priority lifecycle work such as UCS backup/export and certificate rotation automation
 
