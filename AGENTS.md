@@ -62,6 +62,8 @@ These are also binding. A feature is not complete just because syntax-check pass
   - use the repo-wide `provider` variable from `vars/common.yml`
   - keep `tasks/manage.yml` as delete-first then apply-second unless ROADMAP explicitly documents an exception
   - keep example var files, docs, and helper tools aligned with the canonical playbook behavior
+  - keep top-level `prep.yml` files as documented orchestrators when prep logic grows; split heavy discovery/loading/classification/compiler flows into focused `prep/*.yml` snippets
+  - document in top-level `prep.yml` comments which major runtime facts or canonical sets the prep flow produces
 
 - Preserve the separation between canonical runtime objects and higher-level convenience authoring:
   - `playbooks/ltm.yml`, `playbooks/gtm.yml`, and other canonical runtime playbooks should operate on normalized first-class BIG-IP objects

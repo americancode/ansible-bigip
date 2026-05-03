@@ -1,0 +1,148 @@
+- name: Classify GTM object operations
+  ansible.builtin.set_fact:
+    gtm_datacenters_delete: >-
+      {{
+        ((gtm_datacenters | default([])) + (gtm_datacenter_deletions | default([])))
+        | selectattr('state', 'defined')
+        | selectattr('state', 'equalto', 'absent')
+        | list
+      }}
+    gtm_datacenters_present: >-
+      {{
+        (gtm_datacenters | default([]))
+        | rejectattr('state', 'defined')
+        | list
+        +
+        (
+          (gtm_datacenters | default([]))
+          | selectattr('state', 'defined')
+          | rejectattr('state', 'equalto', 'absent')
+          | list
+        )
+      }}
+    gtm_monitors_delete: >-
+      {{
+        ((gtm_monitors | default([])) + (gtm_monitor_deletions | default([])))
+        | selectattr('state', 'defined')
+        | selectattr('state', 'equalto', 'absent')
+        | list
+      }}
+    gtm_monitors_present: >-
+      {{
+        (gtm_monitors | default([]))
+        | rejectattr('state', 'defined')
+        | list
+        +
+        (
+          (gtm_monitors | default([]))
+          | selectattr('state', 'defined')
+          | rejectattr('state', 'equalto', 'absent')
+          | list
+        )
+      }}
+    gtm_servers_delete: >-
+      {{
+        ((gtm_servers | default([])) + (gtm_server_deletions | default([])))
+        | selectattr('state', 'defined')
+        | selectattr('state', 'equalto', 'absent')
+        | list
+      }}
+    gtm_servers_present: >-
+      {{
+        (gtm_servers | default([]))
+        | rejectattr('state', 'defined')
+        | list
+        +
+        (
+          (gtm_servers | default([]))
+          | selectattr('state', 'defined')
+          | rejectattr('state', 'equalto', 'absent')
+          | list
+        )
+      }}
+    gtm_pools_delete: >-
+      {{
+        ((gtm_pools | default([])) + (gtm_pool_deletions | default([])))
+        | selectattr('state', 'defined')
+        | selectattr('state', 'equalto', 'absent')
+        | list
+      }}
+    gtm_pools_present: >-
+      {{
+        (gtm_pools | default([]))
+        | rejectattr('state', 'defined')
+        | list
+        +
+        (
+          (gtm_pools | default([]))
+          | selectattr('state', 'defined')
+          | rejectattr('state', 'equalto', 'absent')
+          | list
+        )
+      }}
+    gtm_wide_ips_delete: >-
+      {{
+        ((gtm_wide_ips | default([])) + (gtm_wide_ip_deletions | default([])))
+        | selectattr('state', 'defined')
+        | selectattr('state', 'equalto', 'absent')
+        | list
+      }}
+    gtm_wide_ips_present: >-
+      {{
+        (gtm_wide_ips | default([]))
+        | rejectattr('state', 'defined')
+        | list
+        +
+        (
+          (gtm_wide_ips | default([]))
+          | selectattr('state', 'defined')
+          | rejectattr('state', 'equalto', 'absent')
+          | list
+        )
+      }}
+    gtm_topology_regions_delete: >-
+      {{
+        ((gtm_topology_regions | default([])) + (gtm_topology_region_deletions | default([])))
+        | selectattr('state', 'defined')
+        | selectattr('state', 'equalto', 'absent')
+        | list
+      }}
+    gtm_topology_regions_present: >-
+      {{
+        (gtm_topology_regions | default([]))
+        | rejectattr('state', 'defined')
+        | list
+        +
+        (
+          (gtm_topology_regions | default([]))
+          | selectattr('state', 'defined')
+          | rejectattr('state', 'equalto', 'absent')
+          | list
+        )
+      }}
+    gtm_topology_records_delete: >-
+      {{
+        ((gtm_topology_records | default([])) + (gtm_topology_record_deletions | default([])))
+        | selectattr('state', 'defined')
+        | selectattr('state', 'equalto', 'absent')
+        | list
+      }}
+    gtm_topology_records_present: >-
+      {{
+        (gtm_topology_records | default([]))
+        | rejectattr('state', 'defined')
+        | list
+        +
+        (
+          (gtm_topology_records | default([]))
+          | selectattr('state', 'defined')
+          | rejectattr('state', 'equalto', 'absent')
+          | list
+        )
+      }}
+
+- name: Compile GTM server-derived datacenter intents
+  ansible.builtin.import_tasks: "{{ playbook_dir }}/gtm/prep/compile-server-datacenter-intents.yml"
+
+- name: Compile GTM Wide IP intent shortcuts
+  ansible.builtin.import_tasks: "{{ playbook_dir }}/gtm/prep/compile-wide-ip-intents.yml"

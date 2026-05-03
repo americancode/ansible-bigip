@@ -1,0 +1,190 @@
+- name: Classify network object operations
+  ansible.builtin.set_fact:
+    bigip_vlans_delete: >-
+      {{
+        ((bigip_vlans | default([])) + (bigip_vlan_deletions | default([])))
+        | selectattr('state', 'defined')
+        | selectattr('state', 'equalto', 'absent')
+        | list
+      }}
+    bigip_vlans_present: >-
+      {{
+        (bigip_vlans | default([]))
+        | rejectattr('state', 'defined')
+        | list
+        +
+        (
+          (bigip_vlans | default([]))
+          | selectattr('state', 'defined')
+          | rejectattr('state', 'equalto', 'absent')
+          | list
+        )
+      }}
+    bigip_route_domains_delete: >-
+      {{
+        ((bigip_route_domains | default([])) + (bigip_route_domain_deletions | default([])))
+        | selectattr('state', 'defined')
+        | selectattr('state', 'equalto', 'absent')
+        | list
+      }}
+    bigip_route_domains_present: >-
+      {{
+        (bigip_route_domains | default([]))
+        | rejectattr('state', 'defined')
+        | list
+        +
+        (
+          (bigip_route_domains | default([]))
+          | selectattr('state', 'defined')
+          | rejectattr('state', 'equalto', 'absent')
+          | list
+        )
+      }}
+    bigip_self_ips_delete: >-
+      {{
+        ((bigip_self_ips | default([])) + (bigip_self_ip_deletions | default([])))
+        | selectattr('state', 'defined')
+        | selectattr('state', 'equalto', 'absent')
+        | list
+      }}
+    bigip_self_ips_present: >-
+      {{
+        (bigip_self_ips | default([]))
+        | rejectattr('state', 'defined')
+        | list
+        +
+        (
+          (bigip_self_ips | default([]))
+          | selectattr('state', 'defined')
+          | rejectattr('state', 'equalto', 'absent')
+          | list
+        )
+      }}
+    bigip_static_routes_delete: >-
+      {{
+        ((bigip_static_routes | default([])) + (bigip_static_route_deletions | default([])))
+        | selectattr('state', 'defined')
+        | selectattr('state', 'equalto', 'absent')
+        | list
+      }}
+    bigip_static_routes_present: >-
+      {{
+        (bigip_static_routes | default([]))
+        | rejectattr('state', 'defined')
+        | list
+        +
+        (
+          (bigip_static_routes | default([]))
+          | selectattr('state', 'defined')
+          | rejectattr('state', 'equalto', 'absent')
+          | list
+        )
+      }}
+    bigip_snat_translations_delete: >-
+      {{
+        ((bigip_snat_translations | default([])) + (bigip_snat_translation_deletions | default([])))
+        | selectattr('state', 'defined')
+        | selectattr('state', 'equalto', 'absent')
+        | list
+      }}
+    bigip_snat_translations_present: >-
+      {{
+        (bigip_snat_translations | default([]))
+        | rejectattr('state', 'defined')
+        | list
+        +
+        (
+          (bigip_snat_translations | default([]))
+          | selectattr('state', 'defined')
+          | rejectattr('state', 'equalto', 'absent')
+          | list
+        )
+      }}
+    bigip_snat_pools_delete: >-
+      {{
+        ((bigip_snat_pools | default([])) + (bigip_snat_pool_deletions | default([])))
+        | selectattr('state', 'defined')
+        | selectattr('state', 'equalto', 'absent')
+        | list
+      }}
+    bigip_snat_pools_present: >-
+      {{
+        (bigip_snat_pools | default([]))
+        | rejectattr('state', 'defined')
+        | list
+        +
+        (
+          (bigip_snat_pools | default([]))
+          | selectattr('state', 'defined')
+          | rejectattr('state', 'equalto', 'absent')
+          | list
+        )
+      }}
+    bigip_trunks_delete: >-
+      {{
+        ((bigip_trunks | default([])) + (bigip_trunk_deletions | default([])))
+        | selectattr('state', 'defined')
+        | selectattr('state', 'equalto', 'absent')
+        | list
+      }}
+    bigip_trunks_present: >-
+      {{
+        (bigip_trunks | default([]))
+        | rejectattr('state', 'defined')
+        | list
+        +
+        (
+          (bigip_trunks | default([]))
+          | selectattr('state', 'defined')
+          | rejectattr('state', 'equalto', 'absent')
+          | list
+        )
+      }}
+    bigip_nats_delete: >-
+      {{
+        ((bigip_nats | default([])) + (bigip_nat_deletions | default([])))
+        | selectattr('state', 'defined')
+        | selectattr('state', 'equalto', 'absent')
+        | list
+      }}
+    bigip_nats_present: >-
+      {{
+        (bigip_nats | default([]))
+        | rejectattr('state', 'defined')
+        | list
+        +
+        (
+          (bigip_nats | default([]))
+          | selectattr('state', 'defined')
+          | rejectattr('state', 'equalto', 'absent')
+          | list
+        )
+      }}
+
+- name: Probe NAT presence on BIG-IP
+  f5networks.f5_modules.bigip_command:
+    provider: "{{ provider }}"
+    commands:
+      - "{{ item | build_nat_tmsh_command('show') }}"
+    warn: false
+  loop: "{{ (bigip_nats_present | default([])) + (bigip_nats_delete | default([])) }}"
+  loop_control:
+    label: "{{ item.partition | default('Common') }}/{{ item.name }}"
+  register: nat_probe_results
+  failed_when: false
+
+- name: Build NAT existence map
+  ansible.builtin.set_fact:
+    bigip_nat_exists_by_name: >-
+      {{
+        bigip_nat_exists_by_name | default({}) | combine({
+          ((item.item.partition | default('Common')) ~ '/' ~ item.item.name): (
+            item.failed is defined and not item.failed and
+            (item.stdout is defined) and
+            (item.stdout | length > 0) and
+            ((item.stdout[0] | default('')) != '')
+          )
+        })
+      }}
+  loop: "{{ nat_probe_results.results | default([]) }}"
+

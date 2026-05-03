@@ -173,6 +173,7 @@ These are binding repo maintenance rules for every feature change, including fut
 
 - keep canonical playbooks under `playbooks/` and keep root-level wrapper playbooks working during transitions
 - default to the split canonical playbook model: keep discovery/default aggregation in `playbooks/<domain>/prep.yml`, keep `tasks/manage.yml` as the ordering wrapper, and separate destructive tasks into `tasks/delete.yml` from present-state tasks in `tasks/apply.yml`
+- when prep logic becomes large, keep top-level `prep.yml` as a documented orchestrator and split discovery/loading/classification/compiler flows into focused `playbooks/<domain>/prep/*.yml` snippets
 
 ### Validation and Commits
 

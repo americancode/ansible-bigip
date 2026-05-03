@@ -1,0 +1,92 @@
+- name: Classify AFM address list operations
+  ansible.builtin.set_fact:
+    afm_address_lists_delete: >-
+      {{
+        ((afm_address_lists | default([])) + (afm_address_list_deletions | default([])))
+        | selectattr('state', 'defined')
+        | selectattr('state', 'equalto', 'absent')
+        | list
+      }}
+    afm_address_lists_present: >-
+      {{
+        (afm_address_lists | default([]))
+        | rejectattr('state', 'defined')
+        | list
+        +
+        (
+          (afm_address_lists | default([]))
+          | selectattr('state', 'defined')
+          | rejectattr('state', 'equalto', 'absent')
+          | list
+        )
+      }}
+
+- name: Classify AFM port list operations
+  ansible.builtin.set_fact:
+    afm_port_lists_delete: >-
+      {{
+        ((afm_port_lists | default([])) + (afm_port_list_deletions | default([])))
+        | selectattr('state', 'defined')
+        | selectattr('state', 'equalto', 'absent')
+        | list
+      }}
+    afm_port_lists_present: >-
+      {{
+        (afm_port_lists | default([]))
+        | rejectattr('state', 'defined')
+        | list
+        +
+        (
+          (afm_port_lists | default([]))
+          | selectattr('state', 'defined')
+          | rejectattr('state', 'equalto', 'absent')
+          | list
+        )
+      }}
+
+- name: Classify AFM rule operations
+  ansible.builtin.set_fact:
+    afm_rules_delete: >-
+      {{
+        ((afm_rules | default([])) + (afm_rule_deletions | default([])))
+        | selectattr('state', 'defined')
+        | selectattr('state', 'equalto', 'absent')
+        | list
+      }}
+    afm_rules_present: >-
+      {{
+        (afm_rules | default([]))
+        | rejectattr('state', 'defined')
+        | list
+        +
+        (
+          (afm_rules | default([]))
+          | selectattr('state', 'defined')
+          | rejectattr('state', 'equalto', 'absent')
+          | list
+        )
+      }}
+
+- name: Classify AFM policy operations
+  ansible.builtin.set_fact:
+    afm_policies_delete: >-
+      {{
+        ((afm_policies | default([])) + (afm_policy_deletions | default([])))
+        | selectattr('state', 'defined')
+        | selectattr('state', 'equalto', 'absent')
+        | list
+      }}
+    afm_policies_present: >-
+      {{
+        (afm_policies | default([]))
+        | rejectattr('state', 'defined')
+        | list
+        +
+        (
+          (afm_policies | default([]))
+          | selectattr('state', 'defined')
+          | rejectattr('state', 'equalto', 'absent')
+          | list
+        )
+      }}
+

@@ -1,0 +1,206 @@
+- name: Classify system DNS operations
+  ansible.builtin.set_fact:
+    system_dns_delete: >-
+      {{
+        ((system_dns | default([])) + (system_dns_deletions | default([])))
+        | selectattr('state', 'defined')
+        | selectattr('state', 'equalto', 'absent')
+        | list
+      }}
+    system_dns_present: >-
+      {{
+        (system_dns | default([]))
+        | rejectattr('state', 'defined')
+        | list
+        +
+        (
+          (system_dns | default([]))
+          | selectattr('state', 'defined')
+          | rejectattr('state', 'equalto', 'absent')
+          | list
+        )
+      }}
+
+- name: Classify system NTP operations
+  ansible.builtin.set_fact:
+    system_ntp_delete: >-
+      {{
+        ((system_ntp | default([])) + (system_ntp_deletions | default([])))
+        | selectattr('state', 'defined')
+        | selectattr('state', 'equalto', 'absent')
+        | list
+      }}
+    system_ntp_present: >-
+      {{
+        (system_ntp | default([]))
+        | rejectattr('state', 'defined')
+        | list
+        +
+        (
+          (system_ntp | default([]))
+          | selectattr('state', 'defined')
+          | rejectattr('state', 'equalto', 'absent')
+          | list
+        )
+      }}
+
+- name: Classify system provisioning operations
+  ansible.builtin.set_fact:
+    system_provisioning_delete: >-
+      {{
+        ((system_provisioning | default([])) + (system_provisioning_deletions | default([])))
+        | selectattr('state', 'defined')
+        | selectattr('state', 'equalto', 'absent')
+        | list
+      }}
+    system_provisioning_present: >-
+      {{
+        (system_provisioning | default([]))
+        | rejectattr('state', 'defined')
+        | list
+        +
+        (
+          (system_provisioning | default([]))
+          | selectattr('state', 'defined')
+          | rejectattr('state', 'equalto', 'absent')
+          | list
+        )
+      }}
+
+- name: Classify system user operations
+  ansible.builtin.set_fact:
+    system_users_delete: >-
+      {{
+        ((system_users | default([])) + (system_user_deletions | default([])))
+        | selectattr('state', 'defined')
+        | selectattr('state', 'equalto', 'absent')
+        | list
+      }}
+    system_users_present: >-
+      {{
+        (system_users | default([]))
+        | rejectattr('state', 'defined')
+        | list
+        +
+        (
+          (system_users | default([]))
+          | selectattr('state', 'defined')
+          | rejectattr('state', 'equalto', 'absent')
+          | list
+        )
+      }}
+
+- name: Classify system LDAP auth operations
+  ansible.builtin.set_fact:
+    system_auth_ldap_delete: >-
+      {{
+        ((system_auth_ldap | default([])) + (system_auth_ldap_deletions | default([])))
+        | selectattr('state', 'defined')
+        | selectattr('state', 'equalto', 'absent')
+        | list
+      }}
+    system_auth_ldap_present: >-
+      {{
+        (system_auth_ldap | default([]))
+        | rejectattr('state', 'defined')
+        | list
+        +
+        (
+          (system_auth_ldap | default([]))
+          | selectattr('state', 'defined')
+          | rejectattr('state', 'equalto', 'absent')
+          | list
+        )
+      }}
+
+- name: Classify system TACACS auth operations
+  ansible.builtin.set_fact:
+    system_auth_tacacs_delete: >-
+      {{
+        ((system_auth_tacacs | default([])) + (system_auth_tacacs_deletions | default([])))
+        | selectattr('state', 'defined')
+        | selectattr('state', 'equalto', 'absent')
+        | list
+      }}
+    system_auth_tacacs_present: >-
+      {{
+        (system_auth_tacacs | default([]))
+        | rejectattr('state', 'defined')
+        | list
+        +
+        (
+          (system_auth_tacacs | default([]))
+          | selectattr('state', 'defined')
+          | rejectattr('state', 'equalto', 'absent')
+          | list
+        )
+      }}
+
+- name: Classify system RADIUS server operations
+  ansible.builtin.set_fact:
+    system_auth_radius_servers_delete: >-
+      {{
+        ((system_auth_radius_servers | default([])) + (system_auth_radius_server_deletions | default([])))
+        | selectattr('state', 'defined')
+        | selectattr('state', 'equalto', 'absent')
+        | list
+      }}
+    system_auth_radius_servers_present: >-
+      {{
+        (system_auth_radius_servers | default([]))
+        | rejectattr('state', 'defined')
+        | list
+        +
+        (
+          (system_auth_radius_servers | default([]))
+          | selectattr('state', 'defined')
+          | rejectattr('state', 'equalto', 'absent')
+          | list
+        )
+      }}
+
+- name: Classify system RADIUS auth operations
+  ansible.builtin.set_fact:
+    system_auth_radius_delete: >-
+      {{
+        ((system_auth_radius | default([])) + (system_auth_radius_deletions | default([])))
+        | selectattr('state', 'defined')
+        | selectattr('state', 'equalto', 'absent')
+        | list
+      }}
+    system_auth_radius_present: >-
+      {{
+        (system_auth_radius | default([]))
+        | rejectattr('state', 'defined')
+        | list
+        +
+        (
+          (system_auth_radius | default([]))
+          | selectattr('state', 'defined')
+          | rejectattr('state', 'equalto', 'absent')
+          | list
+        )
+      }}
+
+- name: Classify system login banner operations
+  ansible.builtin.set_fact:
+    system_login_banner_delete: >-
+      {{
+        ((system_login_banners | default([])) + (system_login_banner_deletions | default([])))
+        | selectattr('state', 'defined')
+        | selectattr('state', 'equalto', 'absent')
+        | list
+      }}
+    system_login_banner_present: >-
+      {{
+        (system_login_banners | default([]))
+        | rejectattr('state', 'defined')
+        | list
+        +
+        (
+          (system_login_banners | default([]))
+          | selectattr('state', 'defined')
+          | rejectattr('state', 'equalto', 'absent')
+          | list
+        )
+      }}

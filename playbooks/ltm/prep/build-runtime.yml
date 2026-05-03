@@ -1,0 +1,209 @@
+- name: Classify LTM monitor operations
+  ansible.builtin.set_fact:
+    ltm_monitors_delete: >-
+      {{
+        ((ltm_monitors | default([])) + (ltm_monitor_deletions | default([])))
+        | selectattr('state', 'defined')
+        | selectattr('state', 'equalto', 'absent')
+        | list
+      }}
+    ltm_monitors_present: >-
+      {{
+        (ltm_monitors | default([]))
+        | rejectattr('state', 'defined')
+        | list
+        +
+        (
+          (ltm_monitors | default([]))
+          | selectattr('state', 'defined')
+          | rejectattr('state', 'equalto', 'absent')
+          | list
+        )
+      }}
+
+- name: Classify LTM node operations
+  ansible.builtin.set_fact:
+    ltm_nodes_delete: >-
+      {{
+        ((ltm_nodes | default([])) + (ltm_node_deletions | default([])))
+        | selectattr('state', 'defined')
+        | selectattr('state', 'equalto', 'absent')
+        | list
+      }}
+    ltm_nodes_present: >-
+      {{
+        (ltm_nodes | default([]))
+        | rejectattr('state', 'defined')
+        | list
+        +
+        (
+          (ltm_nodes | default([]))
+          | selectattr('state', 'defined')
+          | rejectattr('state', 'equalto', 'absent')
+          | list
+        )
+      }}
+
+- name: Classify explicit LTM pool operations
+  ansible.builtin.set_fact:
+    ltm_pools_delete: >-
+      {{
+        ((ltm_pools | default([])) + (ltm_pool_deletions | default([])))
+        | selectattr('state', 'defined')
+        | selectattr('state', 'equalto', 'absent')
+        | list
+      }}
+    ltm_pools_present: >-
+      {{
+        (ltm_pools | default([]))
+        | rejectattr('state', 'defined')
+        | list
+        +
+        (
+          (ltm_pools | default([]))
+          | selectattr('state', 'defined')
+          | rejectattr('state', 'equalto', 'absent')
+          | list
+        )
+      }}
+
+- name: Classify LTM profile operations
+  ansible.builtin.set_fact:
+    ltm_profiles_delete: >-
+      {{
+        ((ltm_profiles | default([])) + (ltm_profile_deletions | default([])))
+        | selectattr('state', 'defined')
+        | selectattr('state', 'equalto', 'absent')
+        | list
+      }}
+    ltm_profiles_present: >-
+      {{
+        (ltm_profiles | default([]))
+        | rejectattr('state', 'defined')
+        | list
+        +
+        (
+          (ltm_profiles | default([]))
+          | selectattr('state', 'defined')
+          | rejectattr('state', 'equalto', 'absent')
+          | list
+        )
+      }}
+
+- name: Classify LTM virtual server operations
+  ansible.builtin.set_fact:
+    ltm_virtual_servers_delete: >-
+      {{
+        ((ltm_virtual_servers | default([])) + (ltm_virtual_server_deletions | default([])))
+        | selectattr('state', 'defined')
+        | selectattr('state', 'equalto', 'absent')
+        | list
+      }}
+    ltm_virtual_servers_present: >-
+      {{
+        (ltm_virtual_servers | default([]))
+        | rejectattr('state', 'defined')
+        | list
+        +
+        (
+          (ltm_virtual_servers | default([]))
+          | selectattr('state', 'defined')
+          | rejectattr('state', 'equalto', 'absent')
+          | list
+        )
+      }}
+
+- name: Classify LTM persistence profile operations
+  ansible.builtin.set_fact:
+    ltm_persistence_profiles_delete: >-
+      {{
+        ((ltm_persistence_profiles | default([])) + (ltm_persistence_profile_deletions | default([])))
+        | selectattr('state', 'defined')
+        | selectattr('state', 'equalto', 'absent')
+        | list
+      }}
+    ltm_persistence_profiles_present: >-
+      {{
+        (ltm_persistence_profiles | default([]))
+        | rejectattr('state', 'defined')
+        | list
+        +
+        (
+          (ltm_persistence_profiles | default([]))
+          | selectattr('state', 'defined')
+          | rejectattr('state', 'equalto', 'absent')
+          | list
+        )
+      }}
+
+- name: Classify LTM iRule operations
+  ansible.builtin.set_fact:
+    ltm_irules_delete: >-
+      {{
+        ((ltm_irules | default([])) + (ltm_irule_deletions | default([])))
+        | selectattr('state', 'defined')
+        | selectattr('state', 'equalto', 'absent')
+        | list
+      }}
+    ltm_irules_present: >-
+      {{
+        (ltm_irules | default([]))
+        | rejectattr('state', 'defined')
+        | list
+        +
+        (
+          (ltm_irules | default([]))
+          | selectattr('state', 'defined')
+          | rejectattr('state', 'equalto', 'absent')
+          | list
+        )
+      }}
+
+- name: Classify LTM data group operations
+  ansible.builtin.set_fact:
+    ltm_data_groups_delete: >-
+      {{
+        ((ltm_data_groups | default([])) + (ltm_data_group_deletions | default([])))
+        | selectattr('state', 'defined')
+        | selectattr('state', 'equalto', 'absent')
+        | list
+      }}
+    ltm_data_groups_present: >-
+      {{
+        (ltm_data_groups | default([]))
+        | rejectattr('state', 'defined')
+        | list
+        +
+        (
+          (ltm_data_groups | default([]))
+          | selectattr('state', 'defined')
+          | rejectattr('state', 'equalto', 'absent')
+          | list
+        )
+      }}
+
+- name: Classify LTM policy operations
+  ansible.builtin.set_fact:
+    ltm_policies_delete: >-
+      {{
+        ((ltm_policies | default([])) + (ltm_policy_deletions | default([])))
+        | selectattr('state', 'defined')
+        | selectattr('state', 'equalto', 'absent')
+        | list
+      }}
+    ltm_policies_present: >-
+      {{
+        (ltm_policies | default([]))
+        | rejectattr('state', 'defined')
+        | list
+        +
+        (
+          (ltm_policies | default([]))
+          | selectattr('state', 'defined')
+          | rejectattr('state', 'equalto', 'absent')
+          | list
+        )
+      }}
+
+- name: Compile LTM virtual-server intent shortcuts
+  ansible.builtin.import_tasks: "{{ playbook_dir }}/ltm/prep/compile-virtual-server-intents.yml"

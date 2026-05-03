@@ -1,0 +1,69 @@
+- name: Classify bootstrap objects
+  ansible.builtin.set_fact:
+    bootstrap_licenses_delete: >-
+      {{
+        ((bootstrap_licenses | default([])) + (bootstrap_license_deletions | default([])))
+        | selectattr('state', 'defined')
+        | selectattr('state', 'equalto', 'absent')
+        | list
+      }}
+    bootstrap_licenses_present: >-
+      {{
+        (bootstrap_licenses | default([]))
+        | rejectattr('state', 'defined')
+        | list
+        +
+        (
+          (bootstrap_licenses | default([]))
+          | selectattr('state', 'defined')
+          | rejectattr('state', 'equalto', 'absent')
+          | list
+        )
+      }}
+    bootstrap_management_delete: >-
+      {{
+        ((bootstrap_management | default([])) + (bootstrap_management_deletions | default([])))
+        | selectattr('state', 'defined')
+        | selectattr('state', 'equalto', 'absent')
+        | list
+      }}
+    bootstrap_management_present: >-
+      {{
+        (bootstrap_management | default([]))
+        | rejectattr('state', 'defined')
+        | list
+        +
+        (
+          (bootstrap_management | default([]))
+          | selectattr('state', 'defined')
+          | rejectattr('state', 'equalto', 'absent')
+          | list
+        )
+      }}
+
+- name: Probe management route presence on BIG-IP
+  f5networks.f5_modules.bigip_command:
+    provider: "{{ provider }}"
+    commands:
+      - "{{ item | build_management_route_tmsh_command('show') }}"
+    warn: false
+  loop: "{{ bootstrap_management_present | default([]) }}"
+  loop_control:
+    label: "{{ item.route_name | default('default') }}"
+  register: bootstrap_management_route_probe_results
+  failed_when: false
+
+- name: Build bootstrap management route existence map
+  ansible.builtin.set_fact:
+    bootstrap_management_route_exists_by_name: >-
+      {{
+        bootstrap_management_route_exists_by_name | default({}) | combine({
+          (item.item.route_name | default('default')): (
+            item.failed is defined and not item.failed and
+            (item.stdout is defined) and
+            (item.stdout | length > 0) and
+            ((item.stdout[0] | default('')) != '')
+          )
+        })
+      }}
+  loop: "{{ bootstrap_management_route_probe_results.results | default([]) }}"

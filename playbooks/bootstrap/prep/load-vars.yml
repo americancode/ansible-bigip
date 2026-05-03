@@ -1,0 +1,122 @@
+- name: Discover bootstrap license fragments
+  ansible.builtin.set_fact:
+    bootstrap_license_files: >-
+      {{
+        lookup(
+          'ansible.builtin.pipe',
+          "find {{ repo_root }}/vars/bootstrap/license -type f -name '*.yml' ! -name 'settings.yml' 2>/dev/null | sort"
+        ).splitlines() | reject('equalto', '') | list
+      }}
+    bootstrap_license_deletion_files: >-
+      {{
+        lookup(
+          'ansible.builtin.pipe',
+          "find {{ repo_root }}/vars/bootstrap/deletions/license -type f -name '*.yml' ! -name 'settings.yml' 2>/dev/null | sort"
+        ).splitlines() | reject('equalto', '') | list
+      }}
+
+- name: Load bootstrap license fragments
+  ansible.builtin.include_vars:
+    file: "{{ item }}"
+    name: bootstrap_license_fragment
+  loop: "{{ bootstrap_license_files }}"
+  register: bootstrap_license_include_results
+
+- name: Load bootstrap license deletion fragments
+  ansible.builtin.include_vars:
+    file: "{{ item }}"
+    name: bootstrap_license_deletion_fragment
+  loop: "{{ bootstrap_license_deletion_files }}"
+  register: bootstrap_license_deletion_include_results
+
+- name: Aggregate bootstrap licenses with directory settings
+  ansible.builtin.set_fact:
+    bootstrap_licenses: "{{ bootstrap_licenses | default([]) + [ bootstrap_license_directory_defaults | combine(item.1, recursive=True) ] }}"
+  loop: "{{ query('subelements', bootstrap_license_include_results.results, 'ansible_facts.bootstrap_license_fragment.bootstrap_licenses', {'skip_missing': True}) }}"
+  vars:
+    bootstrap_license_settings_path: "{{ item.0.item | regex_replace('/[^/]+$', '/settings.yml') }}"
+    bootstrap_license_directory_defaults: >-
+      {{
+        (
+          lookup('ansible.builtin.file', bootstrap_license_settings_path, errors='ignore')
+          | default('{}', true)
+          | from_yaml
+        ).bootstrap_license_defaults | default({})
+      }}
+
+- name: Aggregate bootstrap license deletions with directory settings
+  ansible.builtin.set_fact:
+    bootstrap_license_deletions: "{{ bootstrap_license_deletions | default([]) + [ (bootstrap_license_deletion_directory_defaults | combine(item.1, recursive=True)) | combine({'state': 'absent'}, recursive=True) ] }}"
+  loop: "{{ query('subelements', bootstrap_license_deletion_include_results.results, 'ansible_facts.bootstrap_license_deletion_fragment.bootstrap_licenses', {'skip_missing': True}) }}"
+  vars:
+    bootstrap_license_deletion_settings_path: "{{ item.0.item | regex_replace('/[^/]+$', '/settings.yml') }}"
+    bootstrap_license_deletion_directory_defaults: >-
+      {{
+        (
+          lookup('ansible.builtin.file', bootstrap_license_deletion_settings_path, errors='ignore')
+          | default('{}', true)
+          | from_yaml
+        ).bootstrap_license_defaults | default({})
+      }}
+
+- name: Discover bootstrap management fragments
+  ansible.builtin.set_fact:
+    bootstrap_management_files: >-
+      {{
+        lookup(
+          'ansible.builtin.pipe',
+          "find {{ repo_root }}/vars/bootstrap/management -type f -name '*.yml' ! -name 'settings.yml' 2>/dev/null | sort"
+        ).splitlines() | reject('equalto', '') | list
+      }}
+    bootstrap_management_deletion_files: >-
+      {{
+        lookup(
+          'ansible.builtin.pipe',
+          "find {{ repo_root }}/vars/bootstrap/deletions/management -type f -name '*.yml' ! -name 'settings.yml' 2>/dev/null | sort"
+        ).splitlines() | reject('equalto', '') | list
+      }}
+
+- name: Load bootstrap management fragments
+  ansible.builtin.include_vars:
+    file: "{{ item }}"
+    name: bootstrap_management_fragment
+  loop: "{{ bootstrap_management_files }}"
+  register: bootstrap_management_include_results
+
+- name: Load bootstrap management deletion fragments
+  ansible.builtin.include_vars:
+    file: "{{ item }}"
+    name: bootstrap_management_deletion_fragment
+  loop: "{{ bootstrap_management_deletion_files }}"
+  register: bootstrap_management_deletion_include_results
+
+- name: Aggregate bootstrap management objects with directory settings
+  ansible.builtin.set_fact:
+    bootstrap_management: "{{ bootstrap_management | default([]) + [ bootstrap_management_directory_defaults | combine(item.1, recursive=True) ] }}"
+  loop: "{{ query('subelements', bootstrap_management_include_results.results, 'ansible_facts.bootstrap_management_fragment.bootstrap_management', {'skip_missing': True}) }}"
+  vars:
+    bootstrap_management_settings_path: "{{ item.0.item | regex_replace('/[^/]+$', '/settings.yml') }}"
+    bootstrap_management_directory_defaults: >-
+      {{
+        (
+          lookup('ansible.builtin.file', bootstrap_management_settings_path, errors='ignore')
+          | default('{}', true)
+          | from_yaml
+        ).bootstrap_management_defaults | default({})
+      }}
+
+- name: Aggregate bootstrap management deletions with directory settings
+  ansible.builtin.set_fact:
+    bootstrap_management_deletions: "{{ bootstrap_management_deletions | default([]) + [ (bootstrap_management_deletion_directory_defaults | combine(item.1, recursive=True)) | combine({'state': 'absent'}, recursive=True) ] }}"
+  loop: "{{ query('subelements', bootstrap_management_deletion_include_results.results, 'ansible_facts.bootstrap_management_deletion_fragment.bootstrap_management', {'skip_missing': True}) }}"
+  vars:
+    bootstrap_management_deletion_settings_path: "{{ item.0.item | regex_replace('/[^/]+$', '/settings.yml') }}"
+    bootstrap_management_deletion_directory_defaults: >-
+      {{
+        (
+          lookup('ansible.builtin.file', bootstrap_management_deletion_settings_path, errors='ignore')
+          | default('{}', true)
+          | from_yaml
+        ).bootstrap_management_defaults | default({})
+      }}
+

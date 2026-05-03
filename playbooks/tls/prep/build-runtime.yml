@@ -1,0 +1,103 @@
+- name: Classify TLS object operations
+  ansible.builtin.set_fact:
+    tls_keys_delete: >-
+      {{
+        ((tls_keys | default([])) + (tls_key_deletions | default([])))
+        | selectattr('state', 'defined')
+        | selectattr('state', 'equalto', 'absent')
+        | list
+      }}
+    tls_keys_present: >-
+      {{
+        (tls_keys | default([]))
+        | rejectattr('state', 'defined')
+        | list
+        +
+        (
+          (tls_keys | default([]))
+          | selectattr('state', 'defined')
+          | rejectattr('state', 'equalto', 'absent')
+          | list
+        )
+      }}
+    tls_certificates_delete: >-
+      {{
+        ((tls_certificates | default([])) + (tls_certificate_deletions | default([])))
+        | selectattr('state', 'defined')
+        | selectattr('state', 'equalto', 'absent')
+        | list
+      }}
+    tls_certificates_present: >-
+      {{
+        (tls_certificates | default([]))
+        | rejectattr('state', 'defined')
+        | list
+        +
+        (
+          (tls_certificates | default([]))
+          | selectattr('state', 'defined')
+          | rejectattr('state', 'equalto', 'absent')
+          | list
+        )
+      }}
+    tls_ca_bundles_delete: >-
+      {{
+        ((tls_ca_bundles | default([])) + (tls_ca_bundle_deletions | default([])))
+        | selectattr('state', 'defined')
+        | selectattr('state', 'equalto', 'absent')
+        | list
+      }}
+    tls_ca_bundles_present: >-
+      {{
+        (tls_ca_bundles | default([]))
+        | rejectattr('state', 'defined')
+        | list
+        +
+        (
+          (tls_ca_bundles | default([]))
+          | selectattr('state', 'defined')
+          | rejectattr('state', 'equalto', 'absent')
+          | list
+        )
+      }}
+    tls_client_ssl_profiles_delete: >-
+      {{
+        ((tls_client_ssl_profiles | default([])) + (tls_client_ssl_profile_deletions | default([])))
+        | selectattr('state', 'defined')
+        | selectattr('state', 'equalto', 'absent')
+        | list
+      }}
+    tls_client_ssl_profiles_present: >-
+      {{
+        (tls_client_ssl_profiles | default([]))
+        | rejectattr('state', 'defined')
+        | list
+        +
+        (
+          (tls_client_ssl_profiles | default([]))
+          | selectattr('state', 'defined')
+          | rejectattr('state', 'equalto', 'absent')
+          | list
+        )
+      }}
+    tls_server_ssl_profiles_delete: >-
+      {{
+        ((tls_server_ssl_profiles | default([])) + (tls_server_ssl_profile_deletions | default([])))
+        | selectattr('state', 'defined')
+        | selectattr('state', 'equalto', 'absent')
+        | list
+      }}
+    tls_server_ssl_profiles_present: >-
+      {{
+        (tls_server_ssl_profiles | default([]))
+        | rejectattr('state', 'defined')
+        | list
+        +
+        (
+          (tls_server_ssl_profiles | default([]))
+          | selectattr('state', 'defined')
+          | rejectattr('state', 'equalto', 'absent')
+          | list
+        )
+      }}
+

@@ -1,0 +1,398 @@
+- name: Discover HA device trust fragments
+  ansible.builtin.set_fact:
+    ha_device_trust_files: >-
+      {{
+        lookup(
+          'ansible.builtin.pipe',
+          "find {{ repo_root }}/vars/ha/device_trust -type f -name '*.yml' ! -name 'settings.yml' 2>/dev/null | sort"
+        ).splitlines() | reject('equalto', '') | list
+      }}
+    ha_device_trust_deletion_files: >-
+      {{
+        lookup(
+          'ansible.builtin.pipe',
+          "find {{ repo_root }}/vars/ha/deletions/device_trust -type f -name '*.yml' ! -name 'settings.yml' 2>/dev/null | sort"
+        ).splitlines() | reject('equalto', '') | list
+      }}
+
+- name: Load HA device trust fragments
+  ansible.builtin.include_vars:
+    file: "{{ item }}"
+    name: ha_device_trust_fragment
+  loop: "{{ ha_device_trust_files }}"
+  register: ha_device_trust_include_results
+
+- name: Load HA device trust deletion fragments
+  ansible.builtin.include_vars:
+    file: "{{ item }}"
+    name: ha_device_trust_deletion_fragment
+  loop: "{{ ha_device_trust_deletion_files }}"
+  register: ha_device_trust_deletion_include_results
+
+- name: Aggregate HA device trusts with directory settings
+  ansible.builtin.set_fact:
+    ha_device_trusts: "{{ ha_device_trusts | default([]) + [ ha_device_trust_directory_defaults | combine(item.1, recursive=True) ] }}"
+  loop: "{{ query('subelements', ha_device_trust_include_results.results, 'ansible_facts.ha_device_trust_fragment.ha_device_trusts', {'skip_missing': True}) }}"
+  vars:
+    ha_device_trust_settings_path: "{{ item.0.item | regex_replace('/[^/]+$', '/settings.yml') }}"
+    ha_device_trust_directory_defaults: >-
+      {{
+        (
+          lookup('ansible.builtin.file', ha_device_trust_settings_path, errors='ignore')
+          | default('{}', true)
+          | from_yaml
+        ).ha_device_trust_defaults | default({})
+      }}
+
+- name: Aggregate HA device trust deletions with directory settings
+  ansible.builtin.set_fact:
+    ha_device_trust_deletions: "{{ ha_device_trust_deletions | default([]) + [ (ha_device_trust_deletion_directory_defaults | combine(item.1, recursive=True)) | combine({'state': 'absent'}, recursive=True) ] }}"
+  loop: "{{ query('subelements', ha_device_trust_deletion_include_results.results, 'ansible_facts.ha_device_trust_deletion_fragment.ha_device_trusts', {'skip_missing': True}) }}"
+  vars:
+    ha_device_trust_deletion_settings_path: "{{ item.0.item | regex_replace('/[^/]+$', '/settings.yml') }}"
+    ha_device_trust_deletion_directory_defaults: >-
+      {{
+        (
+          lookup('ansible.builtin.file', ha_device_trust_deletion_settings_path, errors='ignore')
+          | default('{}', true)
+          | from_yaml
+        ).ha_device_trust_defaults | default({})
+      }}
+
+- name: Discover HA device group fragments
+  ansible.builtin.set_fact:
+    ha_device_group_files: >-
+      {{
+        lookup(
+          'ansible.builtin.pipe',
+          "find {{ repo_root }}/vars/ha/device_groups -type f -name '*.yml' ! -name 'settings.yml' 2>/dev/null | sort"
+        ).splitlines() | reject('equalto', '') | list
+      }}
+    ha_device_group_deletion_files: >-
+      {{
+        lookup(
+          'ansible.builtin.pipe',
+          "find {{ repo_root }}/vars/ha/deletions/device_groups -type f -name '*.yml' ! -name 'settings.yml' 2>/dev/null | sort"
+        ).splitlines() | reject('equalto', '') | list
+      }}
+
+- name: Load HA device group fragments
+  ansible.builtin.include_vars:
+    file: "{{ item }}"
+    name: ha_device_group_fragment
+  loop: "{{ ha_device_group_files }}"
+  register: ha_device_group_include_results
+
+- name: Load HA device group deletion fragments
+  ansible.builtin.include_vars:
+    file: "{{ item }}"
+    name: ha_device_group_deletion_fragment
+  loop: "{{ ha_device_group_deletion_files }}"
+  register: ha_device_group_deletion_include_results
+
+- name: Aggregate HA device groups with directory settings
+  ansible.builtin.set_fact:
+    ha_device_groups: "{{ ha_device_groups | default([]) + [ ha_device_group_directory_defaults | combine(item.1, recursive=True) ] }}"
+  loop: "{{ query('subelements', ha_device_group_include_results.results, 'ansible_facts.ha_device_group_fragment.ha_device_groups', {'skip_missing': True}) }}"
+  vars:
+    ha_device_group_settings_path: "{{ item.0.item | regex_replace('/[^/]+$', '/settings.yml') }}"
+    ha_device_group_directory_defaults: >-
+      {{
+        (
+          lookup('ansible.builtin.file', ha_device_group_settings_path, errors='ignore')
+          | default('{}', true)
+          | from_yaml
+        ).ha_device_group_defaults | default({})
+      }}
+
+- name: Aggregate HA device group deletions with directory settings
+  ansible.builtin.set_fact:
+    ha_device_group_deletions: "{{ ha_device_group_deletions | default([]) + [ (ha_device_group_deletion_directory_defaults | combine(item.1, recursive=True)) | combine({'state': 'absent'}, recursive=True) ] }}"
+  loop: "{{ query('subelements', ha_device_group_deletion_include_results.results, 'ansible_facts.ha_device_group_deletion_fragment.ha_device_groups', {'skip_missing': True}) }}"
+  vars:
+    ha_device_group_deletion_settings_path: "{{ item.0.item | regex_replace('/[^/]+$', '/settings.yml') }}"
+    ha_device_group_deletion_directory_defaults: >-
+      {{
+        (
+          lookup('ansible.builtin.file', ha_device_group_deletion_settings_path, errors='ignore')
+          | default('{}', true)
+          | from_yaml
+        ).ha_device_group_defaults | default({})
+      }}
+
+- name: Discover HA device group member fragments
+  ansible.builtin.set_fact:
+    ha_device_group_member_files: >-
+      {{
+        lookup(
+          'ansible.builtin.pipe',
+          "find {{ repo_root }}/vars/ha/device_group_members -type f -name '*.yml' ! -name 'settings.yml' 2>/dev/null | sort"
+        ).splitlines() | reject('equalto', '') | list
+      }}
+    ha_device_group_member_deletion_files: >-
+      {{
+        lookup(
+          'ansible.builtin.pipe',
+          "find {{ repo_root }}/vars/ha/deletions/device_group_members -type f -name '*.yml' ! -name 'settings.yml' 2>/dev/null | sort"
+        ).splitlines() | reject('equalto', '') | list
+      }}
+
+- name: Load HA device group member fragments
+  ansible.builtin.include_vars:
+    file: "{{ item }}"
+    name: ha_device_group_member_fragment
+  loop: "{{ ha_device_group_member_files }}"
+  register: ha_device_group_member_include_results
+
+- name: Load HA device group member deletion fragments
+  ansible.builtin.include_vars:
+    file: "{{ item }}"
+    name: ha_device_group_member_deletion_fragment
+  loop: "{{ ha_device_group_member_deletion_files }}"
+  register: ha_device_group_member_deletion_include_results
+
+- name: Aggregate HA device group members with directory settings
+  ansible.builtin.set_fact:
+    ha_device_group_members: "{{ ha_device_group_members | default([]) + [ ha_device_group_member_directory_defaults | combine(item.1, recursive=True) ] }}"
+  loop: "{{ query('subelements', ha_device_group_member_include_results.results, 'ansible_facts.ha_device_group_member_fragment.ha_device_group_members', {'skip_missing': True}) }}"
+  vars:
+    ha_device_group_member_settings_path: "{{ item.0.item | regex_replace('/[^/]+$', '/settings.yml') }}"
+    ha_device_group_member_directory_defaults: >-
+      {{
+        (
+          lookup('ansible.builtin.file', ha_device_group_member_settings_path, errors='ignore')
+          | default('{}', true)
+          | from_yaml
+        ).ha_device_group_member_defaults | default({})
+      }}
+
+- name: Aggregate HA device group member deletions with directory settings
+  ansible.builtin.set_fact:
+    ha_device_group_member_deletions: "{{ ha_device_group_member_deletions | default([]) + [ (ha_device_group_member_deletion_directory_defaults | combine(item.1, recursive=True)) | combine({'state': 'absent'}, recursive=True) ] }}"
+  loop: "{{ query('subelements', ha_device_group_member_deletion_include_results.results, 'ansible_facts.ha_device_group_member_deletion_fragment.ha_device_group_members', {'skip_missing': True}) }}"
+  vars:
+    ha_device_group_member_deletion_settings_path: "{{ item.0.item | regex_replace('/[^/]+$', '/settings.yml') }}"
+    ha_device_group_member_deletion_directory_defaults: >-
+      {{
+        (
+          lookup('ansible.builtin.file', ha_device_group_member_deletion_settings_path, errors='ignore')
+          | default('{}', true)
+          | from_yaml
+        ).ha_device_group_member_defaults | default({})
+      }}
+
+- name: Discover HA traffic group fragments
+  ansible.builtin.set_fact:
+    ha_traffic_group_files: >-
+      {{
+        lookup(
+          'ansible.builtin.pipe',
+          "find {{ repo_root }}/vars/ha/traffic_groups -type f -name '*.yml' ! -name 'settings.yml' 2>/dev/null | sort"
+        ).splitlines() | reject('equalto', '') | list
+      }}
+    ha_traffic_group_deletion_files: >-
+      {{
+        lookup(
+          'ansible.builtin.pipe',
+          "find {{ repo_root }}/vars/ha/deletions/traffic_groups -type f -name '*.yml' ! -name 'settings.yml' 2>/dev/null | sort"
+        ).splitlines() | reject('equalto', '') | list
+      }}
+
+- name: Load HA traffic group fragments
+  ansible.builtin.include_vars:
+    file: "{{ item }}"
+    name: ha_traffic_group_fragment
+  loop: "{{ ha_traffic_group_files }}"
+  register: ha_traffic_group_include_results
+
+- name: Load HA traffic group deletion fragments
+  ansible.builtin.include_vars:
+    file: "{{ item }}"
+    name: ha_traffic_group_deletion_fragment
+  loop: "{{ ha_traffic_group_deletion_files }}"
+  register: ha_traffic_group_deletion_include_results
+
+- name: Aggregate HA traffic groups with directory settings
+  ansible.builtin.set_fact:
+    ha_traffic_groups: "{{ ha_traffic_groups | default([]) + [ ha_traffic_group_directory_defaults | combine(item.1, recursive=True) ] }}"
+  loop: "{{ query('subelements', ha_traffic_group_include_results.results, 'ansible_facts.ha_traffic_group_fragment.ha_traffic_groups', {'skip_missing': True}) }}"
+  vars:
+    ha_traffic_group_settings_path: "{{ item.0.item | regex_replace('/[^/]+$', '/settings.yml') }}"
+    ha_traffic_group_directory_defaults: >-
+      {{
+        (
+          lookup('ansible.builtin.file', ha_traffic_group_settings_path, errors='ignore')
+          | default('{}', true)
+          | from_yaml
+        ).ha_traffic_group_defaults | default({})
+      }}
+
+- name: Aggregate HA traffic group deletions with directory settings
+  ansible.builtin.set_fact:
+    ha_traffic_group_deletions: "{{ ha_traffic_group_deletions | default([]) + [ (ha_traffic_group_deletion_directory_defaults | combine(item.1, recursive=True)) | combine({'state': 'absent'}, recursive=True) ] }}"
+  loop: "{{ query('subelements', ha_traffic_group_deletion_include_results.results, 'ansible_facts.ha_traffic_group_deletion_fragment.ha_traffic_groups', {'skip_missing': True}) }}"
+  vars:
+    ha_traffic_group_deletion_settings_path: "{{ item.0.item | regex_replace('/[^/]+$', '/settings.yml') }}"
+    ha_traffic_group_deletion_directory_defaults: >-
+      {{
+        (
+          lookup('ansible.builtin.file', ha_traffic_group_deletion_settings_path, errors='ignore')
+          | default('{}', true)
+          | from_yaml
+        ).ha_traffic_group_defaults | default({})
+      }}
+
+- name: Discover HA device connectivity fragments
+  ansible.builtin.set_fact:
+    ha_device_connectivity_files: >-
+      {{
+        lookup(
+          'ansible.builtin.pipe',
+          "find {{ repo_root }}/vars/ha/device_connectivity -type f -name '*.yml' ! -name 'settings.yml' 2>/dev/null | sort"
+        ).splitlines() | reject('equalto', '') | list
+      }}
+    ha_device_connectivity_deletion_files: >-
+      {{
+        lookup(
+          'ansible.builtin.pipe',
+          "find {{ repo_root }}/vars/ha/deletions/device_connectivity -type f -name '*.yml' ! -name 'settings.yml' 2>/dev/null | sort"
+        ).splitlines() | reject('equalto', '') | list
+      }}
+
+- name: Load HA device connectivity fragments
+  ansible.builtin.include_vars:
+    file: "{{ item }}"
+    name: ha_device_connectivity_fragment
+  loop: "{{ ha_device_connectivity_files }}"
+  register: ha_device_connectivity_include_results
+
+- name: Load HA device connectivity deletion fragments
+  ansible.builtin.include_vars:
+    file: "{{ item }}"
+    name: ha_device_connectivity_deletion_fragment
+  loop: "{{ ha_device_connectivity_deletion_files }}"
+  register: ha_device_connectivity_deletion_include_results
+
+- name: Aggregate HA device connectivity with directory settings
+  ansible.builtin.set_fact:
+    ha_device_connectivity: "{{ ha_device_connectivity | default([]) + [ ha_device_connectivity_directory_defaults | combine(item.1, recursive=True) ] }}"
+  loop: "{{ query('subelements', ha_device_connectivity_include_results.results, 'ansible_facts.ha_device_connectivity_fragment.ha_device_connectivity', {'skip_missing': True}) }}"
+  vars:
+    ha_device_connectivity_settings_path: "{{ item.0.item | regex_replace('/[^/]+$', '/settings.yml') }}"
+    ha_device_connectivity_directory_defaults: >-
+      {{
+        (
+          lookup('ansible.builtin.file', ha_device_connectivity_settings_path, errors='ignore')
+          | default('{}', true)
+          | from_yaml
+        ).ha_device_connectivity_defaults | default({})
+      }}
+
+- name: Aggregate HA device connectivity deletions with directory settings
+  ansible.builtin.set_fact:
+    ha_device_connectivity_deletions: "{{ ha_device_connectivity_deletions | default([]) + [ (ha_device_connectivity_deletion_directory_defaults | combine(item.1, recursive=True)) | combine({'state': 'absent'}, recursive=True) ] }}"
+  loop: "{{ query('subelements', ha_device_connectivity_deletion_include_results.results, 'ansible_facts.ha_device_connectivity_deletion_fragment.ha_device_connectivity', {'skip_missing': True}) }}"
+  vars:
+    ha_device_connectivity_deletion_settings_path: "{{ item.0.item | regex_replace('/[^/]+$', '/settings.yml') }}"
+    ha_device_connectivity_deletion_directory_defaults: >-
+      {{
+        (
+          lookup('ansible.builtin.file', ha_device_connectivity_deletion_settings_path, errors='ignore')
+          | default('{}', true)
+          | from_yaml
+        ).ha_device_connectivity_defaults | default({})
+      }}
+
+- name: Discover HA group fragments
+  ansible.builtin.set_fact:
+    ha_group_files: >-
+      {{
+        lookup(
+          'ansible.builtin.pipe',
+          "find {{ repo_root }}/vars/ha/ha_groups -type f -name '*.yml' ! -name 'settings.yml' 2>/dev/null | sort"
+        ).splitlines() | reject('equalto', '') | list
+      }}
+    ha_group_deletion_files: >-
+      {{
+        lookup(
+          'ansible.builtin.pipe',
+          "find {{ repo_root }}/vars/ha/deletions/ha_groups -type f -name '*.yml' ! -name 'settings.yml' 2>/dev/null | sort"
+        ).splitlines() | reject('equalto', '') | list
+      }}
+
+- name: Load HA group fragments
+  ansible.builtin.include_vars:
+    file: "{{ item }}"
+    name: ha_group_fragment
+  loop: "{{ ha_group_files }}"
+  register: ha_group_include_results
+
+- name: Load HA group deletion fragments
+  ansible.builtin.include_vars:
+    file: "{{ item }}"
+    name: ha_group_deletion_fragment
+  loop: "{{ ha_group_deletion_files }}"
+  register: ha_group_deletion_include_results
+
+- name: Aggregate HA groups with directory settings
+  ansible.builtin.set_fact:
+    ha_groups: "{{ ha_groups | default([]) + [ ha_group_directory_defaults | combine(item.1, recursive=True) ] }}"
+  loop: "{{ query('subelements', ha_group_include_results.results, 'ansible_facts.ha_group_fragment.ha_groups', {'skip_missing': True}) }}"
+  vars:
+    ha_group_settings_path: "{{ item.0.item | regex_replace('/[^/]+$', '/settings.yml') }}"
+    ha_group_directory_defaults: >-
+      {{
+        (
+          lookup('ansible.builtin.file', ha_group_settings_path, errors='ignore')
+          | default('{}', true)
+          | from_yaml
+        ).ha_group_defaults | default({})
+      }}
+
+- name: Aggregate HA group deletions with directory settings
+  ansible.builtin.set_fact:
+    ha_group_deletions: "{{ ha_group_deletions | default([]) + [ (ha_group_deletion_directory_defaults | combine(item.1, recursive=True)) | combine({'state': 'absent'}, recursive=True) ] }}"
+  loop: "{{ query('subelements', ha_group_deletion_include_results.results, 'ansible_facts.ha_group_deletion_fragment.ha_groups', {'skip_missing': True}) }}"
+  vars:
+    ha_group_deletion_settings_path: "{{ item.0.item | regex_replace('/[^/]+$', '/settings.yml') }}"
+    ha_group_deletion_directory_defaults: >-
+      {{
+        (
+          lookup('ansible.builtin.file', ha_group_deletion_settings_path, errors='ignore')
+          | default('{}', true)
+          | from_yaml
+        ).ha_group_defaults | default({})
+      }}
+
+- name: Discover HA config sync action fragments
+  ansible.builtin.set_fact:
+    ha_configsync_action_files: >-
+      {{
+        lookup(
+          'ansible.builtin.pipe',
+          "find {{ repo_root }}/vars/ha/configsync_actions -type f -name '*.yml' ! -name 'settings.yml' 2>/dev/null | sort"
+        ).splitlines() | reject('equalto', '') | list
+      }}
+
+- name: Load HA config sync action fragments
+  ansible.builtin.include_vars:
+    file: "{{ item }}"
+    name: ha_configsync_action_fragment
+  loop: "{{ ha_configsync_action_files }}"
+  register: ha_configsync_action_include_results
+
+- name: Aggregate HA config sync actions with directory settings
+  ansible.builtin.set_fact:
+    ha_configsync_actions: "{{ ha_configsync_actions | default([]) + [ ha_configsync_action_directory_defaults | combine(item.1, recursive=True) ] }}"
+  loop: "{{ query('subelements', ha_configsync_action_include_results.results, 'ansible_facts.ha_configsync_action_fragment.ha_configsync_actions', {'skip_missing': True}) }}"
+  vars:
+    ha_configsync_action_settings_path: "{{ item.0.item | regex_replace('/[^/]+$', '/settings.yml') }}"
+    ha_configsync_action_directory_defaults: >-
+      {{
+        (
+          lookup('ansible.builtin.file', ha_configsync_action_settings_path, errors='ignore')
+          | default('{}', true)
+          | from_yaml
+        ).ha_configsync_action_defaults | default({})
+      }}
+

@@ -1,0 +1,223 @@
+- name: Classify APM ACL operations
+  ansible.builtin.set_fact:
+    apm_acls_delete: >-
+      {{
+        ((apm_acls | default([])) + (apm_acl_deletions | default([])))
+        | selectattr('state', 'defined')
+        | selectattr('state', 'equalto', 'absent')
+        | list
+      }}
+    apm_acls_present: >-
+      {{
+        (apm_acls | default([]))
+        | rejectattr('state', 'defined')
+        | list
+        +
+        (
+          (apm_acls | default([]))
+          | selectattr('state', 'defined')
+          | rejectattr('state', 'equalto', 'absent')
+          | list
+        )
+      }}
+
+- name: Classify APM auth server operations
+  ansible.builtin.set_fact:
+    apm_auth_servers_delete: >-
+      {{
+        ((apm_auth_servers | default([])) + (apm_auth_server_deletions | default([])))
+        | selectattr('state', 'defined')
+        | selectattr('state', 'equalto', 'absent')
+        | list
+      }}
+    apm_auth_servers_present: >-
+      {{
+        (apm_auth_servers | default([]))
+        | rejectattr('state', 'defined')
+        | list
+        +
+        (
+          (apm_auth_servers | default([]))
+          | selectattr('state', 'defined')
+          | rejectattr('state', 'equalto', 'absent')
+          | list
+        )
+      }}
+
+- name: Classify APM SSO config operations
+  ansible.builtin.set_fact:
+    apm_sso_configs_delete: >-
+      {{
+        ((apm_sso_configs | default([])) + (apm_sso_config_deletions | default([])))
+        | selectattr('state', 'defined')
+        | selectattr('state', 'equalto', 'absent')
+        | list
+      }}
+    apm_sso_configs_present: >-
+      {{
+        (apm_sso_configs | default([]))
+        | rejectattr('state', 'defined')
+        | list
+        +
+        (
+          (apm_sso_configs | default([]))
+          | selectattr('state', 'defined')
+          | rejectattr('state', 'equalto', 'absent')
+          | list
+        )
+      }}
+
+- name: Classify APM resource operations
+  ansible.builtin.set_fact:
+    apm_resources_delete: >-
+      {{
+        ((apm_resources | default([])) + (apm_resource_deletions | default([])))
+        | selectattr('state', 'defined')
+        | selectattr('state', 'equalto', 'absent')
+        | list
+      }}
+    apm_resources_present: >-
+      {{
+        (apm_resources | default([]))
+        | rejectattr('state', 'defined')
+        | list
+        +
+        (
+          (apm_resources | default([]))
+          | selectattr('state', 'defined')
+          | rejectattr('state', 'equalto', 'absent')
+          | list
+        )
+      }}
+
+- name: Classify APM policy node operations
+  ansible.builtin.set_fact:
+    apm_policy_nodes_delete: >-
+      {{
+        ((apm_policy_nodes | default([])) + (apm_policy_node_deletions | default([])))
+        | selectattr('state', 'defined')
+        | selectattr('state', 'equalto', 'absent')
+        | list
+      }}
+    apm_policy_nodes_present: >-
+      {{
+        (apm_policy_nodes | default([]))
+        | rejectattr('state', 'defined')
+        | list
+        +
+        (
+          (apm_policy_nodes | default([]))
+          | selectattr('state', 'defined')
+          | rejectattr('state', 'equalto', 'absent')
+          | list
+        )
+      }}
+
+- name: Classify APM access profile operations
+  ansible.builtin.set_fact:
+    apm_access_profiles_delete: >-
+      {{
+        ((apm_access_profiles | default([])) + (apm_access_profile_deletions | default([])))
+        | selectattr('state', 'defined')
+        | selectattr('state', 'equalto', 'absent')
+        | list
+      }}
+    apm_access_profiles_present: >-
+      {{
+        (apm_access_profiles | default([]))
+        | rejectattr('state', 'defined')
+        | list
+        +
+        (
+          (apm_access_profiles | default([]))
+          | selectattr('state', 'defined')
+          | rejectattr('state', 'equalto', 'absent')
+          | list
+        )
+      }}
+
+- name: Classify APM per-session policy operations
+  ansible.builtin.set_fact:
+    apm_per_session_policies_delete: >-
+      {{
+        ((apm_per_session_policies | default([])) + (apm_per_session_policy_deletions | default([])))
+        | selectattr('state', 'defined')
+        | selectattr('state', 'equalto', 'absent')
+        | list
+      }}
+    apm_per_session_policies_present: >-
+      {{
+        (apm_per_session_policies | default([]))
+        | rejectattr('state', 'defined')
+        | list
+        +
+        (
+          (apm_per_session_policies | default([]))
+          | selectattr('state', 'defined')
+          | rejectattr('state', 'equalto', 'absent')
+          | list
+        )
+      }}
+
+- name: Classify APM macro operations
+  ansible.builtin.set_fact:
+    apm_macros_delete: >-
+      {{
+        ((apm_macros | default([])) + (apm_macro_deletions | default([])))
+        | selectattr('state', 'defined')
+        | selectattr('state', 'equalto', 'absent')
+        | list
+      }}
+    apm_macros_present: >-
+      {{
+        (apm_macros | default([]))
+        | rejectattr('state', 'defined')
+        | list
+        +
+        (
+          (apm_macros | default([]))
+          | selectattr('state', 'defined')
+          | rejectattr('state', 'equalto', 'absent')
+          | list
+        )
+      }}
+
+- name: Initialize flattened APM per-session policy nodes
+  ansible.builtin.set_fact:
+    apm_per_session_nodes_present: []
+
+- name: Flatten APM per-session policy nodes for tmsh tasks
+  ansible.builtin.set_fact:
+    apm_per_session_nodes_present: >-
+      {{
+        (apm_per_session_nodes_present | default([])) + [
+          {
+            'partition': item.0.partition | default('Common'),
+            'policy': item.0.name,
+            'name': item.1.name,
+            'type': item.1.type,
+            'properties': item.1.properties | default(item.1.config | default({}))
+          }
+        ]
+      }}
+  loop: "{{ query('subelements', apm_per_session_policies_present | default([]), 'nodes', {'skip_missing': True}) }}"
+
+- name: Initialize flattened APM macro nodes
+  ansible.builtin.set_fact:
+    apm_macro_nodes_present: []
+
+- name: Flatten APM macro nodes for tmsh tasks
+  ansible.builtin.set_fact:
+    apm_macro_nodes_present: >-
+      {{
+        (apm_macro_nodes_present | default([])) + [
+          {
+            'partition': item.0.partition | default('Common'),
+            'macro': item.0.name,
+            'name': item.1.name,
+            'type': item.1.type,
+            'properties': item.1.properties | default(item.1.config | default({}))
+          }
+        ]
+      }}
+  loop: "{{ query('subelements', apm_macros_present | default([]), 'nodes', {'skip_missing': True}) }}"

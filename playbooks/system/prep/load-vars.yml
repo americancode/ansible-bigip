@@ -1,0 +1,613 @@
+- name: Discover system hostname fragments
+  ansible.builtin.set_fact:
+    system_hostname_files: >-
+      {{
+        lookup(
+          'ansible.builtin.pipe',
+          "find {{ repo_root }}/vars/system/hostname -type f -name '*.yml' ! -name 'settings.yml' 2>/dev/null | sort"
+        ).splitlines() | reject('equalto', '') | list
+      }}
+
+- name: Load system hostname fragments
+  ansible.builtin.include_vars:
+    file: "{{ item }}"
+    name: system_hostname_fragment
+  loop: "{{ system_hostname_files }}"
+  register: system_hostname_include_results
+
+- name: Aggregate system hostnames with directory settings
+  ansible.builtin.set_fact:
+    system_hostnames: "{{ system_hostnames | default([]) + [ system_hostname_directory_defaults | combine(item.1, recursive=True) ] }}"
+  loop: "{{ query('subelements', system_hostname_include_results.results, 'ansible_facts.system_hostname_fragment.system_hostnames', {'skip_missing': True}) }}"
+  vars:
+    system_hostname_settings_path: "{{ item.0.item | regex_replace('/[^/]+$', '/settings.yml') }}"
+    system_hostname_directory_defaults: >-
+      {{
+        (
+          lookup('ansible.builtin.file', system_hostname_settings_path, errors='ignore')
+          | default('{}', true)
+          | from_yaml
+        ).system_hostname_defaults | default({})
+      }}
+
+- name: Discover system DNS fragments
+  ansible.builtin.set_fact:
+    system_dns_files: >-
+      {{
+        lookup(
+          'ansible.builtin.pipe',
+          "find {{ repo_root }}/vars/system/dns -type f -name '*.yml' ! -name 'settings.yml' 2>/dev/null | sort"
+        ).splitlines() | reject('equalto', '') | list
+      }}
+    system_dns_deletion_files: >-
+      {{
+        lookup(
+          'ansible.builtin.pipe',
+          "find {{ repo_root }}/vars/system/deletions/dns -type f -name '*.yml' ! -name 'settings.yml' 2>/dev/null | sort"
+        ).splitlines() | reject('equalto', '') | list
+      }}
+
+- name: Load system DNS fragments
+  ansible.builtin.include_vars:
+    file: "{{ item }}"
+    name: system_dns_fragment
+  loop: "{{ system_dns_files }}"
+  register: system_dns_include_results
+
+- name: Load system DNS deletion fragments
+  ansible.builtin.include_vars:
+    file: "{{ item }}"
+    name: system_dns_deletion_fragment
+  loop: "{{ system_dns_deletion_files }}"
+  register: system_dns_deletion_include_results
+
+- name: Aggregate system DNS with directory settings
+  ansible.builtin.set_fact:
+    system_dns: "{{ system_dns | default([]) + [ system_dns_directory_defaults | combine(item.1, recursive=True) ] }}"
+  loop: "{{ query('subelements', system_dns_include_results.results, 'ansible_facts.system_dns_fragment.system_dns', {'skip_missing': True}) }}"
+  vars:
+    system_dns_settings_path: "{{ item.0.item | regex_replace('/[^/]+$', '/settings.yml') }}"
+    system_dns_directory_defaults: >-
+      {{
+        (
+          lookup('ansible.builtin.file', system_dns_settings_path, errors='ignore')
+          | default('{}', true)
+          | from_yaml
+        ).system_dns_defaults | default({})
+      }}
+
+- name: Aggregate system DNS deletions with directory settings
+  ansible.builtin.set_fact:
+    system_dns_deletions: "{{ system_dns_deletions | default([]) + [ (system_dns_deletion_directory_defaults | combine(item.1, recursive=True)) | combine({'state': 'absent'}, recursive=True) ] }}"
+  loop: "{{ query('subelements', system_dns_deletion_include_results.results, 'ansible_facts.system_dns_deletion_fragment.system_dns', {'skip_missing': True}) }}"
+  vars:
+    system_dns_deletion_settings_path: "{{ item.0.item | regex_replace('/[^/]+$', '/settings.yml') }}"
+    system_dns_deletion_directory_defaults: >-
+      {{
+        (
+          lookup('ansible.builtin.file', system_dns_deletion_settings_path, errors='ignore')
+          | default('{}', true)
+          | from_yaml
+        ).system_dns_defaults | default({})
+      }}
+
+- name: Discover system NTP fragments
+  ansible.builtin.set_fact:
+    system_ntp_files: >-
+      {{
+        lookup(
+          'ansible.builtin.pipe',
+          "find {{ repo_root }}/vars/system/ntp -type f -name '*.yml' ! -name 'settings.yml' 2>/dev/null | sort"
+        ).splitlines() | reject('equalto', '') | list
+      }}
+    system_ntp_deletion_files: >-
+      {{
+        lookup(
+          'ansible.builtin.pipe',
+          "find {{ repo_root }}/vars/system/deletions/ntp -type f -name '*.yml' ! -name 'settings.yml' 2>/dev/null | sort"
+        ).splitlines() | reject('equalto', '') | list
+      }}
+
+- name: Load system NTP fragments
+  ansible.builtin.include_vars:
+    file: "{{ item }}"
+    name: system_ntp_fragment
+  loop: "{{ system_ntp_files }}"
+  register: system_ntp_include_results
+
+- name: Load system NTP deletion fragments
+  ansible.builtin.include_vars:
+    file: "{{ item }}"
+    name: system_ntp_deletion_fragment
+  loop: "{{ system_ntp_deletion_files }}"
+  register: system_ntp_deletion_include_results
+
+- name: Aggregate system NTP with directory settings
+  ansible.builtin.set_fact:
+    system_ntp: "{{ system_ntp | default([]) + [ system_ntp_directory_defaults | combine(item.1, recursive=True) ] }}"
+  loop: "{{ query('subelements', system_ntp_include_results.results, 'ansible_facts.system_ntp_fragment.system_ntp', {'skip_missing': True}) }}"
+  vars:
+    system_ntp_settings_path: "{{ item.0.item | regex_replace('/[^/]+$', '/settings.yml') }}"
+    system_ntp_directory_defaults: >-
+      {{
+        (
+          lookup('ansible.builtin.file', system_ntp_settings_path, errors='ignore')
+          | default('{}', true)
+          | from_yaml
+        ).system_ntp_defaults | default({})
+      }}
+
+- name: Aggregate system NTP deletions with directory settings
+  ansible.builtin.set_fact:
+    system_ntp_deletions: "{{ system_ntp_deletions | default([]) + [ (system_ntp_deletion_directory_defaults | combine(item.1, recursive=True)) | combine({'state': 'absent'}, recursive=True) ] }}"
+  loop: "{{ query('subelements', system_ntp_deletion_include_results.results, 'ansible_facts.system_ntp_deletion_fragment.system_ntp', {'skip_missing': True}) }}"
+  vars:
+    system_ntp_deletion_settings_path: "{{ item.0.item | regex_replace('/[^/]+$', '/settings.yml') }}"
+    system_ntp_deletion_directory_defaults: >-
+      {{
+        (
+          lookup('ansible.builtin.file', system_ntp_deletion_settings_path, errors='ignore')
+          | default('{}', true)
+          | from_yaml
+        ).system_ntp_defaults | default({})
+      }}
+
+- name: Discover system provisioning fragments
+  ansible.builtin.set_fact:
+    system_provisioning_files: >-
+      {{
+        lookup(
+          'ansible.builtin.pipe',
+          "find {{ repo_root }}/vars/system/provisioning -type f -name '*.yml' ! -name 'settings.yml' 2>/dev/null | sort"
+        ).splitlines() | reject('equalto', '') | list
+      }}
+    system_provisioning_deletion_files: >-
+      {{
+        lookup(
+          'ansible.builtin.pipe',
+          "find {{ repo_root }}/vars/system/deletions/provisioning -type f -name '*.yml' ! -name 'settings.yml' 2>/dev/null | sort"
+        ).splitlines() | reject('equalto', '') | list
+      }}
+
+- name: Load system provisioning fragments
+  ansible.builtin.include_vars:
+    file: "{{ item }}"
+    name: system_provisioning_fragment
+  loop: "{{ system_provisioning_files }}"
+  register: system_provisioning_include_results
+
+- name: Load system provisioning deletion fragments
+  ansible.builtin.include_vars:
+    file: "{{ item }}"
+    name: system_provisioning_deletion_fragment
+  loop: "{{ system_provisioning_deletion_files }}"
+  register: system_provisioning_deletion_include_results
+
+- name: Aggregate system provisioning with directory settings
+  ansible.builtin.set_fact:
+    system_provisioning: "{{ system_provisioning | default([]) + [ system_provisioning_directory_defaults | combine(item.1, recursive=True) ] }}"
+  loop: "{{ query('subelements', system_provisioning_include_results.results, 'ansible_facts.system_provisioning_fragment.system_provisioning', {'skip_missing': True}) }}"
+  vars:
+    system_provisioning_settings_path: "{{ item.0.item | regex_replace('/[^/]+$', '/settings.yml') }}"
+    system_provisioning_directory_defaults: >-
+      {{
+        (
+          lookup('ansible.builtin.file', system_provisioning_settings_path, errors='ignore')
+          | default('{}', true)
+          | from_yaml
+        ).system_provisioning_defaults | default({})
+      }}
+
+- name: Aggregate system provisioning deletions with directory settings
+  ansible.builtin.set_fact:
+    system_provisioning_deletions: "{{ system_provisioning_deletions | default([]) + [ (system_provisioning_deletion_directory_defaults | combine(item.1, recursive=True)) | combine({'state': 'absent'}, recursive=True) ] }}"
+  loop: "{{ query('subelements', system_provisioning_deletion_include_results.results, 'ansible_facts.system_provisioning_deletion_fragment.system_provisioning', {'skip_missing': True}) }}"
+  vars:
+    system_provisioning_deletion_settings_path: "{{ item.0.item | regex_replace('/[^/]+$', '/settings.yml') }}"
+    system_provisioning_deletion_directory_defaults: >-
+      {{
+        (
+          lookup('ansible.builtin.file', system_provisioning_deletion_settings_path, errors='ignore')
+          | default('{}', true)
+          | from_yaml
+        ).system_provisioning_defaults | default({})
+      }}
+
+- name: Discover system user fragments
+  ansible.builtin.set_fact:
+    system_user_files: >-
+      {{
+        lookup(
+          'ansible.builtin.pipe',
+          "find {{ repo_root }}/vars/system/users -type f -name '*.yml' ! -name 'settings.yml' 2>/dev/null | sort"
+        ).splitlines() | reject('equalto', '') | list
+      }}
+    system_user_deletion_files: >-
+      {{
+        lookup(
+          'ansible.builtin.pipe',
+          "find {{ repo_root }}/vars/system/deletions/users -type f -name '*.yml' ! -name 'settings.yml' 2>/dev/null | sort"
+        ).splitlines() | reject('equalto', '') | list
+      }}
+
+- name: Load system user fragments
+  ansible.builtin.include_vars:
+    file: "{{ item }}"
+    name: system_user_fragment
+  loop: "{{ system_user_files }}"
+  register: system_user_include_results
+
+- name: Load system user deletion fragments
+  ansible.builtin.include_vars:
+    file: "{{ item }}"
+    name: system_user_deletion_fragment
+  loop: "{{ system_user_deletion_files }}"
+  register: system_user_deletion_include_results
+
+- name: Aggregate system users with directory settings
+  ansible.builtin.set_fact:
+    system_users: "{{ system_users | default([]) + [ system_user_directory_defaults | combine(item.1, recursive=True) ] }}"
+  loop: "{{ query('subelements', system_user_include_results.results, 'ansible_facts.system_user_fragment.system_users', {'skip_missing': True}) }}"
+  vars:
+    system_user_settings_path: "{{ item.0.item | regex_replace('/[^/]+$', '/settings.yml') }}"
+    system_user_directory_defaults: >-
+      {{
+        (
+          lookup('ansible.builtin.file', system_user_settings_path, errors='ignore')
+          | default('{}', true)
+          | from_yaml
+        ).system_user_defaults | default({})
+      }}
+
+- name: Aggregate system user deletions with directory settings
+  ansible.builtin.set_fact:
+    system_user_deletions: "{{ system_user_deletions | default([]) + [ (system_user_deletion_directory_defaults | combine(item.1, recursive=True)) | combine({'state': 'absent'}, recursive=True) ] }}"
+  loop: "{{ query('subelements', system_user_deletion_include_results.results, 'ansible_facts.system_user_deletion_fragment.system_users', {'skip_missing': True}) }}"
+  vars:
+    system_user_deletion_settings_path: "{{ item.0.item | regex_replace('/[^/]+$', '/settings.yml') }}"
+    system_user_deletion_directory_defaults: >-
+      {{
+        (
+          lookup('ansible.builtin.file', system_user_deletion_settings_path, errors='ignore')
+          | default('{}', true)
+          | from_yaml
+        ).system_user_defaults | default({})
+      }}
+
+- name: Discover system LDAP auth fragments
+  ansible.builtin.set_fact:
+    system_auth_ldap_files: >-
+      {{
+        lookup(
+          'ansible.builtin.pipe',
+          "find {{ repo_root }}/vars/system/auth/ldap -type f -name '*.yml' ! -name 'settings.yml' 2>/dev/null | sort"
+        ).splitlines() | reject('equalto', '') | list
+      }}
+    system_auth_ldap_deletion_files: >-
+      {{
+        lookup(
+          'ansible.builtin.pipe',
+          "find {{ repo_root }}/vars/system/deletions/auth/ldap -type f -name '*.yml' ! -name 'settings.yml' 2>/dev/null | sort"
+        ).splitlines() | reject('equalto', '') | list
+      }}
+
+- name: Load system LDAP auth fragments
+  ansible.builtin.include_vars:
+    file: "{{ item }}"
+    name: system_auth_ldap_fragment
+  loop: "{{ system_auth_ldap_files }}"
+  register: system_auth_ldap_include_results
+
+- name: Load system LDAP auth deletion fragments
+  ansible.builtin.include_vars:
+    file: "{{ item }}"
+    name: system_auth_ldap_deletion_fragment
+  loop: "{{ system_auth_ldap_deletion_files }}"
+  register: system_auth_ldap_deletion_include_results
+
+- name: Aggregate system LDAP auth with directory settings
+  ansible.builtin.set_fact:
+    system_auth_ldap: "{{ system_auth_ldap | default([]) + [ system_auth_ldap_directory_defaults | combine(item.1, recursive=True) ] }}"
+  loop: "{{ query('subelements', system_auth_ldap_include_results.results, 'ansible_facts.system_auth_ldap_fragment.system_auth_ldap', {'skip_missing': True}) }}"
+  vars:
+    system_auth_ldap_settings_path: "{{ item.0.item | regex_replace('/[^/]+$', '/settings.yml') }}"
+    system_auth_ldap_directory_defaults: >-
+      {{
+        (
+          lookup('ansible.builtin.file', system_auth_ldap_settings_path, errors='ignore')
+          | default('{}', true)
+          | from_yaml
+        ).system_auth_ldap_defaults | default({})
+      }}
+
+- name: Aggregate system LDAP auth deletions with directory settings
+  ansible.builtin.set_fact:
+    system_auth_ldap_deletions: "{{ system_auth_ldap_deletions | default([]) + [ (system_auth_ldap_deletion_directory_defaults | combine(item.1, recursive=True)) | combine({'state': 'absent'}, recursive=True) ] }}"
+  loop: "{{ query('subelements', system_auth_ldap_deletion_include_results.results, 'ansible_facts.system_auth_ldap_deletion_fragment.system_auth_ldap', {'skip_missing': True}) }}"
+  vars:
+    system_auth_ldap_deletion_settings_path: "{{ item.0.item | regex_replace('/[^/]+$', '/settings.yml') }}"
+    system_auth_ldap_deletion_directory_defaults: >-
+      {{
+        (
+          lookup('ansible.builtin.file', system_auth_ldap_deletion_settings_path, errors='ignore')
+          | default('{}', true)
+          | from_yaml
+        ).system_auth_ldap_defaults | default({})
+      }}
+
+- name: Discover system TACACS auth fragments
+  ansible.builtin.set_fact:
+    system_auth_tacacs_files: >-
+      {{
+        lookup(
+          'ansible.builtin.pipe',
+          "find {{ repo_root }}/vars/system/auth/tacacs -type f -name '*.yml' ! -name 'settings.yml' 2>/dev/null | sort"
+        ).splitlines() | reject('equalto', '') | list
+      }}
+    system_auth_tacacs_deletion_files: >-
+      {{
+        lookup(
+          'ansible.builtin.pipe',
+          "find {{ repo_root }}/vars/system/deletions/auth/tacacs -type f -name '*.yml' ! -name 'settings.yml' 2>/dev/null | sort"
+        ).splitlines() | reject('equalto', '') | list
+      }}
+
+- name: Load system TACACS auth fragments
+  ansible.builtin.include_vars:
+    file: "{{ item }}"
+    name: system_auth_tacacs_fragment
+  loop: "{{ system_auth_tacacs_files }}"
+  register: system_auth_tacacs_include_results
+
+- name: Load system TACACS auth deletion fragments
+  ansible.builtin.include_vars:
+    file: "{{ item }}"
+    name: system_auth_tacacs_deletion_fragment
+  loop: "{{ system_auth_tacacs_deletion_files }}"
+  register: system_auth_tacacs_deletion_include_results
+
+- name: Aggregate system TACACS auth with directory settings
+  ansible.builtin.set_fact:
+    system_auth_tacacs: "{{ system_auth_tacacs | default([]) + [ system_auth_tacacs_directory_defaults | combine(item.1, recursive=True) ] }}"
+  loop: "{{ query('subelements', system_auth_tacacs_include_results.results, 'ansible_facts.system_auth_tacacs_fragment.system_auth_tacacs', {'skip_missing': True}) }}"
+  vars:
+    system_auth_tacacs_settings_path: "{{ item.0.item | regex_replace('/[^/]+$', '/settings.yml') }}"
+    system_auth_tacacs_directory_defaults: >-
+      {{
+        (
+          lookup('ansible.builtin.file', system_auth_tacacs_settings_path, errors='ignore')
+          | default('{}', true)
+          | from_yaml
+        ).system_auth_tacacs_defaults | default({})
+      }}
+
+- name: Aggregate system TACACS auth deletions with directory settings
+  ansible.builtin.set_fact:
+    system_auth_tacacs_deletions: "{{ system_auth_tacacs_deletions | default([]) + [ (system_auth_tacacs_deletion_directory_defaults | combine(item.1, recursive=True)) | combine({'state': 'absent'}, recursive=True) ] }}"
+  loop: "{{ query('subelements', system_auth_tacacs_deletion_include_results.results, 'ansible_facts.system_auth_tacacs_deletion_fragment.system_auth_tacacs', {'skip_missing': True}) }}"
+  vars:
+    system_auth_tacacs_deletion_settings_path: "{{ item.0.item | regex_replace('/[^/]+$', '/settings.yml') }}"
+    system_auth_tacacs_deletion_directory_defaults: >-
+      {{
+        (
+          lookup('ansible.builtin.file', system_auth_tacacs_deletion_settings_path, errors='ignore')
+          | default('{}', true)
+          | from_yaml
+        ).system_auth_tacacs_defaults | default({})
+      }}
+
+- name: Discover system RADIUS server fragments
+  ansible.builtin.set_fact:
+    system_auth_radius_server_files: >-
+      {{
+        lookup(
+          'ansible.builtin.pipe',
+          "find {{ repo_root }}/vars/system/auth/radius_servers -type f -name '*.yml' ! -name 'settings.yml' 2>/dev/null | sort"
+        ).splitlines() | reject('equalto', '') | list
+      }}
+    system_auth_radius_server_deletion_files: >-
+      {{
+        lookup(
+          'ansible.builtin.pipe',
+          "find {{ repo_root }}/vars/system/deletions/auth/radius_servers -type f -name '*.yml' ! -name 'settings.yml' 2>/dev/null | sort"
+        ).splitlines() | reject('equalto', '') | list
+      }}
+
+- name: Load system RADIUS server fragments
+  ansible.builtin.include_vars:
+    file: "{{ item }}"
+    name: system_auth_radius_server_fragment
+  loop: "{{ system_auth_radius_server_files }}"
+  register: system_auth_radius_server_include_results
+
+- name: Load system RADIUS server deletion fragments
+  ansible.builtin.include_vars:
+    file: "{{ item }}"
+    name: system_auth_radius_server_deletion_fragment
+  loop: "{{ system_auth_radius_server_deletion_files }}"
+  register: system_auth_radius_server_deletion_include_results
+
+- name: Aggregate system RADIUS servers with directory settings
+  ansible.builtin.set_fact:
+    system_auth_radius_servers: "{{ system_auth_radius_servers | default([]) + [ system_auth_radius_server_directory_defaults | combine(item.1, recursive=True) ] }}"
+  loop: "{{ query('subelements', system_auth_radius_server_include_results.results, 'ansible_facts.system_auth_radius_server_fragment.system_auth_radius_servers', {'skip_missing': True}) }}"
+  vars:
+    system_auth_radius_server_settings_path: "{{ item.0.item | regex_replace('/[^/]+$', '/settings.yml') }}"
+    system_auth_radius_server_directory_defaults: >-
+      {{
+        (
+          lookup('ansible.builtin.file', system_auth_radius_server_settings_path, errors='ignore')
+          | default('{}', true)
+          | from_yaml
+        ).system_auth_radius_server_defaults | default({})
+      }}
+
+- name: Aggregate system RADIUS server deletions with directory settings
+  ansible.builtin.set_fact:
+    system_auth_radius_server_deletions: "{{ system_auth_radius_server_deletions | default([]) + [ (system_auth_radius_server_deletion_directory_defaults | combine(item.1, recursive=True)) | combine({'state': 'absent'}, recursive=True) ] }}"
+  loop: "{{ query('subelements', system_auth_radius_server_deletion_include_results.results, 'ansible_facts.system_auth_radius_server_deletion_fragment.system_auth_radius_servers', {'skip_missing': True}) }}"
+  vars:
+    system_auth_radius_server_deletion_settings_path: "{{ item.0.item | regex_replace('/[^/]+$', '/settings.yml') }}"
+    system_auth_radius_server_deletion_directory_defaults: >-
+      {{
+        (
+          lookup('ansible.builtin.file', system_auth_radius_server_deletion_settings_path, errors='ignore')
+          | default('{}', true)
+          | from_yaml
+        ).system_auth_radius_server_defaults | default({})
+      }}
+
+- name: Discover system RADIUS auth fragments
+  ansible.builtin.set_fact:
+    system_auth_radius_files: >-
+      {{
+        lookup(
+          'ansible.builtin.pipe',
+          "find {{ repo_root }}/vars/system/auth/radius -type f -name '*.yml' ! -name 'settings.yml' 2>/dev/null | sort"
+        ).splitlines() | reject('equalto', '') | list
+      }}
+    system_auth_radius_deletion_files: >-
+      {{
+        lookup(
+          'ansible.builtin.pipe',
+          "find {{ repo_root }}/vars/system/deletions/auth/radius -type f -name '*.yml' ! -name 'settings.yml' 2>/dev/null | sort"
+        ).splitlines() | reject('equalto', '') | list
+      }}
+
+- name: Load system RADIUS auth fragments
+  ansible.builtin.include_vars:
+    file: "{{ item }}"
+    name: system_auth_radius_fragment
+  loop: "{{ system_auth_radius_files }}"
+  register: system_auth_radius_include_results
+
+- name: Load system RADIUS auth deletion fragments
+  ansible.builtin.include_vars:
+    file: "{{ item }}"
+    name: system_auth_radius_deletion_fragment
+  loop: "{{ system_auth_radius_deletion_files }}"
+  register: system_auth_radius_deletion_include_results
+
+- name: Aggregate system RADIUS auth with directory settings
+  ansible.builtin.set_fact:
+    system_auth_radius: "{{ system_auth_radius | default([]) + [ system_auth_radius_directory_defaults | combine(item.1, recursive=True) ] }}"
+  loop: "{{ query('subelements', system_auth_radius_include_results.results, 'ansible_facts.system_auth_radius_fragment.system_auth_radius', {'skip_missing': True}) }}"
+  vars:
+    system_auth_radius_settings_path: "{{ item.0.item | regex_replace('/[^/]+$', '/settings.yml') }}"
+    system_auth_radius_directory_defaults: >-
+      {{
+        (
+          lookup('ansible.builtin.file', system_auth_radius_settings_path, errors='ignore')
+          | default('{}', true)
+          | from_yaml
+        ).system_auth_radius_defaults | default({})
+      }}
+
+- name: Aggregate system RADIUS auth deletions with directory settings
+  ansible.builtin.set_fact:
+    system_auth_radius_deletions: "{{ system_auth_radius_deletions | default([]) + [ (system_auth_radius_deletion_directory_defaults | combine(item.1, recursive=True)) | combine({'state': 'absent'}, recursive=True) ] }}"
+  loop: "{{ query('subelements', system_auth_radius_deletion_include_results.results, 'ansible_facts.system_auth_radius_deletion_fragment.system_auth_radius', {'skip_missing': True}) }}"
+  vars:
+    system_auth_radius_deletion_settings_path: "{{ item.0.item | regex_replace('/[^/]+$', '/settings.yml') }}"
+    system_auth_radius_deletion_directory_defaults: >-
+      {{
+        (
+          lookup('ansible.builtin.file', system_auth_radius_deletion_settings_path, errors='ignore')
+          | default('{}', true)
+          | from_yaml
+        ).system_auth_radius_defaults | default({})
+      }}
+
+- name: Discover system login banner fragments
+  ansible.builtin.set_fact:
+    system_login_banner_files: >-
+      {{
+        lookup(
+          'ansible.builtin.pipe',
+          "find {{ repo_root }}/vars/system/login_banners -type f -name '*.yml' ! -name 'settings.yml' 2>/dev/null | sort"
+        ).splitlines() | reject('equalto', '') | list
+      }}
+    system_login_banner_deletion_files: >-
+      {{
+        lookup(
+          'ansible.builtin.pipe',
+          "find {{ repo_root }}/vars/system/deletions/login_banners -type f -name '*.yml' ! -name 'settings.yml' 2>/dev/null | sort"
+        ).splitlines() | reject('equalto', '') | list
+      }}
+
+- name: Load system login banner fragments
+  ansible.builtin.include_vars:
+    file: "{{ item }}"
+    name: system_login_banner_fragment
+  loop: "{{ system_login_banner_files }}"
+  register: system_login_banner_include_results
+
+- name: Load system login banner deletion fragments
+  ansible.builtin.include_vars:
+    file: "{{ item }}"
+    name: system_login_banner_deletion_fragment
+  loop: "{{ system_login_banner_deletion_files }}"
+  register: system_login_banner_deletion_include_results
+
+- name: Aggregate system login banners with directory settings
+  ansible.builtin.set_fact:
+    system_login_banners: "{{ system_login_banners | default([]) + [ system_login_banner_directory_defaults | combine(item.1, recursive=True) ] }}"
+  loop: "{{ query('subelements', system_login_banner_include_results.results, 'ansible_facts.system_login_banner_fragment.system_login_banners', {'skip_missing': True}) }}"
+  vars:
+    system_login_banner_settings_path: "{{ item.0.item | regex_replace('/[^/]+$', '/settings.yml') }}"
+    system_login_banner_directory_defaults: >-
+      {{
+        (
+          lookup('ansible.builtin.file', system_login_banner_settings_path, errors='ignore')
+          | default('{}', true)
+          | from_yaml
+        ).system_login_banner_defaults | default({})
+      }}
+
+- name: Aggregate system login banner deletions with directory settings
+  ansible.builtin.set_fact:
+    system_login_banner_deletions: "{{ system_login_banner_deletions | default([]) + [ (system_login_banner_deletion_directory_defaults | combine(item.1, recursive=True)) | combine({'state': 'absent'}, recursive=True) ] }}"
+  loop: "{{ query('subelements', system_login_banner_deletion_include_results.results, 'ansible_facts.system_login_banner_deletion_fragment.system_login_banners', {'skip_missing': True}) }}"
+  vars:
+    system_login_banner_deletion_settings_path: "{{ item.0.item | regex_replace('/[^/]+$', '/settings.yml') }}"
+    system_login_banner_deletion_directory_defaults: >-
+      {{
+        (
+          lookup('ansible.builtin.file', system_login_banner_deletion_settings_path, errors='ignore')
+          | default('{}', true)
+          | from_yaml
+        ).system_login_banner_defaults | default({})
+      }}
+
+- name: Discover system config fragments
+  ansible.builtin.set_fact:
+    system_config_files: >-
+      {{
+        lookup(
+          'ansible.builtin.pipe',
+          "find {{ repo_root }}/vars/system/config -type f -name '*.yml' ! -name 'settings.yml' 2>/dev/null | sort"
+        ).splitlines() | reject('equalto', '') | list
+      }}
+
+- name: Load system config fragments
+  ansible.builtin.include_vars:
+    file: "{{ item }}"
+    name: system_config_fragment
+  loop: "{{ system_config_files }}"
+  register: system_config_include_results
+
+- name: Aggregate system config with directory settings
+  ansible.builtin.set_fact:
+    system_config: "{{ system_config | default([]) + [ system_config_directory_defaults | combine(item.1, recursive=True) ] }}"
+  loop: "{{ query('subelements', system_config_include_results.results, 'ansible_facts.system_config_fragment.system_config', {'skip_missing': True}) }}"
+  vars:
+    system_config_settings_path: "{{ item.0.item | regex_replace('/[^/]+$', '/settings.yml') }}"
+    system_config_directory_defaults: >-
+      {{
+        (
+          lookup('ansible.builtin.file', system_config_settings_path, errors='ignore')
+          | default('{}', true)
+          | from_yaml
+        ).system_config_defaults | default({})
+      }}
+

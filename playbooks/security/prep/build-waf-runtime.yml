@@ -1,0 +1,46 @@
+- name: Classify WAF policy operations
+  ansible.builtin.set_fact:
+    waf_policies_delete: >-
+      {{
+        ((waf_policies | default([])) + (waf_policy_deletions | default([])))
+        | selectattr('state', 'defined')
+        | selectattr('state', 'equalto', 'absent')
+        | list
+      }}
+    waf_policies_present: >-
+      {{
+        (waf_policies | default([]))
+        | rejectattr('state', 'defined')
+        | list
+        +
+        (
+          (waf_policies | default([]))
+          | selectattr('state', 'defined')
+          | rejectattr('state', 'equalto', 'absent')
+          | list
+        )
+      }}
+
+- name: Classify WAF server technology operations
+  ansible.builtin.set_fact:
+    waf_server_technologies_delete: >-
+      {{
+        ((waf_server_technologies | default([])) + (waf_server_technology_deletions | default([])))
+        | selectattr('state', 'defined')
+        | selectattr('state', 'equalto', 'absent')
+        | list
+      }}
+    waf_server_technologies_present: >-
+      {{
+        (waf_server_technologies | default([]))
+        | rejectattr('state', 'defined')
+        | list
+        +
+        (
+          (waf_server_technologies | default([]))
+          | selectattr('state', 'defined')
+          | rejectattr('state', 'equalto', 'absent')
+          | list
+        )
+      }}
+

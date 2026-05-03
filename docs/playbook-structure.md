@@ -18,8 +18,9 @@ Canonical playbooks live under `playbooks/`. Root-level `*.yml` files are compat
 Canonical playbooks use a consistent split so the entrypoint stays small and the discovery and execution logic remain easy to follow:
 
 - `playbooks/<domain>.yml` is the canonical entrypoint
-- `playbooks/<domain>/prep.yml` contains fragment discovery, `include_vars`, defaults loading, and aggregation logic
+- `playbooks/<domain>/prep.yml` is the documented orchestrator for prep flow and should say which major facts or canonical sets it produces
 - when a domain has larger compiler or normalization flows, `prep.yml` may import focused prep snippets such as `playbooks/<domain>/prep/*.yml`
+- common split points are `load-*.yml`, `build-*.yml`, and `compile-*.yml`
 - `playbooks/<domain>/tasks/manage.yml` orchestrates task execution order
 - `playbooks/<domain>/tasks/delete.yml` contains destructive tasks
 - `playbooks/<domain>/tasks/apply.yml` contains present-state create/update tasks
