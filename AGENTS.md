@@ -63,6 +63,15 @@ These are also binding. A feature is not complete just because syntax-check pass
   - keep `tasks/manage.yml` as delete-first then apply-second unless ROADMAP explicitly documents an exception
   - keep example var files, docs, and helper tools aligned with the canonical playbook behavior
 
+- Preserve the separation between canonical runtime objects and higher-level convenience authoring:
+  - `playbooks/ltm.yml`, `playbooks/gtm.yml`, and other canonical runtime playbooks should operate on normalized first-class BIG-IP objects
+  - do not keep adding shortcut-specific branching directly into `tasks/apply.yml` or `tasks/delete.yml` for common service patterns
+  - when a new “simple thing” or common pattern is needed, prefer adding it as an intent/compiler layer ahead of runtime tasks
+  - intent-style inputs should compile into the same canonical object model the runtime already manages
+  - runtime task files should remain the stable apply/delete contract; convenience models belong in normalization, prep, or dedicated compiler helpers
+  - if an existing shortcut path becomes more complex, refactor it toward the intent/compiler design instead of extending ad hoc hybrid logic in-place
+  - document clearly whether a var tree is canonical object data or higher-level intent data, and keep validators aligned to both layers where supported
+
 - `bootstrap` is the current documented exception to normal delete/apply semantics:
   - keep `playbooks/bootstrap/tasks/delete.yml` intentionally empty
   - do not invent deletion behavior for day-0 licensing or first management-IP seeding
@@ -118,6 +127,20 @@ Update existing `docs/` files when an existing domain changes:
 - `docs/var-layout.md` — add new var trees to the domain trees list
 - `docs/example-models.md` — add a section explaining the new domain's authoring model and cross-file linkages
 - `docs/hybrid-authoring.md` — update if a new hybrid pattern is introduced
+
+### Intent And Shortcut Design
+
+When working on convenience patterns, common service templates, or “simple mode” authoring:
+
+- do not treat runtime playbooks as the right place to accumulate every known use case
+- prefer a pluggable intent/compiler layer that expands high-level intent into canonical objects before runtime execution
+- keep the canonical object model as the single apply/delete source of truth
+- if you introduce intent trees, document:
+  - where the intent vars live
+  - which compiler/normalization layer expands them
+  - which canonical objects are emitted
+  - whether helper tools understand the intent layer directly or only the compiled canonical layer
+- if a shortcut exists today inside `ltm` or `gtm` runtime logic, prefer refactoring it into the intent/compiler layer before adding more shortcut behavior around it
 - `docs/security.md` — update when AFM, WAF, or APM object types are added or changed
 - `docs/02-bootstrap-playbook.md` — update when day-0 licensing, first management reachability, or handoff behavior changes
 - `docs/01-initial-setup-and-handoff.md` — update when first-boot prerequisites, bootstrap sequencing, or AWX handoff behavior changes
