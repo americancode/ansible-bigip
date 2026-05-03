@@ -140,6 +140,31 @@ These are the concrete remaining backlog items.
    - if needed, promote selected object families from `basic field drift` toward `model-aware`
    - only pursue this when the operational value is clear
 
+## Future Domain Candidates
+
+These are possible future domain splits or lifecycle surfaces. They are not committed backlog items yet.
+
+- `backup` or `snapshot`
+  - UCS backup/export workflows
+  - possibly other operational artifact exports later
+- `cert-lifecycle`
+  - certificate renewal detection
+  - rotation orchestration
+  - external PKI workflow integration if needed
+- `observability`
+  - telemetry streaming
+  - logging/export integrations
+  - analytics-facing platform configuration
+- deeper WAF content lifecycle
+  - only if WAF policy/content management grows beyond the current `security` domain scope
+- brownfield onboarding/promotion workflow surfaces
+  - only if import/reconciliation/promotion grows large enough to justify a clearer lifecycle split
+
+Default rule:
+
+- do not create a new playbook/domain just because a feature exists
+- prefer extending `system`, `security`, `tls`, or helper tooling unless a new surface is operationally distinct enough to justify its own domain
+
 ## Delivery Principles
 
 - missing from vars does not mean delete
