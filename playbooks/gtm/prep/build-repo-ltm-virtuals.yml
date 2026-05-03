@@ -1,34 +1,14 @@
 - name: Classify repo-known LTM virtual server operations
   ansible.builtin.set_fact:
-    repo_ltm_virtual_servers_present: >-
-      {{
-        (repo_ltm_virtual_servers | default([]))
-        | rejectattr('state', 'defined')
-        | list
-        +
-        (
-          (repo_ltm_virtual_servers | default([]))
-          | selectattr('state', 'defined')
-          | rejectattr('state', 'equalto', 'absent')
-          | list
-        )
-      }}
+    repo_ltm_virtual_servers_present: "{{ repo_ltm_virtual_server_ops.present }}"
+  vars:
+    repo_ltm_virtual_server_ops: "{{ (repo_ltm_virtual_servers | default([])) | classify_operations([]) }}"
 
 - name: Classify repo-known LTM RKE2 server intent operations
   ansible.builtin.set_fact:
-    repo_ltm_rke2_server_intents_present: >-
-      {{
-        (repo_ltm_rke2_server_intents | default([]))
-        | rejectattr('state', 'defined')
-        | list
-        +
-        (
-          (repo_ltm_rke2_server_intents | default([]))
-          | selectattr('state', 'defined')
-          | rejectattr('state', 'equalto', 'absent')
-          | list
-        )
-      }}
+    repo_ltm_rke2_server_intents_present: "{{ repo_ltm_rke2_server_intent_ops.present }}"
+  vars:
+    repo_ltm_rke2_server_intent_ops: "{{ (repo_ltm_rke2_server_intents | default([])) | classify_operations([]) }}"
 
 - name: Compile repo-known LTM RKE2 intent virtual servers
   ansible.builtin.import_tasks: "{{ playbook_dir }}/gtm/prep/intents/clusters/compile-repo-ltm-rke2-server-intents.yml"

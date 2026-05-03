@@ -17,6 +17,7 @@ The repo already manages the main BIG-IP runtime domains through Git:
 - network, system, HA, LTM, GTM, TLS, and security playbooks
 - split var trees with per-directory `settings.yml` and explicit deletion trees
 - dedicated intent/compiler authoring for opinionated patterns such as RKE2 LTM clusters, organized under category-first trees like `vars/ltm/intents/clusters/...` with layered `settings.yml` support
+- Python-backed prep helpers split by concern under `filter_plugins/bigip_filters/`, with `filter_plugins/bigip_var_filters.py` kept as the thin Ansible entrypoint
 - offline validation, drift detection, and brownfield import tooling
 
 Current lifecycle boundaries:

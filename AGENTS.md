@@ -39,7 +39,7 @@ These are also binding. A feature is not complete just because syntax-check pass
   - `tools/validate-vars`
   - `tools/drift-check`
   - `tools/import-from-bigip`
-  - any supporting Python filter or helper modules such as `filter_plugins/bigip_var_filters.py`
+  - any supporting Python filter or helper modules such as `filter_plugins/bigip_var_filters.py` and split support packages under `filter_plugins/bigip_filters/`
   A feature is not complete if those layers were skipped without an explicitly documented exception.
 
 - Do not mark a roadmap item complete unless the feature is operationally complete across the repo model:
@@ -74,6 +74,7 @@ These are also binding. A feature is not complete just because syntax-check pass
 - do not place concrete intent files directly under `vars/<domain>/intents/`; place them under a first-level category such as `vars/<domain>/intents/clusters/...`, `vars/<domain>/intents/applications/...`, or another documented family name
 - when a repeated platform pattern becomes more opinionated than a single embedded object shortcut, prefer a dedicated intent tree in one of those categories plus a focused compiler snippet in `playbooks/<domain>/prep/*.yml`
   - put those compiler snippets under `playbooks/<domain>/prep/intents/<category>/...` when they are part of the intent layer
+  - if the supporting Python layer grows, keep `filter_plugins/bigip_var_filters.py` as a thin entrypoint and split implementation by concern under `filter_plugins/bigip_filters/`
   - runtime task files should remain the stable apply/delete contract; convenience models belong in normalization, prep, or dedicated compiler helpers
   - if an existing shortcut path becomes more complex, refactor it toward the intent/compiler design instead of extending ad hoc hybrid logic in-place
   - document clearly whether a var tree is canonical object data or higher-level intent data, and keep validators aligned to both layers where supported

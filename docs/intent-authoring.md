@@ -99,7 +99,7 @@ The preferred compiler location is a dedicated Python normalization layer, not m
 Good homes for this logic are:
 
 - `filter_plugins/bigip_var_filters.py` if the compiler remains small and close to playbook prep
-- a dedicated Python helper module if the compiler surface grows and needs clearer structure
+- split modules under `filter_plugins/bigip_filters/` once the compiler and normalization surface grows by concern
 
 The compiler should:
 
@@ -108,6 +108,14 @@ The compiler should:
 - keep object naming deterministic
 - keep partition behavior explicit
 - avoid mutating runtime semantics
+
+In the current repo structure, `filter_plugins/bigip_var_filters.py` stays as the thin Ansible-facing entrypoint while the implementation can be split into focused modules such as:
+
+- `filter_plugins/bigip_filters/intent_ltm.py`
+- `filter_plugins/bigip_filters/intent_gtm.py`
+- `filter_plugins/bigip_filters/settings.py`
+- `filter_plugins/bigip_filters/prep_ops.py`
+- `filter_plugins/bigip_filters/tmsh_*.py`
 
 ## Naming And Ownership Rules
 

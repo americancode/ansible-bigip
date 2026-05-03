@@ -38,6 +38,7 @@ The repo also has first-class helper tooling:
 - `tools/validate-vars` for offline validation
 - `tools/drift-check` for live-vs-Git comparison
 - `tools/import-from-bigip` for brownfield import
+- Python-backed prep/compiler helpers under `filter_plugins/bigip_filters/`, with `filter_plugins/bigip_var_filters.py` kept as the Ansible filter entrypoint
 
 ## Capability Boundaries
 
@@ -55,6 +56,7 @@ These boundaries must stay explicit.
 - intent trees are authoring abstractions, not separate live BIG-IP object families; helper tools continue to treat the compiled canonical objects as the lifecycle surface unless documented otherwise
 - intent trees should be category-first under `vars/<domain>/intents/<category>/...`, not flat directly under `intents/`
 - intent compiler snippets should live under `playbooks/<domain>/prep/intents/<category>/...` when they are part of the dedicated intent layer
+- prep refactors that move repeated loading, compiler, or classification logic into Python-backed helpers should be treated as repo-wide architecture work and applied everywhere they make sense across canonical playbooks, not as one-off cleanups in only one domain
 
 ## Acceptance Criteria
 
@@ -112,15 +114,21 @@ Do not call work complete when any of the following is true:
 
 These are the highest-value open items.
 
-1. Helper-tool maturity decisions for `system` and `ha`
+1. Finish the repo-wide prep refactor into shared Python-backed helpers
+   - the split filter/helper module structure is in place
+   - some intent compilation, layered settings resolution, and LTM/GTM classification work already uses Python-backed helpers
+   - repeated discovery, tree loading, settings aggregation, and classification patterns still remain in playbook YAML across multiple domains
+   - this refactor is intended to apply everywhere it makes sense across all canonical playbooks and domains, not only `ltm` and `gtm`
+
+2. Helper-tool maturity decisions for `system` and `ha`
    - either add drift/import coverage
    - or keep them explicitly documented as `runtime+validation` for the current phase
 
-2. Configuration snapshot and recovery workflows
+3. Configuration snapshot and recovery workflows
    - UCS backup/export workflow
    - explicit operational guidance for snapshot use in change and rollback paths
 
-3. Certificate lifecycle automation
+4. Certificate lifecycle automation
    - certificate rotation workflows
    - renewal/expiry detection
 
@@ -128,19 +136,25 @@ These are the highest-value open items.
 
 These are the concrete remaining backlog items.
 
-1. Decide the helper-tool lifecycle target for `system` and `ha`
+1. Finish refactoring repeated prep loading, discovery, settings aggregation, and classification logic into shared Python-backed helpers while keeping `prep.yml` as the orchestration layer
+   - this is a repo-wide refactor target for every canonical playbook/domain where the pattern exists
+   - do not treat it as an `ltm`/`gtm`-only cleanup
+   - compiler and normalization logic should move first where reuse and validator sharing are highest
+   - top-level `prep.yml` and focused prep snippets should remain the readable orchestration layer
+
+2. Decide the helper-tool lifecycle target for `system` and `ha`
    - either implement drift/import support
    - or document them as intentional `runtime+validation` boundaries in long-term steady state
 
-2. UCS backup/export workflow for configuration snapshots
+3. UCS backup/export workflow for configuration snapshots
    - priority: lower than management-plane auth, compliance, and current repo-boundary decisions
    - completion target: `runtime+validation`
 
-3. Certificate rotation automation with renewal detection
+4. Certificate rotation automation with renewal detection
    - priority: lower than management-plane auth, compliance, and current repo-boundary decisions
    - completion target: `runtime+validation+helper-tools` where practical
 
-4. Future deeper helper-tool fidelity
+5. Future deeper helper-tool fidelity
    - if needed, promote selected object families from `basic field drift` toward `model-aware`
    - only pursue this when the operational value is clear
 

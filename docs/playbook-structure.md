@@ -29,6 +29,8 @@ This pattern is the default for `bootstrap`, `network`, `system`, `ha`, `tls`, `
 
 When a domain grows a real intent layer, keep those prep snippets under `playbooks/<domain>/prep/intents/<category>/...` instead of leaving them mixed into the prep root.
 
+When Python-backed prep helpers grow beyond a small handful of filters, keep `filter_plugins/bigip_var_filters.py` as the thin Ansible entrypoint and split the implementation by concern under `filter_plugins/bigip_filters/`.
+
 ## Path Handling
 
 Path handling inside canonical playbooks is anchored from `playbook_dir`, so moving playbooks under `playbooks/` does not break references to `vars/`.
