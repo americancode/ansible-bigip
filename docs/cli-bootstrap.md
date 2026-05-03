@@ -8,6 +8,12 @@ Use this path when:
 - you need to initialize one or more new BIG-IP devices from a terminal
 - you want a simple, repeatable bootstrap process before shifting to AWX
 
+The CLI path is staged:
+
+- `playbooks/bootstrap.yml` for license activation and first management reachability
+- `playbooks/system.yml` for hostname, DNS, NTP, provisioning, and users after the management address is stable
+- `playbooks/ha.yml` for trust and sync configuration
+
 ## Setting Up a Jump Host
 
 ### Ubuntu 22.04 / 24.04 Minimal
@@ -188,13 +194,24 @@ Those examples mean:
 python3 tools/validate-vars
 ```
 
-### 2. Syntax-check the HA playbook
+### 2. Syntax-check the bootstrap and HA playbooks
 
 ```sh
+ansible-playbook --syntax-check -i inventory/bootstrap.ini playbooks/bootstrap.yml
 ansible-playbook --syntax-check -i inventory/bootstrap.ini playbooks/ha.yml
 ```
 
-### 3. Run HA bootstrap against one device
+### 3. Run day-0 bootstrap against one device
+
+Apply the dedicated bootstrap playbook first if the device still needs licensing or a stable management IP:
+
+```sh
+ansible-playbook -i inventory/bootstrap.ini playbooks/bootstrap.yml --limit bigip-east-sync-owner
+```
+
+If `vars/bootstrap/management/*.yml` changes the management IP, update `f5_host` in the inventory before continuing.
+
+### 4. Run HA bootstrap against one device
 
 ```sh
 ansible-playbook -i inventory/bootstrap.ini playbooks/ha.yml --limit bigip-east-sync-owner
@@ -207,7 +224,7 @@ This is the important behavior:
 - the BIG-IP at `192.0.2.10` receives the API calls
 - that device creates trust toward the west peer and pushes config sync if requested
 
-### 4. Verify the pair manually
+### 5. Verify the pair manually
 
 Check on the BIG-IP UI or CLI:
 
@@ -217,12 +234,13 @@ Check on the BIG-IP UI or CLI:
 - traffic group ordering looks correct
 - config sync status is healthy
 
-### 5. Apply shared config from the same bootstrap target
+### 6. Apply shared config from the same bootstrap target
 
 After HA is healthy, keep using one execution target for shared configuration:
 
 ```sh
 ansible-playbook -i inventory/bootstrap.ini playbooks/network.yml --limit bigip-east-sync-owner
+ansible-playbook -i inventory/bootstrap.ini playbooks/system.yml --limit bigip-east-sync-owner
 ansible-playbook -i inventory/bootstrap.ini playbooks/tls.yml --limit bigip-east-sync-owner
 ansible-playbook -i inventory/bootstrap.ini playbooks/ltm.yml --limit bigip-east-sync-owner
 ```
@@ -255,7 +273,9 @@ export F5_SERVER_PORT='443'
 export F5_VALIDATE_CERTS='false'
 
 python3 tools/validate-vars
+ansible-playbook --syntax-check -i inventory/bootstrap.ini playbooks/bootstrap.yml
 ansible-playbook --syntax-check -i inventory/bootstrap.ini playbooks/ha.yml
+ansible-playbook -i inventory/bootstrap.ini playbooks/bootstrap.yml --limit bigip-east-sync-owner
 ansible-playbook -i inventory/bootstrap.ini playbooks/ha.yml --limit bigip-east-sync-owner
 ```
 

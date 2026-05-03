@@ -5,6 +5,7 @@ Canonical playbooks live under `playbooks/`. Root-level `*.yml` files are compat
 ## Playbook List
 
 - `playbooks/network.yml`: VLANs, trunks, route domains, self IPs, static routes, SNAT translations, SNAT pools, and NATs
+- `playbooks/bootstrap.yml`: BIG-IP day-0 licensing and first management reachability
 - `playbooks/system.yml`: base system settings like hostname, DNS, NTP, provisioning, users
 - `playbooks/ha.yml`: device trust, device groups, traffic groups, config sync actions
 - `playbooks/ltm.yml`: LTM monitors, non-TLS profiles, nodes, pools, virtual servers
@@ -22,7 +23,7 @@ Canonical playbooks use a consistent split so the entrypoint stays small and the
 - `playbooks/<domain>/tasks/delete.yml` contains destructive tasks
 - `playbooks/<domain>/tasks/apply.yml` contains present-state create/update tasks
 
-This pattern is the default for `network`, `system`, `ha`, `tls`, `ltm`, `gtm`, and `security`. If a future playbook stays small enough that splitting it adds no value, document that choice in [ROADMAP.md](../ROADMAP.md) before keeping it monolithic.
+This pattern is the default for `bootstrap`, `network`, `system`, `ha`, `tls`, `ltm`, `gtm`, and `security`. `bootstrap` is the explicit exception where `tasks/delete.yml` is intentionally empty because the domain is apply-only. If a future playbook stays small enough that splitting it adds no value, document that choice in [ROADMAP.md](../ROADMAP.md) before keeping it monolithic.
 
 ## Path Handling
 

@@ -76,6 +76,20 @@ class Validator:
         self.settings_cache: dict[Path, dict[str, Any]] = {}
         self.tree_specs = [
             TreeSpec(
+                name="bootstrap_licenses",
+                active_dir=VARS_DIR / "bootstrap" / "license",
+                deletion_dir=VARS_DIR / "bootstrap" / "deletions" / "license",
+                top_key="bootstrap_licenses",
+                settings_key="bootstrap_license_defaults",
+            ),
+            TreeSpec(
+                name="bootstrap_management",
+                active_dir=VARS_DIR / "bootstrap" / "management",
+                deletion_dir=VARS_DIR / "bootstrap" / "deletions" / "management",
+                top_key="bootstrap_management",
+                settings_key="bootstrap_management_defaults",
+            ),
+            TreeSpec(
                 name="ha_device_trusts",
                 active_dir=VARS_DIR / "ha" / "device_trust",
                 deletion_dir=VARS_DIR / "ha" / "deletions" / "device_trust",
@@ -466,6 +480,7 @@ class Validator:
             self.load_tree(spec, from_deletions=False)
             self.load_tree(spec, from_deletions=True)
 
+        self.validate_bootstrap()
         self.validate_network()
         self.validate_system()
         self.validate_ha()
@@ -495,6 +510,54 @@ class Validator:
             self.error(path, "must define `provider`")
         elif not isinstance(payload["provider"], dict):
             self.error(path, "`provider` must be a mapping")
+
+    def validate_bootstrap(self) -> None:
+        licenses = self.objects.get("bootstrap_licenses", [])
+        management = self.objects.get("bootstrap_management", [])
+
+        for obj in licenses:
+            if obj.from_deletions:
+                self.error(obj.relpath, "bootstrap license objects do not support deletion trees")
+                continue
+            state = str(obj.data.get("state", "present"))
+            if state not in ("present", "latest", "absent", "revoked"):
+                self.error(obj.relpath, f"bootstrap license state `{state}` is unsupported")
+            if state in ("present", "latest"):
+                self.require_fields(obj, ["license_key"])
+                if obj.data.get("accept_eula") is not True:
+                    self.error(obj.relpath, "bootstrap license objects using `present` or `latest` must set `accept_eula: true`")
+            addon_keys = obj.data.get("addon_keys")
+            if addon_keys is not None and not isinstance(addon_keys, list):
+                self.error(obj.relpath, "`addon_keys` must be a list when provided")
+
+        self.check_duplicates(
+            licenses,
+            lambda obj: ("bootstrap_license", obj.data.get("license_key") or obj.relpath, obj.data.get("state", "present")),
+            "bootstrap license object",
+        )
+
+        for obj in management:
+            if obj.from_deletions:
+                self.error(obj.relpath, "bootstrap management objects do not support deletion trees")
+                continue
+            self.require_fields(obj, ["address", "gateway"])
+            try:
+                ipaddress.ip_interface(str(obj.data.get("address")))
+            except ValueError:
+                self.error(obj.relpath, f"bootstrap management address `{obj.data.get('address')}` must be a valid CIDR")
+            try:
+                ipaddress.ip_address(str(obj.data.get("gateway")))
+            except ValueError:
+                self.error(obj.relpath, f"bootstrap management gateway `{obj.data.get('gateway')}` must be a valid IP address")
+            route_name = obj.data.get("route_name")
+            if route_name is not None and str(route_name).strip() == "":
+                self.error(obj.relpath, "bootstrap management `route_name` may not be empty")
+
+        self.check_duplicates(
+            management,
+            lambda obj: ("bootstrap_management", obj.data.get("route_name", "default")),
+            "bootstrap management route",
+        )
 
     def load_tree(self, spec: TreeSpec, *, from_deletions: bool) -> None:
         base_dir = spec.deletion_dir if from_deletions else spec.active_dir

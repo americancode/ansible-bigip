@@ -1,0 +1,2 @@
+- name: Apply desired bootstrap objects
+  ansible.builtin.import_tasks: apply.yml

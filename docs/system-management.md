@@ -1,6 +1,8 @@
 # System Management
 
-The `playbooks/system.yml` playbook manages base BIG-IP device settings: hostname, DNS, NTP, module provisioning, local users, and config persistence.
+The `playbooks/system.yml` playbook manages base BIG-IP device settings after the device is already reachable through a stable management endpoint: hostname, DNS, NTP, module provisioning, local users, and config persistence.
+
+For day-0 licensing and the first management IP/default route, use [bootstrap.md](bootstrap.md) and `playbooks/bootstrap.yml` first.
 
 ## Object Types
 

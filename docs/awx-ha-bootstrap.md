@@ -4,7 +4,7 @@ This guide walks through bringing up HA for two brand-new BIG-IP devices using A
 
 For the general AWX targeting model, inventory patterns, credential design, and template list, see [awx-operation.md](awx-operation.md).
 
-If you need to initialize BIG-IP before AWX can safely reach it (e.g., AWX is fronted by the BIG-IP), use the CLI path in [cli-bootstrap.md](cli-bootstrap.md) first, then adopt this AWX model afterward.
+If you need to initialize BIG-IP before AWX can safely reach it (e.g., AWX is fronted by the BIG-IP), use the CLI path in [cli-bootstrap.md](cli-bootstrap.md) and the day-0 runtime in [bootstrap.md](bootstrap.md) first, then adopt this AWX model afterward.
 
 ## Example Topology
 

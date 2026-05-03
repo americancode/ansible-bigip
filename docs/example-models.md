@@ -75,6 +75,19 @@ The network tree also shows both native-module and validated-command patterns.
   This uses a validated `tmsh` command workflow because the installed collection does not provide a first-class NAT module.
 - NAT VLAN references such as `external` point at `vars/network/vlans/foundation-vlans.yml`.
 
+## Bootstrap Model
+
+The bootstrap tree is intentionally narrow and operationally staged.
+
+- License input: `vars/bootstrap/license/foundation-license.yml`
+- First management endpoint: `vars/bootstrap/management/foundation-management.yml`
+
+Linkage works like this:
+
+- `bootstrap_licenses[*]` is consumed by `playbooks/bootstrap.yml` before the normal system domain is applied
+- `bootstrap_management[*].address` becomes the management endpoint that AWX inventory `f5_host` or CLI inventory entries should target after bootstrap
+- after that cutover, hostname/DNS/NTP/provisioning/users move into `vars/system/*` and HA setup moves into `vars/ha/*`
+
 ## AFM Security Model
 
 The security playbook uses first-class var trees for address lists, port lists, rules, and policies.

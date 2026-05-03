@@ -5,6 +5,7 @@ The repo uses split trees under `vars/` so large estates can be managed by domai
 ## Domain Trees
 
 - `vars/network/...`
+- `vars/bootstrap/...`
 - `vars/system/...`
 - `vars/ha/...`
 - `vars/ltm/...`
@@ -34,6 +35,16 @@ The network var tree includes:
 - reusable SNAT translations and SNAT pools
 - trunk examples using the native `bigip_trunk` module
 - NAT examples using a validated `tmsh` command workflow (the installed collection does not provide a first-class NAT module)
+
+## Bootstrap Tree Examples
+
+The bootstrap var tree covers the narrow day-0 layer that exists before normal steady-state management:
+
+- license activation inputs
+- first management IP CIDR
+- first management default route
+
+After bootstrap, the source of truth moves to `vars/system/...`, `vars/ha/...`, and the other service-domain trees.
 
 ## Hybrid Authoring
 

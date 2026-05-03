@@ -1,0 +1,33 @@
+- name: Manage BIG-IP license state
+  f5networks.f5_modules.bigip_device_license:
+    provider: "{{ provider }}"
+    license_key: "{{ item.license_key | default(omit) }}"
+    addon_keys: "{{ item.addon_keys | default(omit) }}"
+    license_server: "{{ item.license_server | default(omit) }}"
+    accept_eula: "{{ item.accept_eula | default(omit) }}"
+    force: "{{ item.force | default(omit) }}"
+    state: "{{ item.state | default('present') }}"
+  loop: "{{ bootstrap_licenses_present | default([]) }}"
+  loop_control:
+    label: "{{ item.license_key | default(item.state | default('present')) }}"
+  register: bootstrap_license_apply_results
+
+- name: Persist BIG-IP config after license changes
+  f5networks.f5_modules.bigip_config:
+    provider: "{{ provider }}"
+    save: true
+  when:
+    - bootstrap_license_apply_results is defined
+    - (bootstrap_license_apply_results.results | default([]) | selectattr('changed') | list | length) > 0
+
+- name: Apply management reachability changes and save config
+  f5networks.f5_modules.bigip_command:
+    provider: "{{ provider }}"
+    commands:
+      - "{{ item | build_management_ip_tmsh_command }}"
+      - "{{ item | build_management_route_tmsh_command(((bootstrap_management_route_exists_by_name | default({})).get(item.route_name | default('default'), false)) | ternary('modify', 'create')) }}"
+      - "save sys config"
+    warn: false
+  loop: "{{ bootstrap_management_present | default([]) }}"
+  loop_control:
+    label: "{{ item.address }}"

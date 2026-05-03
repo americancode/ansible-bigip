@@ -12,6 +12,7 @@ Declarative BIG-IP playbooks organized for GitOps-style management.
 | Deletion workflows | [docs/deletion-workflows.md](docs/deletion-workflows.md) |
 | AWX and HA operation | [docs/awx-operation.md](docs/awx-operation.md) |
 | Validation | [docs/validation.md](docs/validation.md) |
+| Day-0 bootstrap | [docs/bootstrap.md](docs/bootstrap.md) |
 | TLS secrets | [docs/tls-secrets.md](docs/tls-secrets.md) |
 | Network objects | [docs/network-objects.md](docs/network-objects.md) |
 | System management | [docs/system-management.md](docs/system-management.md) |
@@ -37,6 +38,7 @@ Canonical playbooks live under `playbooks/`. Root-level `*.yml` files are compat
 | Playbook | Domain |
 |---|---|
 | `playbooks/network.yml` | VLANs, trunks, route domains, self IPs, routes, SNATs, NATs |
+| `playbooks/bootstrap.yml` | device licensing and initial management IP/default-route bootstrap |
 | `playbooks/system.yml` | hostname, DNS, NTP, provisioning, users |
 | `playbooks/ha.yml` | device trust, device groups, traffic groups, config sync |
 | `playbooks/ltm.yml` | monitors, profiles, nodes, pools, virtual servers |

@@ -1,0 +1,14 @@
+- name: Manage BIG-IP bootstrap state
+  hosts: all
+  connection: local
+  gather_facts: false
+  vars_files:
+    - "{{ playbook_dir }}/../vars/common.yml"
+  vars:
+    repo_root: "{{ playbook_dir }}/.."
+  tasks:
+    - name: Load bootstrap variables
+      ansible.builtin.import_tasks: bootstrap/prep.yml
+
+    - name: Manage bootstrap objects
+      ansible.builtin.import_tasks: bootstrap/tasks/manage.yml

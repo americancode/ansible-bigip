@@ -16,9 +16,10 @@ Target outcome:
 
 The repository is already a viable GitOps control plane for BIG-IP runtime configuration:
 
-- declarative `network`, `system`, `ha`, `ltm`, `gtm`, `security`, and `tls` playbooks
+- declarative `bootstrap`, `network`, `system`, `ha`, `ltm`, `gtm`, `security`, and `tls` playbooks
 - canonical playbooks organized under `playbooks/` with root-level wrapper entrypoints
 - all canonical playbooks use the split model: `<domain>.yml`, `prep.yml`, `tasks/manage.yml`, `tasks/apply.yml`, `tasks/delete.yml`
+- `bootstrap` is the documented apply-only exception where `tasks/delete.yml` is intentionally empty because day-0 licensing and management seeding do not have a meaningful deletion workflow
 - split var trees for scale across all domains
 - per-directory `settings.yml` inheritance with object-level override → sibling settings → playbook fallback precedence
 - object-level partition overrides with `Common` fallback
@@ -34,7 +35,7 @@ The repository is already a viable GitOps control plane for BIG-IP runtime confi
 - reusable monitor definitions
 - universal `enabled: true` default where modules support admin state
 - offline validation through `tools/validate-vars` with `make validate` wrapper
-- modular documentation under `docs/` covering playbook structure, var layout, hybrid authoring, deletion workflows, AWX operation, validation, TLS secrets, network objects, system management, LTM advanced fields, GTM advanced fields, and bootstrap paths
+- modular documentation under `docs/` covering playbook structure, var layout, hybrid authoring, deletion workflows, AWX operation, validation, TLS secrets, network objects, bootstrap management, system management, LTM advanced fields, GTM advanced fields, and bootstrap paths
 
 The repo is not yet at full GitOps parity for every lifecycle path. The main remaining work falls into three buckets:
 
@@ -55,7 +56,6 @@ These items are the top priority before more feature expansion.
 ## Next Major Gaps
 
 - deepen drift tooling from basic existence checks to field-level comparison for newer object families
-- add true day-0 onboarding for brand-new BIG-IPs so Git can drive licensing, initial management bootstrap, and first secure API handoff
 - add explicit initial-setup documentation for first-boot prerequisites, pre-AWX appliance preparation, and cutover into repo-managed state
 - deeper HA lifecycle (connection mirroring, failover metadata, automated testing)
 - UCS backup/export workflow
@@ -69,6 +69,13 @@ This section is the roadmap-to-repo check.
 
 Implemented today:
 
+- `bootstrap.yml`
+  - BIG-IP license activation and revocation
+  - initial management IP CIDR
+  - initial management default route
+  - canonical playbook entrypoint at `playbooks/bootstrap.yml`
+  - internal split between canonical playbook wrapper, `prep.yml`, `tasks/manage.yml`, `tasks/delete.yml`, and `tasks/apply.yml`
+  - apply-only runtime model with validator-enforced no-deletions boundary
 - `network.yml`
   - VLANs
   - trunks
@@ -170,6 +177,7 @@ Implemented today:
   - corrected helper-tool mappings for trunks and SNAT pools
   - newer-object type coverage added for network route domains, SNAT translations, NATs, GTM topology, TLS CA bundles/client SSL/server SSL, WAF server technologies, APM policy nodes, and APM SSO configs
   - system objects and HA objects remain runtime-managed but not yet helper-tool-managed
+  - bootstrap objects are runtime-managed and validator-managed, but not helper-tool-managed
   - exhaustive parity still requires model-accurate extraction and richer field-level comparisons
 
 Not implemented yet:
@@ -210,6 +218,7 @@ These rules define what "done" means for roadmap items.
   - runtime exists
   - `tools/validate-vars` supports the object tree and references
   - helper-tool lifecycle coverage is still intentionally incomplete and documented
+  - this should be rare; outside the documented `bootstrap` exception, new feature work is expected to update `tools/drift-check`, `tools/import-from-bigip`, and any supporting Python helpers
 - `runtime+validation+helper-tools`
   - runtime exists
   - validator exists
@@ -260,6 +269,7 @@ Partial work is acceptable only when the roadmap and domain docs state the limit
 - mark the item with the correct completion class instead of treating it as full parity
 - add a follow-up backlog item for the missing layer or fidelity
 - describe the limitation in user-facing docs where operators will encounter it
+- do not use this clause to skip Python helper-tool updates for normal feature work; the standing repo rule is that all Python tooling should be updated on every feature change unless the roadmap explicitly documents an exception such as `bootstrap`
 
 ## Target Repo Shape
 
@@ -267,6 +277,7 @@ This is the recommended end-state layout.
 
 ```text
 .
+├── bootstrap.yml
 ├── network.yml
 ├── ltm.yml
 ├── gtm.yml
@@ -275,12 +286,20 @@ This is the recommended end-state layout.
 ├── security.yml
 ├── tls.yml
 ├── playbooks/
+│   ├── bootstrap.yml
 │   ├── network.yml
 │   ├── ltm.yml
 │   ├── gtm.yml
 │   ├── system.yml
 │   ├── ha.yml
+│   ├── security.yml
 │   ├── tls.yml
+│   ├── bootstrap/
+│   │   ├── prep.yml
+│   │   └── tasks/
+│   │       ├── manage.yml
+│   │       ├── delete.yml
+│   │       └── apply.yml
 │   ├── network/
 │   │   ├── prep.yml
 │   │   └── tasks/
@@ -294,6 +313,12 @@ This is the recommended end-state layout.
 │   │       ├── delete.yml
 │   │       └── apply.yml
 │   ├── ha/
+│   │   ├── prep.yml
+│   │   └── tasks/
+│   │       ├── manage.yml
+│   │       ├── delete.yml
+│   │       └── apply.yml
+│   ├── security/
 │   │   ├── prep.yml
 │   │   └── tasks/
 │   │       ├── manage.yml
@@ -321,6 +346,10 @@ This is the recommended end-state layout.
 ├── docs/
 └── vars/
     ├── common.yml
+    ├── bootstrap/
+    │   ├── license/
+    │   ├── management/
+    │   └── deletions/
     ├── network/
     │   ├── vlans/
     │   ├── self_ips/
@@ -485,6 +514,7 @@ Goal: manage base device configuration and cluster behavior through Git.
 
 ### Deliverables
 
+- `bootstrap.yml`
 - `system.yml`
 - `ha.yml`
 - var trees for base platform objects
@@ -500,6 +530,9 @@ Goal: manage base device configuration and cluster behavior through Git.
   - login banners
   - local users
   - auth provider integration
+- Add bootstrap management for:
+  - licensing
+  - initial management IP and route seeding
 - Add module provisioning and license handling where supported
 - Add HA management for:
   - device trust
@@ -781,7 +814,7 @@ This is the practical next sequence for the current repo.
 23. [ ] Deepen drift detection to compare meaningful fields for newly added object families
    - progress: `network_route_domains`, `network_trunks`, `network_snat_translations`, `network_snats`, and `network_nats` now have `runtime+validation+helper-tools` helper coverage with `basic field drift` for core runtime-managed fields
    - remaining scope: GTM, TLS, and newer security families still need deeper field-level drift work where helper tooling is currently only identity-level or otherwise shallower than runtime coverage
-24. [ ] Add day-0 BIG-IP onboarding for licensing and initial management bootstrap
+24. [x] Add day-0 BIG-IP onboarding for licensing and initial management bootstrap
 25. [ ] Document initial setup from first boot through handoff to Git-managed operation
 
 ### Checked-Off Item Audit Result
@@ -812,6 +845,7 @@ Completion-class summary for checked backlog items:
   - 18. Add APM access profiles, per-session policies, and macros
   - 22. Complete exhaustive drift/import parity for every newest object tree
 - `runtime+validation`
+  - 24. Add day-0 BIG-IP onboarding for licensing and initial management bootstrap
   - 4. Add `system.yml` for base platform settings
   - 5. Add `ha.yml` for trust/sync/failover
 
@@ -877,8 +911,10 @@ These are the first concrete tickets I would open.
 
 ### Milestone 4: Platform and HA
 
+- [x] Add `bootstrap.yml`
 - [x] Add `system.yml`
 - [x] Add `ha.yml`
+- [x] Add day-0 license and first management-route/IP bootstrap support
 - [x] Implement config save workflow
 - [x] Add examples for active/standby pair bootstrap
 

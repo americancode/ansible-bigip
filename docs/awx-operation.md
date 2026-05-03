@@ -112,5 +112,6 @@ That control belongs in AWX inventory and template design. The safe pattern is t
 
 ## Bootstrap Guides
 
+- day-0 bootstrap domain: [bootstrap.md](bootstrap.md)
 - AWX step-by-step: [awx-ha-bootstrap.md](awx-ha-bootstrap.md)
 - CLI step-by-step: [cli-bootstrap.md](cli-bootstrap.md)

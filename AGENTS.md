@@ -8,7 +8,7 @@ This repository manages F5 BIG-IP through declarative Ansible playbooks organize
 
 ## Core Structure
 
-- `playbooks/` — canonical playbooks (network, system, ha, ltm, gtm, tls, security)
+- `playbooks/` — canonical playbooks (bootstrap, network, system, ha, ltm, gtm, tls, security)
 - `vars/` — split var trees organized by domain with `settings.yml` inheritance
 - `docs/` — all operational documentation
 - `tools/` — validation and utility scripts
@@ -35,6 +35,13 @@ These are also binding. A feature is not complete just because syntax-check pass
 
 - Do not silently upgrade a feature's claimed completion class or helper-tool fidelity. If the repo only supports `runtime-only` or `identity-only`, that limitation must remain explicit in `ROADMAP.md` and the relevant docs.
 
+- For every normal feature change, all repo Python tooling must be considered part of the implementation surface:
+  - `tools/validate-vars`
+  - `tools/drift-check`
+  - `tools/import-from-bigip`
+  - any supporting Python filter or helper modules such as `filter_plugins/bigip_var_filters.py`
+  A feature is not complete if those layers were skipped without an explicitly documented exception.
+
 - Do not mark a roadmap item complete unless the feature is operationally complete across the repo model:
   - `prep.yml` loads and classifies the data the runtime tasks actually consume
   - `tasks/apply.yml` supports create/update behavior
@@ -55,6 +62,13 @@ These are also binding. A feature is not complete just because syntax-check pass
   - use the repo-wide `provider` variable from `vars/common.yml`
   - keep `tasks/manage.yml` as delete-first then apply-second unless ROADMAP explicitly documents an exception
   - keep example var files, docs, and helper tools aligned with the canonical playbook behavior
+
+- `bootstrap` is the current documented exception to normal delete/apply semantics:
+  - keep `playbooks/bootstrap/tasks/delete.yml` intentionally empty
+  - do not invent deletion behavior for day-0 licensing or first management-IP seeding
+  - keep that exception documented in `ROADMAP.md` and `docs/bootstrap.md`
+  - keep `bootstrap` classified as `runtime+validation` unless the roadmap explicitly decides helper-tool coverage is worth adding later
+  - do not treat `bootstrap` as precedent for skipping drift/import work in other domains
 
 - If a helper tool cannot yet support a newly added object family well, record that explicitly in `ROADMAP.md` as a remaining gap instead of silently implying full GitOps parity.
 
@@ -105,6 +119,7 @@ Update existing `docs/` files when an existing domain changes:
 - `docs/example-models.md` — add a section explaining the new domain's authoring model and cross-file linkages
 - `docs/hybrid-authoring.md` — update if a new hybrid pattern is introduced
 - `docs/security.md` — update when AFM, WAF, or APM object types are added or changed
+- `docs/bootstrap.md` — update when day-0 licensing, first management reachability, or handoff behavior changes
 
 ### README.md Updates
 
@@ -172,12 +187,14 @@ These updates are **required after every feature change** (new object types, new
 - [ ] `tools/drift-check` — add non-standard name fields to `DriftChecker.NAME_FIELDS` if applicable
 - [ ] `tools/drift-check` — add value drift comparisons in `_find_value_drift` for the new type's fields
 - [ ] explicitly classify the resulting drift support as `identity-only`, `basic field drift`, or `model-aware`
+- [ ] if drift tooling is intentionally not updated, document the exception in `ROADMAP.md` and the relevant domain doc before calling the work complete
 
 ### Import Tooling
 
 - [ ] `tools/import-from-bigip` — add an `ImportSpec` entry in `IMPORT_SPECS` with endpoint, output directory, top-level key, and field extraction
 - [ ] `tools/import-from-bigip` — add type-specific transformation logic in `_transform_item` (pool members, virtual server references, etc.) if needed
 - [ ] explicitly classify the resulting import fidelity as `identity-only`, `basic field drift`, or `model-aware`
+- [ ] if import tooling is intentionally not updated, document the exception in `ROADMAP.md` and the relevant domain doc before calling the work complete
 
 ### Documentation
 

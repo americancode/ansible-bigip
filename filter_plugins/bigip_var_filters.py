@@ -115,6 +115,35 @@ def build_nat_tmsh_command(action, nat):
     return " ".join(parts)
 
 
+def build_management_route_tmsh_command(action, management):
+    if not isinstance(management, dict):
+        return None
+
+    route_name = management.get("route_name", "default")
+    gateway = management.get("gateway")
+    if not route_name:
+        return None
+
+    if action == "show":
+        return f"list sys management-route {route_name} one-line"
+
+    verb = "create" if action == "create" else "modify"
+    parts = [verb, "sys", "management-route", str(route_name)]
+    if gateway not in (None, ""):
+        parts.extend(["gateway", str(gateway)])
+    return " ".join(parts)
+
+
+def build_management_ip_tmsh_command(management):
+    if not isinstance(management, dict):
+        return None
+
+    address = management.get("address")
+    if address in (None, ""):
+        return None
+    return f"modify sys management-ip {address}"
+
+
 def normalize_ltm_pool(pool, pool_defaults=None, member_defaults=None, monitor_sets=None):
     if not isinstance(pool, dict):
         return pool
@@ -162,4 +191,6 @@ class FilterModule(object):
             "expand_monitor_list": _expand_monitor_list,
             "resolve_gtm_members": _resolve_gtm_members,
             "build_nat_tmsh_command": build_nat_tmsh_command,
+            "build_management_route_tmsh_command": build_management_route_tmsh_command,
+            "build_management_ip_tmsh_command": build_management_ip_tmsh_command,
         }
