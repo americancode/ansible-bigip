@@ -37,10 +37,37 @@ VARS_DIR = ROOT / "vars"
 
 
 class AnsibleVarLoader(yaml.SafeLoader):
+    """YAML loader for Ansible variable files.
+
+    Purpose:
+        Extended SafeLoader that handles Ansible-specific YAML tags (e.g., !vault, !unsafe)
+        by passing them through unchanged rather than raising parse errors.
+
+    Usage:
+        Use this loader when reading var files that may contain Ansible vault-encrypted
+        values or other custom tags.
+    """
     pass
 
 
 def construct_ansible_tag(loader: AnsibleVarLoader, tag_suffix: str, node: yaml.Node) -> Any:
+    """YAML constructor that passes through Ansible-style tags (!) unchanged.
+
+    Purpose:
+        Allows the AnsibleVarLoader to parse YAML files that use Ansible-specific
+        tags (e.g., !vault, !unsafe) without raising errors.
+
+    Inputs:
+        loader (AnsibleVarLoader): The YAML loader instance.
+        tag_suffix (str): The tag suffix after the "!" prefix.
+        node (yaml.Node): The YAML node being constructed.
+
+    Outputs:
+        The constructed Python object (str, list, or dict depending on node type).
+
+    Constraints:
+        - Raises TypeError for unsupported node types.
+    """
     if isinstance(node, yaml.ScalarNode):
         return loader.construct_scalar(node)
     if isinstance(node, yaml.SequenceNode):
@@ -55,6 +82,26 @@ AnsibleVarLoader.add_multi_constructor("!", construct_ansible_tag)
 
 @dataclass
 class BigIPConnection:
+    """Manage authenticated REST API connections to a BIG-IP device.
+
+    Purpose:
+        Reads connection details from environment variables and provides
+        helpers to query the BIG-IP REST API for drift detection.
+
+    Attributes:
+        host (str): BIG-IP hostname or IP address.
+        username (str): BIG-IP username (default: "admin").
+        password (str): BIG-IP password.
+        port (int): BIG-IP management port (default: 443).
+
+    Environment variables:
+        F5_HOST (required), F5_USERNAME (default: admin), F5_PASSWORD (required),
+        F5_SERVER_PORT / F5_PORT (default: 443).
+
+    Example:
+        conn = BigIPConnection.from_env()
+        data = conn.get("ltm/node")
+    """
     host: str
     username: str
     password: str
@@ -62,10 +109,19 @@ class BigIPConnection:
 
     @property
     def base_url(self) -> str:
+        """Return the base URL for BIG-IP REST API calls."""
         return f"https://{self.host}:{self.port}/mgmt/tm"
 
     @classmethod
     def from_env(cls) -> "BigIPConnection":
+        """Create a BigIPConnection from environment variables.
+
+        Returns:
+            BigIPConnection: Configured connection instance.
+
+        Side effects:
+            Exits with code 1 if F5_HOST or F5_PASSWORD are missing.
+        """
         host = os.environ.get("F5_HOST")
         if not host:
             print("ERROR: F5_HOST environment variable is required.", file=sys.stderr)
@@ -122,6 +178,19 @@ class BigIPConnection:
 
 @dataclass
 class DriftEntry:
+    """Represents a single drift detection result for one object.
+
+    Purpose:
+        Captures the type, name, partition, and drift details for an object
+        that differs between the live BIG-IP and Git-declared state.
+
+    Attributes:
+        object_type (str): The object family (e.g., "ltm_nodes", "ltm_pools").
+        name (str): The object name.
+        partition (str): The BIG-IP partition (default: "Common").
+        status (str): Status or state information.
+        detail (str): Human-readable description of the drift.
+    """
     object_type: str
     name: str
     partition: str = "Common"
@@ -131,6 +200,20 @@ class DriftEntry:
 
 @dataclass
 class DriftReport:
+    """Aggregates drift detection results across all object types.
+
+    Purpose:
+        Collects and summarizes drift between live BIG-IP state and Git-declared state.
+
+    Attributes:
+        missing_from_git (list[DriftEntry]): Objects on device but not in Git.
+        missing_from_device (list[DriftEntry]): Objects in Git but not on device.
+        value_drift (list[DriftEntry]): Objects with field value differences.
+        unchanged (int): Count of objects that match between device and Git.
+
+    Properties:
+        has_drift (bool): True if any drift was detected.
+    """
     missing_from_git: list[DriftEntry] = field(default_factory=list)
     missing_from_device: list[DriftEntry] = field(default_factory=list)
     value_drift: list[DriftEntry] = field(default_factory=list)
@@ -159,10 +242,25 @@ class DriftReport:
 
 
 class VarTreeLoader:
+    """Loads var tree objects from the repository for drift comparison.
+
+    Purpose:
+        Reads all YAML files from the vars/ directory and loads them into
+        an in-memory structure for comparison against live BIG-IP state.
+
+    Attributes:
+        objects (dict): Dictionary mapping object type keys to lists of loaded objects.
+
+    Example:
+        loader = VarTreeLoader()
+        loader.load()
+        pools = loader.objects.get("ltm_pools", [])
+    """
     def __init__(self) -> None:
         self.objects: dict[str, list[dict[str, Any]]] = {}
 
     def load(self) -> None:
+        """Load all var trees into memory."""
         self._load_simple_tree("ltm_nodes", VARS_DIR / "ltm" / "nodes", "ltm_nodes")
         self._load_simple_tree("ltm_monitors", VARS_DIR / "ltm" / "monitors", "ltm_monitors")
         self._load_simple_tree("ltm_pools", VARS_DIR / "ltm" / "pools", "ltm_pools")
@@ -303,6 +401,20 @@ class DriftChecker:
     }
 
     def __init__(self, conn: BigIPConnection, var_loader: VarTreeLoader) -> None:
+        """Initialize the drift checker.
+
+        Purpose:
+            Compare Git-declared objects against live BIG-IP state to detect drift.
+
+        Inputs:
+            conn (BigIPConnection): Authenticated connection to the BIG-IP device.
+            var_loader (VarTreeLoader): Loaded var tree objects from the repository.
+
+        Attributes:
+            conn: The BIG-IP connection instance.
+            var_loader: The var tree loader with Git-declared objects.
+            report (DriftReport): Accumulated drift results.
+        """
         self.conn = conn
         self.var_loader = var_loader
         self.report = DriftReport()
@@ -1424,6 +1536,19 @@ class DriftChecker:
 
 
 def main() -> int:
+    """CLI entry point for drift-check.
+
+    Purpose:
+        Compare live BIG-IP device state against Git-declared var tree to detect drift.
+        Reports objects missing from Git, missing from device, and value mismatches.
+
+    Outputs:
+        Returns 0 on success, 1 if no objects found in var trees.
+        Prints drift report to stdout in human-readable or JSON format.
+
+    Example:
+        F5_HOST=10.1.1.1 F5_PASSWORD=secret python tools/drift-check --types ltm_pools
+    """
     import argparse
 
     parser = argparse.ArgumentParser(description="Compare live BIG-IP state against declared var tree state.")

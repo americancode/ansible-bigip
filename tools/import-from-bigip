@@ -38,11 +38,33 @@ except ImportError:
 
 
 class VarTreeDumper(yaml.Dumper):
+    """YAML dumper for var tree output.
+
+    Purpose:
+        Custom Dumper that properly indents nested structures, ensuring
+        the generated YAML files match the repository's formatting conventions.
+
+    Example:
+        yaml.dump(data, Dumper=VarTreeDumper)
+    """
     def increase_indent(self, flow=False, *args, **kwargs):
         return super().increase_indent(flow=flow, indentless=False)
 
 
 def str_representer(dumper: yaml.Dumper, data: str) -> yaml.Node:
+    """YAML representer for strings with proper formatting.
+
+    Purpose:
+        Ensures multiline strings use the literal block style (|) while
+        single-line strings use plain style for cleaner output.
+
+    Inputs:
+        dumper (yaml.Dumper): The YAML dumper instance.
+        data (str): The string value to represent.
+
+    Outputs:
+        yaml.Node: A scalar node with appropriate style.
+    """
     if "\n" in data:
         return dumper.represent_scalar("tag:yaml.org,2002:str", data, style="|")
     return dumper.represent_scalar("tag:yaml.org,2002:str", data)
@@ -130,6 +152,26 @@ class BigIPConnection:
 
 @dataclass
 class ImportSpec:
+    """Specification for importing a BIG-IP object type.
+
+    Purpose:
+        Defines how to query a BIG-IP REST endpoint and how to transform
+        the response into repository var tree format.
+
+    Attributes:
+        endpoint (str): The BIG-IP REST API path (e.g., "ltm/pool").
+        top_key (str): The YAML top-level key name for the output file.
+        output_dir (str): Relative path under vars/ for output files.
+        extract (dict[str, str]): Mapping of repo field names to BIG-IP API field names.
+
+    Example:
+        ImportSpec(
+            endpoint="ltm/pool",
+            top_key="ltm_pools",
+            output_dir="ltm/pools",
+            extract={"name": "name", "monitor": "monitor"}
+        )
+    """
     endpoint: str
     top_key: str
     output_dir: str
@@ -984,6 +1026,23 @@ class Importer:
         return obj
 
     def _derive_apm_sso_type(self, item: dict[str, Any]) -> str | None:
+        """Derive the APM SSO configuration type from a BIG-IP API item.
+
+        Purpose:
+            Determines the SSO type (kerberos, form_based, saml, etc.)
+            from the item's type field, kind, or by detecting
+            type-specific fields.
+
+        Inputs:
+            item (dict[str, Any]): Raw SSO config from BIG-IP REST API.
+
+        Returns:
+            str|None: The derived SSO type in snake_case, or None if unknown.
+
+        Side effects:
+            Checks type field, kind string, and presence of type-specific
+            fields (keytab, formActionUrl, idpMetadataUrl, etc.).
+        """
         type_value = self._first_present(item, ("type", "ssoType", "sso_type"))
         if isinstance(type_value, str) and type_value:
             return type_value.replace("-", "_")
@@ -1017,6 +1076,23 @@ class Importer:
         return None
 
     def _apm_sso_field_specs(self, sso_type: str) -> list[tuple[str, tuple[str, ...]]]:
+        """Get field specifications for an APM SSO type.
+
+        Purpose:
+            Returns a list of (repo_field_name, api_keys) tuples for
+            the given SSO type, defining how to extract fields from
+            the BIG-IP API response.
+
+        Inputs:
+            sso_type (str): The SSO type (kerberos, form_based, saml, etc.).
+
+        Returns:
+            list[tuple[str, tuple[str, ...]]]: Field specs mapping repo fields
+                to possible API key names.
+
+        Side effects:
+            Returns type-specific field mappings for all supported SSO types.
+        """
         return {
             "kerberos": [
                 ("keytab", ("keytab",)),
@@ -1075,6 +1151,22 @@ class Importer:
         }.get(sso_type, [])
 
     def _extract_apm_policy_node_properties(self, item: dict[str, Any]) -> dict[str, Any]:
+        """Extract properties from an APM policy node item.
+
+        Purpose:
+            Filters out metadata and reference fields from an APM policy node,
+            normalizing the remaining properties into repo format.
+
+        Inputs:
+            item (dict[str, Any]): Raw APM policy node from BIG-IP API.
+
+        Returns:
+            dict[str, Any]: Normalized properties for the policy node.
+
+        Side effects:
+            Skips ignored keys (metadata, references), normalizes property
+            keys and values for repo consumption.
+        """
         ignored_keys = {
             "name",
             "partition",
@@ -1101,6 +1193,21 @@ class Importer:
         return properties
 
     def _normalize_apm_property_key(self, key: Any) -> str:
+        """Normalize an APM policy node property key to repo format.
+
+        Purpose:
+            Converts BIG-IP API property keys (often camelCase) to
+            snake_case format used in the repository.
+
+        Inputs:
+            key (Any): The property key from BIG-IP API.
+
+        Returns:
+            str: Normalized key in snake_case format.
+
+        Side effects:
+            Replaces hyphens with underscores, converts camelCase to snake_case.
+        """
         if not isinstance(key, str):
             return str(key)
         text = key.replace("-", "_")
@@ -1112,6 +1219,23 @@ class Importer:
         return "".join(output)
 
     def _normalize_apm_policy_property_value(self, key: str, value: Any) -> Any:
+        """Normalize an APM policy node property value.
+
+        Purpose:
+            Converts BIG-IP API property values to appropriate Python types
+            and repo format (booleans, references, nested structures).
+
+        Inputs:
+            key (str): The property key (used to determine normalization rules).
+            value (Any): The raw value from BIG-IP API.
+
+        Returns:
+            Any: Normalized value ready for YAML output.
+
+        Side effects:
+            Handles special cases for rules, server references, booleans,
+            nested dicts/lists, and numeric strings.
+        """
         if value is None:
             return None
         if key == "rules":
@@ -1150,6 +1274,22 @@ class Importer:
         return value
 
     def _normalize_apm_rules(self, value: Any) -> Any:
+        """Normalize APM policy rules from BIG-IP API format.
+
+        Purpose:
+            Recursively normalizes a list of APM policy rules, converting
+            keys to snake_case and values to appropriate Python types.
+
+        Inputs:
+            value (Any): Raw rules value from BIG-IP API (expected list).
+
+        Returns:
+            Any: Normalized rules list, or original value if not a list.
+
+        Side effects:
+            Iterates through rule items, normalizing keys and values
+            recursively via _normalize_apm_policy_property_value.
+        """
         if not isinstance(value, list):
             return value
         normalized = []
@@ -1168,6 +1308,22 @@ class Importer:
         return normalized
 
     def _first_present(self, item: dict[str, Any], keys: tuple[str, ...]) -> Any:
+        """Return the first non-empty value from a list of keys in an item.
+
+        Purpose:
+            Searches through multiple possible key names to find the first
+            one that exists and has a non-empty value in the item.
+
+        Inputs:
+            item (dict[str, Any]): The dictionary to search.
+            keys (tuple[str, ...]): Ordered list of keys to try.
+
+        Returns:
+            Any: The first non-empty value found, or None if none found.
+
+        Side effects:
+            None - read-only operation.
+        """
         for key in keys:
             if key in item and item.get(key) not in (None, ""):
                 return item.get(key)
@@ -1363,6 +1519,19 @@ class Importer:
 
 
 def main() -> int:
+    """CLI entry point for import-from-bigip.
+
+    Purpose:
+        Query a live BIG-IP device and import its configuration into
+        repository var tree format as YAML files.
+
+    Outputs:
+        Returns 0 on success, non-zero on error.
+        Writes YAML files to the specified output directory.
+
+    Example:
+        F5_HOST=10.1.1.1 F5_PASSWORD=secret python tools/import-from-bigip --out /tmp/vars
+    """
     import argparse
 
     parser = argparse.ArgumentParser(

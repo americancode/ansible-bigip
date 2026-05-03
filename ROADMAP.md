@@ -133,59 +133,7 @@ These are the highest-value open items.
 
 These are the concrete remaining backlog items.
 
-1. **Function-level documentation for tools/** (BREAKDOWN)**
-    - **tools/validate-vars:**
-      - [x] `construct_ansible_tag()` — YAML tag constructor for Ansible vars
-      - [x] `TreeSpec` dataclass — var tree specification
-      - [x] `LoadedObject` dataclass — loaded object with metadata
-      - [x] `Validator.__init__()` — initialize validator state
-      - [x] `Validator.run()` — main validation entry point
-      - [x] `Validator.validate_common()` — validate common.yml provider
-      - [x] `Validator.validate_bootstrap()` — validate bootstrap objects
-      - [x] `Validator.load_tree()` — load and register objects from a var tree
-      - [x] `Validator.validate_network()` — validate network domain objects
-      - [x] `Validator.validate_system()` — validate system domain objects
-      - [x] `Validator.validate_ha()` — validate HA domain objects
-      - [ ] `Validator.validate_tls()` — validate TLS domain objects
-      - [x] `Validator.validate_ltm()` — validate LTM domain objects
-      - [x] `Validator.validate_gtm()` — validate GTM domain objects
-      - [x] `Validator.validate_security()` — validate security domain objects
-      - [x] `Validator.check_duplicates()` — duplicate object detection
-      - [x] `Validator.require_fields()` — required field validation
-      - [ ] `Validator.validate_named_or_fq_reference()` — cross-object reference validation
-    - **tools/drift-check:**
-      - [x] `BigIPConnection` class — device connection and REST helpers
-      - [x] `DriftEntry` / `DriftReport` dataclasses — drift result types
-      - [x] `VarTreeLoader.__init__()` / `load()` — load var trees for comparison
-      - [x] `VarTreeLoader._load_simple_tree()` — single tree loader
-      - [x] `DriftChecker.__init__()` / `run()` — main drift check entry point
-      - [x] `DriftChecker._check_type()` — check a single object type for drift
-      - [x] `DriftChecker._fetch_live_items()` — query BIG-IP REST API
-      - [x] `DriftChecker._find_value_drift()` — compare declared vs live values
-      - [x] `DriftChecker._find_network_value_drift()` — network-specific drift
-      - [x] `DriftChecker._find_gtm_value_drift()` — GTM-specific drift
-      - [x] `DriftChecker._find_tls_value_drift()` — TLS-specific drift
-      - [x] `DriftChecker._find_apm_value_drift()` — APM-specific drift
-      - [x] `DriftChecker._compare_field()` — single field comparison helper
-      - [x] `DriftChecker._normalize_*()` — value normalization helpers
-    - **tools/import-from-bigip:**
-      - [x] `BigIPConnection` class — device connection and REST helpers
-      - [x] `ImportSpec` dataclass — import specification
-      - [x] `Importer.__init__()` / `run()` — main import entry point
-      - [x] `Importer._import_type()` — import a single object type
-      - [x] `Importer._transform_item()` — transform BIG-IP API object to repo shape
-      - [x] `Importer._normalize_value()` — normalize imported field values
-      - [x] `Importer._import_waf_server_technologies()` — WAF-specific import
-      - [x] `Importer._import_apm_sso_configs()` — APM SSO import
-      - [x] `Importer._import_apm_policy_nodes()` — APM policy node import
-      - [x] `Importer._import_gtm_topology_records()` — GTM topology import
-      - [x] `Importer._transform_pool()` — pool-specific transformations
-      - [x] `Importer._transform_virtual()` — virtual server transformations
-      - [x] `Importer._transform_monitor()` — monitor transformations
-
-2. Add function-level documentation across `filter_plugins/bigip_var_filters.py` and `filter_plugins/bigip_filters/*.py` ✅ COMPLETED
-
-3. **Add top-level header comments across canonical playbook prep/task files**
+1. **Add top-level header comments across canonical playbook prep/task files**
    - **Shared prep snippets (`playbooks/shared/prep/`):**
      - [ ] `load-fragments.yml` — discovery and aggregation helper
      - [ ] `classify-ops.yml` — delete/apply classification helper
@@ -277,15 +225,15 @@ These are the concrete remaining backlog items.
    - keep the CLI entrypoint stable as `tools/import-from-bigip`
    - prefer reusable classes and shared normalization utilities over repeated inline transformations
 
-4. UCS backup/export workflow for configuration snapshots
+8. UCS backup/export workflow for configuration snapshots
    - priority: lower than management-plane auth, compliance, and current repo-boundary decisions
    - completion target: `runtime+validation`
 
-5. Certificate rotation automation with renewal detection
+9. Certificate rotation automation with renewal detection
    - priority: lower than management-plane auth, compliance, and current repo-boundary decisions
    - completion target: `runtime+validation+helper-tools` where practical
 
-6. Future deeper helper-tool fidelity
+10. Future deeper helper-tool fidelity
    - if needed, promote selected object families from `basic field drift` toward `model-aware`
    - only pursue this when the operational value is clear
 

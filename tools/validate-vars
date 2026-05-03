@@ -27,6 +27,20 @@ from filter_plugins.bigip_var_filters import (
 
 
 class AnsibleVarLoader(yaml.SafeLoader):
+    """YAML loader for Ansible variable files.
+
+    Purpose:
+        Extended SafeLoader that handles Ansible-specific YAML tags (e.g., !vault, !unsafe)
+        by passing them through unchanged rather than raising parse errors.
+
+    Usage:
+        Use this loader when reading var files that may contain Ansible vault-encrypted
+        values or other custom tags. The loader delegates to the parent constructor
+        for standard YAML structures.
+
+    Example:
+        data = yaml.load(open("vars/common.yml"), Loader=AnsibleVarLoader)
+    """
     pass
 
 
@@ -1514,6 +1528,16 @@ class Validator:
                 self.error(obj.relpath, f"HA config sync action references undefined device group `{obj.data.get('device_group')}`")
 
     def validate_tls(self) -> None:
+        """Validate TLS domain objects: keys, certificates, CA bundles, SSL profiles.
+
+        Purpose:
+            Validates all TLS objects in the var tree against the repo's field model.
+            Ensures keys have required fields (name, content), certificates link to valid keys,
+            CA bundles are present, and SSL profiles reference valid certificates/keys.
+
+        Side effects:
+            Adds validation errors to self.errors for any violations.
+        """
         keys = self.objects.get("tls_keys", [])
         certificates = self.objects.get("tls_certificates", [])
         ca_bundles = self.objects.get("tls_ca_bundles", [])
@@ -2918,6 +2942,22 @@ class Validator:
         known_objects: set[str],
         kind: str,
     ) -> None:
+        """Validate a cross-object reference by name or fully-qualified path.
+
+        Purpose:
+            Validates that a reference string matches a declared object in the known set.
+            Supports both short names (converted to FQ format) and FQ references (e.g., "/Common/pool1").
+
+        Inputs:
+            source (str): The source file/line for error messages.
+            reference (Any): The reference value to validate (should be a string).
+            default_partition (str): Partition to use for short-name resolution.
+            known_objects (set[str]): Set of valid FQ object names to match against.
+            kind (str): Type name for error messages (e.g., "pool", "profile").
+
+        Side effects:
+            Adds validation error to self.errors if reference is invalid.
+        """
         if not isinstance(reference, str):
             self.error(source, f"{kind} reference must be a string")
             return
@@ -3107,6 +3147,18 @@ class Validator:
 
 
 def main() -> int:
+    """CLI entry point for validate-vars.
+
+    Purpose:
+        Validates all var trees in the repository against the field model.
+        Loads all objects, runs domain-specific validation, and reports errors.
+
+    Outputs:
+        Returns 0 if validation passes, 1 if errors are found.
+
+    Example:
+        python tools/validate-vars
+    """
     return Validator().run()
 
 
