@@ -1,0 +1,42 @@
+- name: Gather embedded GTM datacenter names from deleted servers
+  ansible.builtin.set_fact:
+    gtm_embedded_datacenter_names_delete: >-
+      {{
+        (
+          (gtm_servers_delete | default([]))
+          | selectattr('datacenter', 'defined')
+          | map(attribute='datacenter')
+          | unique
+          | list
+        )
+      }}
+    gtm_embedded_datacenters_delete: []
+
+- name: Gather embedded GTM datacenter names from active servers
+  ansible.builtin.set_fact:
+    gtm_embedded_datacenter_names_present: >-
+      {{
+        (
+          (gtm_servers_present | default([]))
+          | selectattr('datacenter', 'defined')
+          | map(attribute='datacenter')
+          | unique
+          | list
+        )
+      }}
+    gtm_embedded_datacenters_present: []
+
+- name: Build embedded GTM datacenter deletions
+  ansible.builtin.set_fact:
+    gtm_embedded_datacenters_delete: "{{ (gtm_embedded_datacenters_delete | default([])) + [ {'name': item} ] }}"
+  loop: "{{ gtm_embedded_datacenter_names_delete | default([]) }}"
+
+- name: Build embedded GTM datacenters
+  ansible.builtin.set_fact:
+    gtm_embedded_datacenters_present: "{{ (gtm_embedded_datacenters_present | default([])) + [ {'name': item} ] }}"
+  loop: "{{ gtm_embedded_datacenter_names_present | default([]) }}"
+
+- name: Build canonical GTM datacenter operations
+  ansible.builtin.set_fact:
+    gtm_canonical_datacenters_delete: "{{ (gtm_datacenters_delete | default([])) + (gtm_embedded_datacenters_delete | default([])) }}"
+    gtm_canonical_datacenters_present: "{{ (gtm_datacenters_present | default([])) + (gtm_embedded_datacenters_present | default([])) }}"

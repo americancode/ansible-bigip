@@ -1,0 +1,89 @@
+- name: Initialize compiled GTM shortcut objects from deleted Wide IPs
+  ansible.builtin.set_fact:
+    gtm_compiled_wide_ips_delete: []
+    gtm_compiled_pools_delete: []
+
+- name: Initialize compiled GTM shortcut objects from active Wide IPs
+  ansible.builtin.set_fact:
+    gtm_compiled_wide_ips_present: []
+    gtm_compiled_pools_present: []
+
+- name: Compile deleted GTM Wide IP shortcut objects
+  ansible.builtin.set_fact:
+    gtm_compiled_wide_ips_delete: >-
+      {{
+        (gtm_compiled_wide_ips_delete | default([])) + [gtm_compiled_service.wide_ip]
+      }}
+    gtm_compiled_pools_delete: >-
+      {{
+        (gtm_compiled_pools_delete | default([])) + (gtm_compiled_service.pools | default([]))
+      }}
+  loop: "{{ gtm_wide_ips_delete | default([]) }}"
+  vars:
+    gtm_wide_ip_settings_path: "{{ item.__source_file | regex_replace('/[^/]+$', '/settings.yml') if item.__source_file is defined else '' }}"
+    gtm_wide_ip_settings_payload: >-
+      {{
+        (
+          lookup('ansible.builtin.file', gtm_wide_ip_settings_path, errors='ignore')
+          | default('{}', true)
+          | from_yaml
+        ) if gtm_wide_ip_settings_path else {}
+      }}
+    gtm_wide_ip_pool_defaults: "{{ gtm_wide_ip_settings_payload.gtm_pool_defaults | default({}) }}"
+    gtm_wide_ip_member_defaults: "{{ gtm_wide_ip_settings_payload.gtm_member_defaults | default({}) }}"
+    gtm_wide_ip_monitor_sets: "{{ gtm_wide_ip_settings_payload.gtm_monitor_sets | default({}) }}"
+    gtm_compiled_service: >-
+      {{
+        item
+        | compile_gtm_wide_ip_intent(
+            gtm_wide_ip_pool_defaults,
+            gtm_wide_ip_member_defaults,
+            gtm_wide_ip_monitor_sets,
+            repo_ltm_virtual_server_lookup | default({})
+          )
+      }}
+
+- name: Compile active GTM Wide IP shortcut objects
+  ansible.builtin.set_fact:
+    gtm_compiled_wide_ips_present: >-
+      {{
+        (gtm_compiled_wide_ips_present | default([])) + [gtm_compiled_service.wide_ip]
+      }}
+    gtm_compiled_pools_present: >-
+      {{
+        (gtm_compiled_pools_present | default([])) + (gtm_compiled_service.pools | default([]))
+      }}
+  loop: "{{ gtm_wide_ips_present | default([]) }}"
+  vars:
+    gtm_wide_ip_settings_path: "{{ item.__source_file | regex_replace('/[^/]+$', '/settings.yml') if item.__source_file is defined else '' }}"
+    gtm_wide_ip_settings_payload: >-
+      {{
+        (
+          lookup('ansible.builtin.file', gtm_wide_ip_settings_path, errors='ignore')
+          | default('{}', true)
+          | from_yaml
+        ) if gtm_wide_ip_settings_path else {}
+      }}
+    gtm_wide_ip_pool_defaults: "{{ gtm_wide_ip_settings_payload.gtm_pool_defaults | default({}) }}"
+    gtm_wide_ip_member_defaults: "{{ gtm_wide_ip_settings_payload.gtm_member_defaults | default({}) }}"
+    gtm_wide_ip_monitor_sets: "{{ gtm_wide_ip_settings_payload.gtm_monitor_sets | default({}) }}"
+    gtm_compiled_service: >-
+      {{
+        item
+        | compile_gtm_wide_ip_intent(
+            gtm_wide_ip_pool_defaults,
+            gtm_wide_ip_member_defaults,
+            gtm_wide_ip_monitor_sets,
+            repo_ltm_virtual_server_lookup | default({})
+          )
+      }}
+
+- name: Replace raw Wide IP shortcut objects with compiled canonical Wide IPs
+  ansible.builtin.set_fact:
+    gtm_wide_ips_delete: "{{ gtm_compiled_wide_ips_delete | default([]) }}"
+    gtm_wide_ips_present: "{{ gtm_compiled_wide_ips_present | default([]) }}"
+
+- name: Build canonical GTM pool operations
+  ansible.builtin.set_fact:
+    gtm_canonical_pools_delete: "{{ (gtm_pools_delete | default([])) + (gtm_compiled_pools_delete | default([])) }}"
+    gtm_canonical_pools_present: "{{ (gtm_pools_present | default([])) + (gtm_compiled_pools_present | default([])) }}"

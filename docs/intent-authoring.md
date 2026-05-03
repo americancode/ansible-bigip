@@ -74,6 +74,7 @@ The expected implementation boundary is:
 
 - var files describe intent
 - `prep.yml` discovers them
+- focused `prep/*.yml` snippets can own individual compilers for specific patterns
 - a compiler layer normalizes them into canonical objects
 - runtime tasks remain unchanged except for consuming the normalized canonical sets
 
