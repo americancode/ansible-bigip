@@ -36,6 +36,7 @@ Current lifecycle boundaries:
 | Variables and precedence | [docs/var-layout.md](docs/var-layout.md) |
 | Hybrid authoring | [docs/hybrid-authoring.md](docs/hybrid-authoring.md) |
 | Intent authoring | [docs/intent-authoring.md](docs/intent-authoring.md) |
+| Intent extension guide | [docs/intent-extension-guide.md](docs/intent-extension-guide.md) |
 | Deletion workflows | [docs/deletion-workflows.md](docs/deletion-workflows.md) |
 | AWX and HA operation | [docs/04-awx-operation.md](docs/04-awx-operation.md) |
 | Validation | [docs/validation.md](docs/validation.md) |

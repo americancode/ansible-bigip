@@ -2,6 +2,8 @@
 
 This document defines how the repo should support higher-level convenience authoring without turning the canonical runtime playbooks into unmaintainable special-case engines.
 
+If you need the concrete implementation path for adding a new intent/customization, use [intent-extension-guide.md](intent-extension-guide.md). This document explains the architectural rules; the extension guide shows exactly where to wire new behavior in.
+
 The design goal is:
 
 - keep runtime playbooks stable and object-focused
@@ -36,6 +38,8 @@ That means runtime tasks should continue to manage objects such as:
 - `gtm_servers`
 
 Runtime `apply.yml` and `delete.yml` files should not keep gaining more branches for every convenience model.
+
+That also means new convenience patterns should normally not get their own playbook. They should be patched into the existing canonical domain through prep/compiler wiring unless a genuinely new runtime domain is being introduced.
 
 ### Intent Is Optional And Compiles Ahead Of Runtime
 

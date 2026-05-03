@@ -70,6 +70,7 @@ These are also binding. A feature is not complete just because syntax-check pass
 - Preserve the separation between canonical runtime objects and higher-level convenience authoring:
   - `playbooks/ltm.yml`, `playbooks/gtm.yml`, and other canonical runtime playbooks should operate on normalized first-class BIG-IP objects
   - do not keep adding shortcut-specific branching directly into `tasks/apply.yml` or `tasks/delete.yml` for common service patterns
+  - do not create a new playbook just to host a convenience model, embedded-data variant, or easier authoring surface for an existing domain
 - when a new “simple thing” or common pattern is needed, prefer adding it as an intent/compiler layer ahead of runtime tasks
 - intent-style inputs should compile into the same canonical object model the runtime already manages
 - keep `intent` as the umbrella term for higher-level authoring that compiles into canonical objects
@@ -152,6 +153,10 @@ When working on convenience patterns, common service templates, or “simple mod
   - which canonical objects are emitted
   - whether helper tools understand the intent layer directly or only the compiled canonical layer
 - if a shortcut exists today inside `ltm` or `gtm` runtime logic, prefer refactoring it into the intent/compiler layer before adding more shortcut behavior around it
+- if a contributor is unsure where a new convenience pattern belongs, the default answer is:
+  - existing runtime domain + canonical object tree if it is just another object family
+  - existing runtime domain + `vars/<domain>/intents/<category>/...` if it is a convenience bundle
+  - only create a new playbook when introducing a genuinely new runtime domain
 - `docs/security.md` — update when AFM, WAF, or APM object types are added or changed
 - `docs/02-bootstrap-playbook.md` — update when day-0 licensing, first management reachability, or handoff behavior changes
 - `docs/01-initial-setup-and-handoff.md` — update when first-boot prerequisites, bootstrap sequencing, or AWX handoff behavior changes

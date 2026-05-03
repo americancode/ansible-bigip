@@ -30,6 +30,8 @@ This pattern is the default for `bootstrap`, `network`, `system`, `ha`, `tls`, `
 
 When a domain grows a real intent layer, keep those prep snippets under `playbooks/<domain>/prep/intents/<category>/...` instead of leaving them mixed into the prep root.
 
+Do not create a separate playbook just to host a convenience model or embedded-data variant. New convenience behavior should usually patch into the existing canonical domain through prep/compiler wiring.
+
 When Python-backed prep helpers grow beyond a small handful of filters, keep `filter_plugins/bigip_var_filters.py` as the thin Ansible entrypoint and split the implementation by concern under `filter_plugins/bigip_filters/`.
 
 The current preferred split is:
