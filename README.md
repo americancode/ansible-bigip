@@ -2,6 +2,21 @@
 
 Declarative BIG-IP playbooks organized for GitOps-style management.
 
+## Current Coverage
+
+The repo already manages the main BIG-IP runtime domains through Git:
+
+- day-0 bootstrap for licensing and first management reachability
+- network, system, HA, LTM, GTM, TLS, and security playbooks
+- split var trees with per-directory `settings.yml` and explicit deletion trees
+- offline validation, drift detection, and brownfield import tooling
+
+Current lifecycle boundaries:
+
+- `bootstrap` is intentionally `runtime+validation` only
+- `system` and `ha` are currently `runtime+validation`
+- the broader service domains are generally `runtime+validation+helper-tools`, usually at `basic field drift` fidelity for helper-tool comparisons
+
 ## Quick Links
 
 | Topic | Doc |
@@ -46,6 +61,17 @@ Canonical playbooks live under `playbooks/`. Root-level `*.yml` files are compat
 | `playbooks/gtm.yml` | monitors, datacenters, servers, pools, Wide IPs, topology |
 | `playbooks/tls.yml` | keys, certificates, CA bundles, SSL profiles |
 | `playbooks/security.yml` | AFM address lists, port lists, firewall rules, policies; WAF policies, server technologies; APM ACLs, auth servers, SSO configs, resources, policy nodes, access profiles, per-session policies, macros |
+
+## Current Priorities
+
+The main remaining roadmap items are:
+
+- deeper HA lifecycle management
+- UCS backup/export workflow
+- certificate rotation automation
+- BIG-IP management-plane admin auth providers
+- login banner management
+- deciding whether `system` and `ha` should gain full drift/import support
 
 ## Validation
 

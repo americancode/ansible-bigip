@@ -2,223 +2,67 @@
 
 ## Objective
 
-Evolve this repository from a focused set of `network`, `ltm`, and `gtm` playbooks into an enterprise GitOps control plane for BIG-IP.
-
-Target outcome:
+Keep this repository moving toward a practical BIG-IP GitOps control plane:
 
 - most BIG-IP changes are made through Git
 - object ownership is clear by directory and team boundary
 - destructive changes are explicit and reviewable
 - validation happens before Ansible talks to a device
-- platform, service, DNS, security, and lifecycle operations are all covered
+- setup, steady-state operations, and lifecycle work are all covered
 
-## Current State
+## Current Platform Summary
 
-The repository is already a viable GitOps control plane for BIG-IP runtime configuration:
+The repo already manages the main BIG-IP runtime domains through canonical playbooks under `playbooks/`:
 
-- declarative `bootstrap`, `network`, `system`, `ha`, `ltm`, `gtm`, `security`, and `tls` playbooks
-- canonical playbooks organized under `playbooks/` with root-level wrapper entrypoints
-- all canonical playbooks use the split model: `<domain>.yml`, `prep.yml`, `tasks/manage.yml`, `tasks/apply.yml`, `tasks/delete.yml`
-- `bootstrap` is the documented apply-only exception where `tasks/delete.yml` is intentionally empty because day-0 licensing and management seeding do not have a meaningful deletion workflow
-- split var trees for scale across all domains
-- per-directory `settings.yml` inheritance with object-level override → sibling settings → playbook fallback precedence
-- object-level partition overrides with `Common` fallback
-- inventory-driven BIG-IP target selection through `f5_host` with `F5_HOST` env fallback
-- hybrid object modeling:
-  - embedded pools under LTM virtual servers
-  - embedded pools under GTM Wide IPs
-  - first-class shared trees for reusable objects
-  - first-class persistence profiles, iRules, data groups, and LTM policies
-  - first-class GTM topology regions and topology records
-  - hybrid readability shortcuts (`pool_defaults`, `member_defaults`, `monitor_sets`)
-- explicit deletion trees under `vars/*/deletions` and `state: absent` inline pattern
-- reusable monitor definitions
-- universal `enabled: true` default where modules support admin state
-- offline validation through `tools/validate-vars` with `make validate` wrapper
-- modular documentation under `docs/` covering playbook structure, var layout, hybrid authoring, deletion workflows, AWX operation, validation, TLS secrets, network objects, bootstrap management, initial setup, system management, LTM advanced fields, GTM advanced fields, and bootstrap paths
+- `bootstrap` for day-0 licensing and first management reachability
+- `network` for VLANs, trunks, route domains, self IPs, routes, SNAT translations, SNAT pools, and NATs
+- `system` for hostname, DNS, NTP/timezone, provisioning, users, and config save
+- `ha` for trust, sync groups, traffic groups, and config sync actions
+- `ltm` for monitors, profiles, nodes, pools, virtual servers, persistence, iRules, data groups, and policies
+- `gtm` for monitors, datacenters, servers, pools, Wide IPs, regions, and topology records
+- `tls` for keys, certificates, CA bundles, and SSL profiles
+- `security` for AFM, WAF, and APM objects
 
-The repo is not yet at full GitOps parity for every lifecycle path. The main remaining work falls into three buckets:
+The repo structure is standardized:
 
-- stabilize feature parity across runtime, validation, drift detection, import tooling, examples, and docs
-- close day-0 and operator-lifecycle gaps so initial setup and long-term maintenance are both Git-driven
-- expand deeper platform lifecycle coverage where runtime support is still missing
+- canonical playbooks live under `playbooks/`
+- root-level `*.yml` files are compatibility wrappers
+- each canonical domain uses `prep.yml`, `tasks/manage.yml`, `tasks/delete.yml`, and `tasks/apply.yml`
+- `bootstrap` is the documented exception: it is apply-only and keeps `tasks/delete.yml` intentionally empty
+- split var trees under `vars/` use per-directory `settings.yml`
+- explicit deletion trees live under `vars/*/deletions`
 
-## Immediate Stabilization Priorities
+The repo also has first-class helper tooling:
 
-These items are the top priority before more feature expansion.
+- `tools/validate-vars` for offline validation
+- `tools/drift-check` for live-vs-Git comparison
+- `tools/import-from-bigip` for brownfield import
 
-1. audit every checked-off roadmap item against actual code, examples, validator coverage, drift tooling, and import tooling
-2. fix helper-tool object mappings where newer coverage was added against the wrong BIG-IP endpoints or wrong repo var keys
-3. align runtime, validator, docs, and example vars where the current field models drifted apart
-4. finish helper-tool parity for newer object trees where runtime playbook support exists but drift/import parity is still partial
-5. decide explicitly which domains are considered runtime-complete but not yet drift/import-complete, and document that boundary clearly
+## Capability Boundaries
 
-## Next Major Gaps
+These boundaries must stay explicit.
 
-- deepen drift tooling from basic existence checks to field-level comparison for newer object families
-- add explicit initial-setup documentation for first-boot prerequisites, pre-AWX appliance preparation, and cutover into repo-managed state
-- deeper HA lifecycle (connection mirroring, failover metadata, automated testing)
-- UCS backup/export workflow
-- certificate rotation automation
-- auth provider integration for BIG-IP management-plane admin login, separate from APM end-user identity
-- login banner management
-
-## Current Implementation Audit
-
-This section is the roadmap-to-repo check.
-
-Implemented today:
-
-- `bootstrap.yml`
-  - BIG-IP license activation and revocation
-  - initial management IP CIDR
-  - initial management default route
-  - canonical playbook entrypoint at `playbooks/bootstrap.yml`
-  - internal split between canonical playbook wrapper, `prep.yml`, `tasks/manage.yml`, `tasks/delete.yml`, and `tasks/apply.yml`
-  - apply-only runtime model with validator-enforced no-deletions boundary
-- `network.yml`
-  - VLANs
-  - trunks
-  - route domains
-  - self IPs
-  - static routes
-  - SNAT translations
-  - SNAT pools
-  - NATs via validated `tmsh` workflow
-  - deletion trees
-  - per-directory `settings.yml`
-  - canonical playbook entrypoint at `playbooks/network.yml`
-  - internal split between canonical playbook wrapper, `prep.yml`, `tasks/manage.yml`, `tasks/delete.yml`, and `tasks/apply.yml`
-- `system.yml`
-  - hostname
-  - DNS
-  - NTP/timezone
-  - provisioning
-  - users
-  - config save
-  - canonical playbook entrypoint at `playbooks/system.yml`
-  - internal split between canonical playbook wrapper, `prep.yml`, `tasks/manage.yml`, `tasks/delete.yml`, and `tasks/apply.yml`
-- `ha.yml`
-  - device trust
-  - device groups
-  - device group members
-  - traffic groups
-  - config sync actions
-  - canonical playbook entrypoint at `playbooks/ha.yml`
-  - internal split between canonical playbook wrapper, `prep.yml`, `tasks/manage.yml`, `tasks/delete.yml`, and `tasks/apply.yml`
-- `tls.yml`
-  - SSL keys
-  - certificates
-  - CA bundles
-  - client SSL profiles
-  - server SSL profiles
-  - canonical playbook entrypoint at `playbooks/tls.yml`
-  - internal split between canonical playbook wrapper, `prep.yml`, `tasks/manage.yml`, `tasks/delete.yml`, and `tasks/apply.yml`
-- `ltm.yml`
-  - custom LTM monitors
-  - first-class non-TLS LTM profiles (`tcp`, `udp`, `fastl4`, `http`, `http2`, `oneconnect`)
-  - first-class nodes
-  - first-class pools
-  - virtual-server-centric embedded pools
-  - first-class persistence profiles (`cookie`, `source_addr`, `universal`)
-  - first-class iRules
-  - first-class data groups (`string`, `ip`, `integer`)
-  - first-class LTM policies with rules, conditions, and actions
-  - virtual server attachments for persistence, iRules, and policies
-  - virtual server VLAN filtering, metadata, and log profiles
-  - per-object and per-directory partition handling
-  - enabled/disabled semantics where supported
-  - deletion trees
-  - canonical playbook entrypoint at `playbooks/ltm.yml`
-  - internal split between canonical playbook wrapper, `prep.yml`, `tasks/manage.yml`, `tasks/delete.yml`, and `tasks/apply.yml`
-- `gtm.yml`
-  - custom GTM monitors
-  - first-class datacenters
-  - first-class servers
-  - first-class pools
-  - Wide-IP-centric embedded pools
-  - static server model
-  - optional LTM virtual resolution for GTM pool members
-  - topology regions
-  - topology records
-  - per-object and per-directory partition handling
-  - enabled/disabled semantics where supported
-  - deletion trees
-  - canonical playbook entrypoint at `playbooks/gtm.yml`
-  - internal split between canonical playbook wrapper, `prep.yml`, `tasks/manage.yml`, `tasks/delete.yml`, and `tasks/apply.yml`
-- `security.yml`
-  - AFM address lists (addresses, ranges, nested lists, geo locations, FQDNs)
-  - AFM port lists (ports, ranges, nested lists)
-  - AFM firewall rules (actions, protocol, source/destination endpoints)
-  - AFM firewall policies (ordered rule lists)
-  - WAF/ASM policies (built-in templates, active/apply flags)
-  - WAF server technologies (parent policy references)
-  - APM ACLs (L4/L7 entries, actions, host/path/scheme matching)
-  - APM authentication servers (AD, LDAP, RADIUS, TACACS, RSA, cert, localdb, SAML, OAuth)
-  - APM SSO configurations (Kerberos, form-based, HTTP Basic, NTLM, SAML, OAuth, Citrix, domain-join)
-  - APM resources (network access, webtop, remote desktop, portal access)
-  - APM policy nodes (VPE flow nodes with auth/SSO/resource references)
-  - APM access profiles
-  - APM per-session policies (session-level authentication flows)
-  - APM macros (reusable VPE building blocks)
-  - per-directory `settings.yml` inheritance
-  - deletion trees for all object types
-  - canonical playbook entrypoint at `playbooks/security.yml`
-  - internal split between canonical playbook wrapper, `prep.yml`, `tasks/manage.yml`, `tasks/delete.yml`, and `tasks/apply.yml`
-- validation/tooling
-  - YAML/schema/reference validation
-  - duplicate detection
-  - Ansible syntax-check wrapper
-- drift detection and import tooling
-  - `tools/drift-check` for live-vs-Git comparison
-  - `tools/import-from-bigip` for brownfield import
-  - CI-ready JSON output for dashboards
-  - LTM, GTM, network, AFM, WAF, APM, and TLS object type support
-  - corrected helper-tool mappings for trunks and SNAT pools
-  - newer-object type coverage added for network route domains, SNAT translations, NATs, GTM topology, TLS CA bundles/client SSL/server SSL, WAF server technologies, APM policy nodes, and APM SSO configs
-  - system objects and HA objects remain runtime-managed but not yet helper-tool-managed
-  - bootstrap objects are runtime-managed and validator-managed, but not helper-tool-managed
-  - exhaustive parity still requires model-accurate extraction and richer field-level comparisons
-
-Not implemented yet:
-
-- HA connection mirroring and failover metadata
-- Automated failover testing workflows
-- UCS backup/export workflow
-- Certificate rotation automation
-- Auth provider integration for BIG-IP admin users on the management plane, separate from APM end-user identity flows
-- Login banner management
-
-## Coverage Status By Layer
-
-This is the expected interpretation of feature status going forward.
-
-- Runtime complete:
-  - playbook `prep.yml`, `tasks/delete.yml`, and `tasks/apply.yml` exist and match the intended var model
-- Validation complete:
-  - `tools/validate-vars` understands the tree, required fields, references, and duplicate semantics
-- Drift/import complete:
-  - `tools/drift-check` and `tools/import-from-bigip` use the correct BIG-IP endpoints, correct repo var keys, and enough field extraction to reconstruct the repo model without misleading output
-- Documentation/example complete:
-  - `README.md`, domain docs, roadmap state, and example var files all describe the actual runtime field model and linkage behavior
-
-Checked-off roadmap items should only be treated as fully complete when all four layers above are true, unless the roadmap explicitly says the item is runtime-only.
+- `bootstrap` is currently `runtime+validation`
+  - it is intentionally day-0 and apply-only
+  - drift/import coverage is intentionally not part of its current scope
+- `system` and `ha` are currently `runtime+validation`
+  - they are operationally useful, but not yet helper-tool complete
+- the broader service/runtime domains are generally `runtime+validation+helper-tools`
+  - helper-tool fidelity varies by object family
+  - newer families are generally closed at `basic field drift`, not universal full semantic parity
 
 ## Acceptance Criteria
 
-These rules define what "done" means for roadmap items.
+These rules define what "done" means for roadmap work.
 
 ### Completion Classes
 
 - `runtime-only`
-  - playbook runtime exists
-  - validator and/or helper-tool coverage is intentionally incomplete
-  - the limitation is documented in the relevant domain docs and in this roadmap
+  - playbook behavior exists, but validator and/or helper-tool lifecycle support is intentionally incomplete
 - `runtime+validation`
   - runtime exists
   - `tools/validate-vars` supports the object tree and references
-  - helper-tool lifecycle coverage is still intentionally incomplete and documented
-  - this should be rare; outside the documented `bootstrap` exception, new feature work is expected to update `tools/drift-check`, `tools/import-from-bigip`, and any supporting Python helpers
+  - helper-tool lifecycle support is intentionally incomplete and documented
 - `runtime+validation+helper-tools`
   - runtime exists
   - validator exists
@@ -226,7 +70,7 @@ These rules define what "done" means for roadmap items.
 - `full parity`
   - runtime, validator, helper tools, docs, example vars, README, and roadmap are aligned
 
-### Helper-Tool Fidelity Levels
+### Helper-Tool Fidelity
 
 - `identity-only`
   - helper tools can detect or import object presence by identity, but do not claim meaningful field-level parity
@@ -235,189 +79,95 @@ These rules define what "done" means for roadmap items.
 - `model-aware`
   - helper tools reconstruct nested structures and cross-object linkages in the repo's actual field model
 
-### Required Evidence Before Checking a Box
+### Required Evidence Before Calling Work Complete
 
-An item must not be marked complete unless the implementation or closeout can name:
-
-- the completion class being claimed
-- the helper-tool fidelity level where applicable
-- the repo layers updated:
-  - runtime playbook files
+- state the completion class being claimed
+- state the helper-tool fidelity level where applicable
+- name the repo layers updated:
+  - runtime playbooks
   - validator
   - drift/import tooling
   - docs
   - example vars
   - roadmap state
-- the validation commands that passed
+- name the validation commands that passed
 
 ### Prohibited Completion Behavior
 
-Do not mark an item complete when any of the following is true:
+Do not call work complete when any of the following is true:
 
-- runtime exists but delete support is missing
-- runtime exists but `prep.yml` does not actually load the declared field model
+- runtime exists but delete behavior is missing without an explicit documented exception
+- `prep.yml` does not actually load the field model used by runtime tasks
+- validator accepts a different model than runtime uses
 - docs or examples describe fields the runtime does not consume
-- validator accepts a different model than the runtime uses
 - helper tools point at the wrong BIG-IP endpoints or wrong repo var keys
-- helper tools only cover parent objects while the repo models child attachments, and that limitation is not documented
-- the roadmap wording implies stronger parity than the code actually provides
+- roadmap wording claims stronger parity than the code actually provides
 
-### When Partial Work Is Acceptable
+## Active Priorities
 
-Partial work is acceptable only when the roadmap and domain docs state the limitation explicitly. In those cases:
+These are the highest-value open items.
 
-- mark the item with the correct completion class instead of treating it as full parity
-- add a follow-up backlog item for the missing layer or fidelity
-- describe the limitation in user-facing docs where operators will encounter it
-- do not use this clause to skip Python helper-tool updates for normal feature work; the standing repo rule is that all Python tooling should be updated on every feature change unless the roadmap explicitly documents an exception such as `bootstrap`
+1. Deeper HA lifecycle management
+   - connection mirroring
+   - failover metadata
+   - automated failover testing workflows
 
-## Target Repo Shape
+2. Configuration snapshot and recovery workflows
+   - UCS backup/export workflow
+   - explicit operational guidance for snapshot use in change and rollback paths
 
-This is the recommended end-state layout.
+3. Certificate lifecycle automation
+   - certificate rotation workflows
+   - renewal/expiry detection
 
-```text
-.
-├── bootstrap.yml
-├── network.yml
-├── ltm.yml
-├── gtm.yml
-├── system.yml
-├── ha.yml
-├── security.yml
-├── tls.yml
-├── playbooks/
-│   ├── bootstrap.yml
-│   ├── network.yml
-│   ├── ltm.yml
-│   ├── gtm.yml
-│   ├── system.yml
-│   ├── ha.yml
-│   ├── security.yml
-│   ├── tls.yml
-│   ├── bootstrap/
-│   │   ├── prep.yml
-│   │   └── tasks/
-│   │       ├── manage.yml
-│   │       ├── delete.yml
-│   │       └── apply.yml
-│   ├── network/
-│   │   ├── prep.yml
-│   │   └── tasks/
-│   │       ├── manage.yml
-│   │       ├── delete.yml
-│   │       └── apply.yml
-│   ├── system/
-│   │   ├── prep.yml
-│   │   └── tasks/
-│   │       ├── manage.yml
-│   │       ├── delete.yml
-│   │       └── apply.yml
-│   ├── ha/
-│   │   ├── prep.yml
-│   │   └── tasks/
-│   │       ├── manage.yml
-│   │       ├── delete.yml
-│   │       └── apply.yml
-│   ├── security/
-│   │   ├── prep.yml
-│   │   └── tasks/
-│   │       ├── manage.yml
-│   │       ├── delete.yml
-│   │       └── apply.yml
-│   ├── tls/
-│   │   ├── prep.yml
-│   │   └── tasks/
-│   │       ├── manage.yml
-│   │       ├── delete.yml
-│   │       └── apply.yml
-│   ├── ltm/
-│   │   ├── prep.yml
-│   │   └── tasks/
-│   │       ├── manage.yml
-│   │       ├── delete.yml
-│   │       └── apply.yml
-│   └── gtm/
-│       ├── prep.yml
-│       └── tasks/
-│           ├── manage.yml
-│           ├── delete.yml
-│           └── apply.yml
-├── tools/
-├── docs/
-└── vars/
-    ├── common.yml
-    ├── bootstrap/
-    │   ├── license/
-    │   ├── management/
-    │   └── deletions/
-    ├── network/
-    │   ├── vlans/
-    │   ├── self_ips/
-    │   ├── routes/
-    │   ├── route_domains/
-    │   ├── trunks/
-    │   ├── snats/
-    │   ├── nats/
-    │   └── deletions/
-    ├── system/
-    │   ├── dns/
-    │   ├── ntp/
-    │   ├── users/
-    │   ├── auth/
-    │   ├── banners/
-    │   ├── provisioning/
-    │   └── deletions/
-    ├── ha/
-    │   ├── device_trust/
-    │   ├── sync_groups/
-    │   ├── traffic_groups/
-    │   └── deletions/
-    ├── tls/
-    │   ├── certificates/
-    │   ├── keys/
-    │   ├── ca_bundles/
-    │   ├── client_ssl_profiles/
-    │   ├── server_ssl_profiles/
-    │   └── deletions/
-    ├── ltm/
-    │   ├── nodes/
-    │   ├── monitors/
-    │   ├── pools/
-    │   ├── virtual_servers/
-    │   ├── profiles/
-    │   ├── persistence/
-    │   ├── policies/
-    │   ├── irules/
-    │   ├── data_groups/
-    │   └── deletions/
-    ├── gtm/
-    │   ├── datacenters/
-    │   ├── monitors/
-    │   ├── servers/
-    │   ├── pools/
-    │   ├── wide_ips/
-    │   ├── topology/
-    │   ├── regions/
-    │   └── deletions/
-    └── security/
-        ├── afm/
-        ├── waf/
-        ├── apm/
-        └── deletions/
-```
+4. BIG-IP management-plane admin authentication
+   - LDAP/AD/RADIUS/TACACS for BIG-IP admin auth
+   - explicitly separate from APM end-user identity and SSO
+
+5. System compliance surface
+   - login banner management
+
+6. Helper-tool maturity decisions for `system` and `ha`
+   - either add drift/import coverage
+   - or keep them explicitly documented as `runtime+validation` for the current phase
+
+## Open Backlog
+
+These are the concrete remaining backlog items.
+
+1. Deeper HA lifecycle management
+   - completion target: `runtime+validation`
+
+2. UCS backup/export workflow for configuration snapshots
+   - completion target: `runtime+validation`
+
+3. Certificate rotation automation with renewal detection
+   - completion target: `runtime+validation+helper-tools` where practical
+
+4. Auth provider integration for BIG-IP management-plane admin login
+   - scope: LDAP/AD/RADIUS/TACACS for BIG-IP admin auth
+   - non-scope: APM end-user identity, access policy, or backend SSO
+   - completion target: `runtime+validation`
+
+5. Login banner management for system compliance
+   - completion target: `runtime+validation`
+
+6. Decide the helper-tool lifecycle target for `system` and `ha`
+   - either implement drift/import support
+   - or document them as intentional `runtime+validation` boundaries in long-term steady state
+
+7. Future deeper helper-tool fidelity
+   - if needed, promote selected object families from `basic field drift` toward `model-aware`
+   - only pursue this when the operational value is clear
 
 ## Delivery Principles
 
-- Missing from vars does not mean delete.
-- `/deletions` trees are the preferred destructive workflow.
-- Object-level values override sibling `settings.yml`.
-- Sibling `settings.yml` overrides playbook defaults.
-- Shared objects should be modeled as first-class trees, not only nested under applications.
-- The preferred authoring model is hybrid:
-  - embed app-local objects for readability
-  - promote shared or reused objects into first-class trees
-- Validation must fail fast before playbook execution.
-- Runtime drift should be detectable against live BIG-IP state.
+- missing from vars does not mean delete
+- `/deletions` trees are the preferred destructive workflow
+- object-level values override sibling `settings.yml`
+- sibling `settings.yml` overrides playbook defaults
+- validation must fail before playbook execution
+- helper-tool limitations must be documented, not implied away
 
 ## Execution Discipline
 
@@ -426,21 +176,18 @@ These are binding repo maintenance rules for every feature change, including fut
 ### Documentation and Examples
 
 - update `docs/` alongside every code change so linkages and reference strings are explained where operators read them
-- update `README.md` when a feature changes the high-level playbook list, validation commands, or quick links table
+- update `README.md` when a feature changes the high-level playbook list, current capability summary, validation commands, or quick links
 - update example var files under `vars/` when a feature adds or changes an authoring pattern
-- do not add documentation to `README.md` that belongs in `docs/`; the README stays minimal with a table of doc links
+- do not put detailed domain documentation into `README.md`; keep it high-level and link to `docs/`
 - if an empty directory must exist intentionally, include a `.gitkeep`
 
 ### Roadmap Maintenance
 
-- update `ROADMAP.md` Current State section when new features are implemented
-- update the backlog item checklist (`Recommended Near-Term Backlog`) when work is completed
-- update milestone checklists in `Issue-Sized Execution Plan` when work is completed
-- update the Implementation Audit section when new objects or playbooks are added
-- update the Not Implemented Yet list when gaps are filled
-- when marking an item complete, state its completion class (`runtime-only`, `runtime+validation`, `runtime+validation+helper-tools`, or `full parity`) in the implementation note or closeout
-- when helper tools are involved, state the fidelity level (`identity-only`, `basic field drift`, or `model-aware`) in the implementation note or closeout
-- if a playbook is intentionally kept monolithic instead of split, record the reason here
+- keep `Current Platform Summary` accurate when major capability or structure changes land
+- keep `Capability Boundaries` accurate when a domain changes completion class or helper-tool expectations
+- update `Active Priorities` and `Open Backlog` when work is completed, deferred, or newly discovered
+- if a discovered gap changes the real delivery story, record it here before expanding into more feature work
+- when marking an item complete in implementation notes or closeouts, state its completion class and helper-tool fidelity explicitly
 
 ### Playbook Structure
 
@@ -453,630 +200,12 @@ These are binding repo maintenance rules for every feature change, including fut
 - in final closeouts, name the validation commands that actually passed
 - at the end of every implementation prompt, after changes are made and validated, print a suggested commit message
 
-## Program Phases
-
-## Phase 1: GitOps Foundation
-
-Goal: make the repository safe to scale before adding major coverage.
-
-### Deliverables
-
-- schema validation for every object tree
-- cross-file reference validation
-- duplicate object detection
-- partition and naming policy checks
-- docs for active config vs deletion config
-- consistent contributor conventions
-
-### Work Items
-
-- Create `tools/validate-vars` entrypoint
-- Define validation rules for:
-  - required keys
-  - allowed keys
-  - object identity fields
-  - partition defaults
-  - reference fields requiring fully-qualified names
-- Add duplicate detection for:
-  - LTM virtual server names
-  - LTM pool names
-  - GTM Wide IP names
-  - GTM server names
-  - network object names
-- Add reference checks for:
-  - pool monitor references
-  - GTM pool monitor references
-  - Wide IP to GTM pool references
-  - LTM virtual server to pool references
-- Add CI entrypoints for:
-  - YAML parse
-  - Ansible syntax check
-  - schema/reference validation
-
-### Exit Criteria
-
-- broken references are caught before playbook runtime
-- duplicate objects cannot merge unnoticed
-- contributor guidance exists for adding new trees and `settings.yml`
-
-## Phase 2: Platform and HA
-
-Goal: manage base device configuration and cluster behavior through Git.
-
-### Scope
-
-- system settings
-- users and auth
-- licensing and provisioning
-- HA trust and config sync
-- device groups and traffic groups
-- save/backup workflows
-
-### Deliverables
-
-- `bootstrap.yml`
-- `system.yml`
-- `ha.yml`
-- var trees for base platform objects
-- explicit config save workflow
-
-### Work Items
-
-- Add system management for:
-  - hostname
-  - DNS
-  - NTP
-  - timezone
-  - login banners
-  - local users
-  - auth provider integration
-- Add bootstrap management for:
-  - licensing
-  - initial management IP and route seeding
-- Add module provisioning and license handling where supported
-- Add HA management for:
-  - device trust
-  - sync-failover groups
-  - traffic groups
-  - mirroring and failover metadata
-- Add backup hooks:
-  - `bigip_config` save
-  - optional UCS export workflow
-
-### Exit Criteria
-
-- a new device or pair can be brought to a managed baseline from Git
-- config persistence is explicit and repeatable
-
-## Phase 3: Network Expansion
-
-Goal: complete the layer below LTM so traffic plumbing is fully managed.
-
-### Scope
-
-- routes
-- route domains
-- trunks
-- SNATs and NATs
-- floating/non-floating self IP patterns
-
-### Deliverables
-
-- first-class route and routing object trees
-- network examples for multi-VLAN and multi-route-domain designs
-
-### Work Items
-
-- Add `vars/network/routes`
-- Add `vars/network/route_domains`
-- Add `vars/network/snats`
-- Add `vars/network/nats`
-- Add support for:
-  - floating self IP examples
-  - partitioned network ownership
-  - route-domain aware object validation
-
-### Exit Criteria
-
-- enterprise network constructs no longer require UI-only changes
-
-## Phase 4: LTM Shared Object Model
-
-Goal: support both app-centric and shared-object-centric LTM authoring cleanly.
-
-### Scope
-
-- nodes
-- pools as first-class objects
-- profiles
-- persistence
-- policies
-- shared application delivery objects
-
-### Deliverables
-
-- `vars/ltm/nodes`
-- `vars/ltm/pools`
-- `vars/ltm/profiles`
-- `vars/ltm/persistence`
-- updated `ltm.yml` or split playbooks by object family
-- documented hybrid authoring guidance for embedded vs first-class objects
-
-### Work Items
-
-- Promote LTM nodes to a managed tree
-- Promote LTM pools to a managed tree
-- Support advanced pool fields:
-  - priority groups
-  - service down action
-  - min active members
-  - slow ramp
-  - queueing
-- Support advanced member fields:
-  - ratio
-  - connection limits
-  - priority group
-  - forced offline semantics
-- Support virtual server fields:
-  - persistence
-  - fallback persistence
-  - source CIDR
-  - VLAN restrictions
-  - metadata
-  - iRules
-  - policy attachments
-  - log profiles
-  - client/server SSL profiles
-- Add hybrid readability shortcuts:
-  - subdirectory `pool_defaults`
-  - `member_defaults`
-  - reusable `monitor_sets`
-  - subdirectory maintenance/disable defaults
-
-### Exit Criteria
-
-- most LTM app delivery changes can be expressed in one readable app file when desired
-- shared objects are reusable across many applications when needed
-
-## Phase 5: TLS and Certificate Lifecycle
-
-Goal: eliminate manual certificate and SSL profile handling.
-
-### Scope
-
-- cert/key import
-- CA bundles
-- client/server SSL profiles
-- policy standardization
-
-### Deliverables
-
-- `tls.yml`
-- `vars/tls/*`
-- certificate rotation conventions
-
-### Work Items
-
-- Add certificate and key object trees
-- Add bundle and trust object trees
-- Add client SSL and server SSL profile trees
-- Define secret-handling strategy for private keys
-- Add validation for profile-to-certificate references
-
-### Exit Criteria
-
-- TLS onboarding and renewal workflows are Git-driven
-
-## Phase 6: GTM Full Object Model
-
-Goal: move GTM beyond Wide IP centric examples into a complete DNS traffic model.
-
-### Scope
-
-- datacenters
-- static servers
-- GTM pools as first-class objects
-- regions and topology
-- advanced Wide IP behavior
-
-### Deliverables
-
-- `vars/gtm/datacenters`
-- `vars/gtm/pools`
-- `vars/gtm/topology`
-- `vars/gtm/regions`
-
-### Work Items
-
-- Promote datacenters to first-class objects
-- Split GTM servers into:
-  - BIG-IP servers
-  - static servers
-- Promote GTM pools to first-class objects
-- Preserve the hybrid GTM authoring model:
-  - inline pools under Wide IPs for app readability
-  - first-class GTM pools for shared/reused service definitions
-- Support advanced Wide IP fields:
-  - aliases
-  - persistence
-  - last resort pool
-  - load-balancing policy combinations
-- Add topology and region support
-- Add hybrid readability shortcuts:
-  - subdirectory `pool_defaults`
-  - reusable `monitor_sets`
-  - subdirectory maintenance/disable defaults
-  - optional deterministic resolution of `address`/`port` from repo-known LTM virtual servers
-- Add dependency validation across:
-  - Wide IPs
-  - GTM pools
-  - GTM servers
-  - GTM virtual servers
-
-### Exit Criteria
-
-- GTM application routing can be modeled cleanly for large estates
-- datacenters and static servers are no longer implicit side effects
-
-## Phase 7: Security Modules
-
-Goal: cover the enterprise controls that often remain UI-managed.
-
-### Scope
-
-- AFM
-- WAF/ASM
-- APM
-
-### Deliverables
-
-- `security.yml`
-- security var trees by module
-
-### Work Items
-
-- Start with AFM if licensed:
-  - address lists
-  - port lists
-  - rule lists
-  - policies
-- Add WAF policy attachment flows if used
-- Add APM/access object support if used
-- Define ownership and approval boundaries for security changes
-
-### Exit Criteria
-
-- major security controls can be reviewed and applied through Git
-
-## Phase 8: Drift, Import, and Lifecycle Tooling
-
-Goal: make the system operable at enterprise scale over time.
-
-### Scope
-
-- drift detection
-- brownfield import
-- promotion workflows
-- rollback support
-
-### Deliverables
-
-- live-vs-git comparison tooling
-- import helpers for existing BIG-IP estates
-- release/promotion guidance
-
-### Work Items
-
-- Build export/import helpers for existing devices
-- Build drift detection reports
-- Add environment promotion conventions:
-  - dev
-  - test
-  - prod
-- Add change preview output where possible
-- Define rollback patterns for destructive and non-destructive changes
-
-### Exit Criteria
-
-- teams can onboard existing F5 estates without manual re-entry
-- unauthorized drift becomes visible
-
-## Recommended Near-Term Backlog
-
-This is the practical next sequence for the current repo.
-
-1. [x] Add validation tooling and CI gates
-2. [x] Add `vars/ltm/nodes` and `vars/ltm/pools`
-3. [x] Add `vars/gtm/datacenters` and `vars/gtm/pools`
-4. [x] Add `system.yml` for base platform settings
-5. [x] Add `ha.yml` for trust/sync/failover
-6. [x] Add `tls.yml` for certs and SSL profiles
-7. [x] Add NAT and trunk support to complete network expansion
-8. [x] Add hybrid readability shortcuts:
-   - [x] `pool_defaults`
-   - [x] `member_defaults`
-   - [x] `monitor_sets`
-   - [x] subdirectory maintenance defaults via `settings.yml` object defaults
-9. [x] Add optional LTM virtual resolution
-10. [x] Define TLS secret handling approach
-11. [x] Complete missing documentation
-12. [x] Add LTM persistence, iRules, data groups, and policies
-13. [x] Add virtual server VLAN filtering, metadata, and log profiles
-14. [x] Add GTM topology regions and topology records
-15. [x] Add WAF/ASM policies and server technologies to security playbook
-16. [x] Add APM ACLs and tmsh-driven resource objects to security playbook
-17. [x] Add APM auth servers, SSO configs, and policy nodes (tmsh-driven)
-18. [x] Add APM access profiles, per-session policies, and macros
-19. [x] Audit checked-off roadmap items against runtime, validation, drift/import tooling, docs, and examples
-20. [x] Correct drift/import endpoint and var-key mappings for newly added object families
-21. [x] Align runtime, validator, docs, and example vars where field models drifted apart
-22. [x] Complete exhaustive drift/import parity for every newest object tree
-23. [x] Deepen drift detection to compare meaningful fields for newly added object families
-   - delivered: `network_route_domains`, `network_trunks`, `network_snat_translations`, `network_snats`, and `network_nats` now have `runtime+validation+helper-tools` helper coverage with `basic field drift` for core runtime-managed fields
-   - delivered: `gtm_topology_regions`, `gtm_topology_records`, `tls_ca_bundles`, `tls_client_ssl_profiles`, `tls_server_ssl_profiles`, `apm_sso_configs`, `apm_access_profiles`, and `apm_policy_nodes` now also have `runtime+validation+helper-tools` helper coverage with `basic field drift` for core runtime-managed fields
-   - boundary: this closes the backlog item at `basic field drift`; `system` and `ha` remain intentionally `runtime+validation`, and helper tooling for nested or secret-heavy object families still requires review-first operator judgment rather than assuming perfect round-trip parity
-24. [x] Add day-0 BIG-IP onboarding for licensing and initial management bootstrap
-25. [x] Document initial setup from first boot through handoff to Git-managed operation
-
-### Checked-Off Item Audit Result
-
-Audit date:
-
-- 2026-05-02
-
-Completion-class summary for checked backlog items:
-
-- `full parity`
-  - 1. Add validation tooling and CI gates
-  - 10. Define TLS secret handling approach
-  - 11. Complete missing documentation
-  - 25. Document initial setup from first boot through handoff to Git-managed operation
-- `runtime+validation+helper-tools`
-  - 2. Add `vars/ltm/nodes` and `vars/ltm/pools`
-  - 3. Add `vars/gtm/datacenters` and `vars/gtm/pools`
-  - 6. Add `tls.yml` for certs and SSL profiles
-  - 7. Add NAT and trunk support to complete network expansion
-  - 8. Add hybrid readability shortcuts
-  - 9. Add optional LTM virtual resolution
-  - 12. Add LTM persistence, iRules, data groups, and policies
-  - 13. Add virtual server VLAN filtering, metadata, and log profiles
-  - 14. Add GTM topology regions and topology records
-  - 15. Add WAF/ASM policies and server technologies to security playbook
-  - 16. Add APM ACLs and tmsh-driven resource objects to security playbook
-  - 17. Add APM auth servers, SSO configs, and policy nodes (tmsh-driven)
-  - 18. Add APM access profiles, per-session policies, and macros
-  - 22. Complete exhaustive drift/import parity for every newest object tree
-- `runtime+validation`
-  - 24. Add day-0 BIG-IP onboarding for licensing and initial management bootstrap
-  - 4. Add `system.yml` for base platform settings
-  - 5. Add `ha.yml` for trust/sync/failover
-
-Audit findings captured as remaining work:
-
-- item 21 remains open because future field-model drift must still be detected and corrected as implementations evolve
-- item 23 is now complete at `basic field drift` for the newer runtime-managed service families; deeper semantic comparison beyond the declared field model can be tracked as future enhancement work if needed
-- milestone 16 item on `system` and `ha` helper-tool support remains open because those domains are currently intentionally `runtime+validation`, not `full parity`
-
-Endpoint/var-key audit result:
-
-- helper-tool-supported object families no longer have known wrong BIG-IP endpoint mappings or wrong repo var-key mappings
-- remaining lifecycle gaps are now fidelity gaps or intentionally runtime-only domains, not endpoint/key mismatches
-
-Field-model alignment audit result:
-
-- no remaining known mismatches where docs/examples describe a different field model than the current runtime and validator intentionally support
-- WAF coverage is now documented and validated as `Common`-scoped because the current runtime tasks do not consume a partition field
-- AFM rule endpoint validation now follows the rule partition instead of assuming `/Common` for implicit address-list references
-
-## Extended Backlog
-
-These are valuable enhancements identified during implementation:
-
-26. [ ] Deeper HA lifecycle management (connection mirroring, failover metadata, automated failover testing)
-27. [ ] UCS backup/export workflow for configuration snapshots
-28. [ ] Certificate rotation automation with renewal detection
-29. [ ] Auth provider integration for BIG-IP management-plane admin login (LDAP/AD/RADIUS/TACACS for BIG-IP admin auth, separate from APM end-user identity)
-30. [ ] Login banner management for system compliance
-
-## Issue-Sized Execution Plan
-
-These are the first concrete tickets I would open.
-
-### Milestone 1: Validation
-
-- [x] Create `tools/validate-vars`
-- [x] Add schema checks for `network`, `ltm`, and `gtm`
-- [x] Add reference validation across existing object trees
-- [x] Add duplicate object detection
-- [x] Add `make validate` or equivalent wrapper
-
-### Milestone 2: LTM Shared Objects
-
-- [x] Add `vars/ltm/nodes`
-- [x] Add `vars/ltm/pools`
-- [x] Refactor `ltm.yml` to support first-class pool and node objects
-- [x] Keep hybrid support for virtual-server-centric embedded pools
-- [x] Add `pool_defaults`, `member_defaults`, and `monitor_sets`
-- [x] Add subdirectory maintenance defaults
-
-### Milestone 3: GTM Shared Objects
-
-- [x] Add `vars/gtm/datacenters`
-- [x] Add `vars/gtm/pools`
-- [x] Refactor `gtm.yml` so datacenters and pools are explicit managed trees
-- [x] Add separate static server model
-- [x] Restore hybrid Wide IP embedded-pool support
-- [x] Add GTM `pool_defaults`, `member_defaults`, and `monitor_sets`
-- [x] Add subdirectory maintenance defaults
-- [x] Add optional LTM virtual resolution
-
-### Milestone 4: Platform and HA
-
-- [x] Add `bootstrap.yml`
-- [x] Add `system.yml`
-- [x] Add `ha.yml`
-- [x] Add day-0 license and first management-route/IP bootstrap support
-- [x] Implement config save workflow
-- [x] Add examples for active/standby pair bootstrap
-
-### Milestone 5: TLS
-
-- [x] Add `tls.yml`
-- [x] Add certificate, key, and SSL profile trees
-- [x] Define secret handling approach
-
-### Milestone 7: LTM Expansion
-
-- [x] Add `vars/ltm/persistence` for first-class persistence profiles
-- [x] Add `vars/ltm/irules` for first-class iRules
-- [x] Add `vars/ltm/data_groups` for first-class data groups
-- [x] Add `vars/ltm/policies` for first-class LTM policies
-- [x] Update `ltm.yml` apply/delete tasks for new object types
-- [x] Add virtual server fields: `default_persistence_profile`, `fallback_persistence_profile`, `irules`, `policies`
-- [x] Add virtual server fields: `vlans`, `vlans_enabled`, `metadata`, `log_profiles`
-- [x] Add deletion trees for all new object types
-
-### Milestone 8: GTM Topology
-
-- [x] Add `vars/gtm/regions` for first-class topology regions
-- [x] Add `vars/gtm/topology` for first-class topology records
-- [x] Update `gtm.yml` apply/delete tasks for regions and topology records
-- [x] Add deletion trees for topology regions and records
-- [x] Add cross-validation: topology records reference declared regions
-
-### Milestone 9: AFM Security
-
-- [x] Add `vars/security/afm/address_lists` for AFM address lists
-- [x] Add `vars/security/afm/port_lists` for AFM port lists
-- [x] Add `vars/security/afm/rules` for AFM firewall rules
-- [x] Add `vars/security/afm/policies` for AFM firewall policies
-- [x] Add `security.yml` playbook with split task structure
-- [x] Add deletion trees for all AFM object types
-- [x] Add validation for address/port lists, rules, and policies
-- [x] Add cross-validation: policy rules reference declared rules
-- [x] Add cross-validation: rule endpoints reference declared address lists
-
-### Milestone 10: Drift Detection and Import
-
-- [x] Create `tools/drift-check` for live-vs-Git comparison
-- [x] Create `tools/import-from-bigip` for brownfield import
-- [x] Support LTM, GTM, network, AFM, WAF, and TLS object types
-- [x] Provide JSON output for CI integration
-- [x] Document drift and import workflows
-- [x] Add exhaustive drift/import parity for all newest object trees (network route_domains, snat_translations, trunks, snats, nats; gtm topology; tls ca_bundles, client_ssl_profiles, server_ssl_profiles; waf server_technologies; apm policy_nodes, sso_configs basic helper-tool coverage)
-
-### Milestone 11: Promotion and Rollback
-
-- [x] Document environment promotion flow (dev → test → prod)
-- [x] Document hotfix flow (main → test → dev back-propagation)
-- [x] Document rollback strategies: git revert, playbook re-apply, UCS restore
-- [x] Document rollback checklist for production incidents
-- [x] Document drift detection integration at promotion gates
-- [x] Document AWX job template pattern per environment
-
-### Milestone 12: WAF/ASM Policies
-
-- [x] Add `vars/security/waf/policies` for WAF/ASM policies
-- [x] Add `vars/security/waf/server_technologies` for server technologies
-- [x] Extend `security.yml` playbook with WAF apply/delete tasks
-- [x] Add deletion trees for WAF object types
-- [x] Add validation for WAF policies and server technologies
-- [x] Add cross-validation: server technologies reference declared policies
-- [x] Add WAF endpoint to drift detection (`asm/policies`)
-- [x] Add WAF import spec for brownfield import
-- [x] Add `docs/waf.md` with object reference and authoring patterns
-
-### Milestone 13: APM Access Policy Manager
-
-- [x] Add `vars/security/apm/acls` for APM ACLs (L4/L7)
-- [x] Add `vars/security/apm/resources` for tmsh-driven APM resources
-- [x] Extend `security.yml` playbook with APM apply/delete tasks
-- [x] Add deletion trees for all APM object types
-- [x] Add validation for APM ACLs and resource objects
-- [x] Add APM endpoints to drift detection (`access/policy/acl`, `apm/resource`)
-- [x] Add APM import specs for brownfield import
-- [x] Add `docs/apm.md` with object reference and authoring patterns
-- [x] Update `docs/security.md` to include APM coverage
-
-### Milestone 14: APM Authentication and SSO
-
-- [x] Add `vars/security/apm/auth_servers` for all authentication types (AD, LDAP, RADIUS, TACACS, RSA, cert, localdb, SAML, OAuth)
-- [x] Add `vars/security/apm/sso_configs` for all SSO methods (Kerberos, form-based, HTTP Basic, NTLM, SAML, OAuth, Citrix, domain-join)
-- [x] Add `vars/security/apm/resources` for network access, webtops, remote desktop, portal access
-- [x] Add `vars/security/apm/policy_nodes` for VPE flow nodes within access policies
-- [x] Add `vars/security/apm/access_profiles` for access profile definitions
-- [x] Add `vars/security/apm/per_session_policies` for per-session policy definitions
-- [x] Add `vars/security/apm/macros` for reusable VPE macro definitions
-- [x] Extend `security.yml` playbook with tmsh-driven APM apply/delete tasks
-- [x] Add deletion trees for all APM object types
-- [x] Add validation for all APM types with cross-reference checking
-- [x] Add APM endpoints to drift detection (`access/profile`, `access/per-session-policy`, `access/macro`)
-- [x] Add APM import specs for brownfield import
-- [x] Add `docs/authentication.md` with comprehensive auth/SSO type reference
-- [x] Update `docs/apm.md` with new object types and examples
-
-### Milestone 15: Extended Backlog (Optional Enhancements)
-
-- [ ] Add connection mirroring and failover metadata management to `ha.yml`
-- [ ] Add automated failover testing workflows
-- [ ] Add UCS backup/export workflow to `system.yml` or dedicated playbook
-- [ ] Add certificate rotation automation with expiry detection
-- [ ] Add auth provider integration for BIG-IP admin users on the management plane (LDAP/AD/RADIUS/TACACS), explicitly separate from APM end-user identity and SSO configuration
-- [ ] Add login banner management to `system.yml`
-
-### Milestone 16: Coverage Stabilization
-
-- [ ] Treat correction of previously checked-off but partially implemented items as higher priority than adding new feature coverage
-- [x] Audit each checked-off roadmap item against runtime, validation, drift/import tooling, docs, and example vars
-- [x] Correct network helper-tool mappings for trunks and SNAT pools
-- [x] Correct newer helper-tool mappings for WAF server technologies and APM policy nodes
-- [x] Correct remaining drift/import endpoint and var-key mappings for helper-tool-supported object families
-- [x] Align runtime, validator, docs, and examples for any feature where the declared field model drifted
-- [ ] Decide whether `system` and `ha` should gain drift/import support now or be explicitly documented as runtime-only for the current phase
-- [x] Align APM access-profile validation with the current runtime field model
-- [ ] Reconcile the roadmap, README, and docs whenever a checked-off item is found to be only partially complete
-
-## Network Expansion Status
-
-The repo now covers route domains, static routes, SNAT translations, SNAT pools, trunks, and NATs.
-
-Implementation note:
-
-- NAT object management uses a validated `tmsh` command workflow because the installed `f5networks.f5_modules` collection does not provide a first-class NAT module.
-
-## TLS Secret Handling Status
-
-The repo now supports inline Ansible Vault content in offline validation and documents Ansible Vault as the default secret-handling approach for TLS private keys.
-
-Recommended convention:
-
-- store TLS object metadata in the normal `vars/tls/*` trees
-- encrypt `content` values inline with `!vault`
-- keep private keys encrypted at rest in Git
-- optionally encrypt certificates and CA bundles when local policy requires it
-
-## Decisions To Make Early
-
-These choices affect almost every later phase.
-
-- whether `system` should remain a separate domain from `network`
-- whether LTM should stay in one playbook or split into `ltm-shared.yml` and `ltm-virtuals.yml`
-- whether Ansible Vault remains the standard secret mechanism long-term or is replaced by:
-  - SOPS
-  - external secret manager
-- how CI gets device-adjacent test coverage:
-  - syntax only
-  - mocked validation
-  - lab BIG-IP smoke tests
-- whether environment separation is directory-based, branch-based, or repo-based
-
 ## Success Criteria
 
-This program is succeeding when:
+This roadmap is succeeding when:
 
-- teams stop using the BIG-IP UI for routine change windows
-- app-local objects are readable in one place when that helps operators
-- shared objects are reusable and clearly owned when reuse matters
+- teams stop using the BIG-IP UI for routine changes
+- setup and steady-state operations are both Git-driven
+- shared objects are reusable and clearly owned
 - destructive changes are explicit and reviewable
-- drift from Git becomes visible
-- new services can be onboarded by adding files, not by inventing playbook logic
+- helper-tool coverage is honest about its fidelity and limitations
