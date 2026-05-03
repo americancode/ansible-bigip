@@ -1,0 +1,80 @@
+- name: Initialize compiled LTM RKE2 server intent objects
+  ansible.builtin.set_fact:
+    ltm_compiled_rke2_virtual_servers_delete: []
+    ltm_compiled_rke2_pools_delete: []
+    ltm_compiled_rke2_virtual_servers_present: []
+    ltm_compiled_rke2_pools_present: []
+
+- name: Compile deleted LTM RKE2 server intents
+  ansible.builtin.set_fact:
+    ltm_compiled_rke2_virtual_servers_delete: >-
+      {{
+        (ltm_compiled_rke2_virtual_servers_delete | default([])) + (ltm_compiled_service.virtual_servers | default([]))
+      }}
+    ltm_compiled_rke2_pools_delete: >-
+      {{
+        (ltm_compiled_rke2_pools_delete | default([])) + (ltm_compiled_service.pools | default([]))
+      }}
+  loop: "{{ ltm_rke2_server_intents_delete | default([]) }}"
+  vars:
+    ltm_rke2_intent_settings_path: "{{ item.__source_file | regex_replace('/[^/]+$', '/settings.yml') if item.__source_file is defined else '' }}"
+    ltm_rke2_intent_settings_payload: >-
+      {{
+        (
+          lookup('ansible.builtin.file', ltm_rke2_intent_settings_path, errors='ignore')
+          | default('{}', true)
+          | from_yaml
+        ) if ltm_rke2_intent_settings_path else {}
+      }}
+    ltm_compiled_service: >-
+      {{
+        item
+        | compile_ltm_rke2_server_intent(
+            ltm_rke2_intent_settings_payload.ltm_rke2_server_intent_defaults | default({}),
+            ltm_rke2_intent_settings_payload.ltm_pool_defaults | default({}),
+            ltm_rke2_intent_settings_payload.ltm_member_defaults | default({}),
+            ltm_rke2_intent_settings_payload.ltm_monitor_sets | default({})
+          )
+      }}
+
+- name: Compile active LTM RKE2 server intents
+  ansible.builtin.set_fact:
+    ltm_compiled_rke2_virtual_servers_present: >-
+      {{
+        (ltm_compiled_rke2_virtual_servers_present | default([])) + (ltm_compiled_service.virtual_servers | default([]))
+      }}
+    ltm_compiled_rke2_pools_present: >-
+      {{
+        (ltm_compiled_rke2_pools_present | default([])) + (ltm_compiled_service.pools | default([]))
+      }}
+  loop: "{{ ltm_rke2_server_intents_present | default([]) }}"
+  vars:
+    ltm_rke2_intent_settings_path: "{{ item.__source_file | regex_replace('/[^/]+$', '/settings.yml') if item.__source_file is defined else '' }}"
+    ltm_rke2_intent_settings_payload: >-
+      {{
+        (
+          lookup('ansible.builtin.file', ltm_rke2_intent_settings_path, errors='ignore')
+          | default('{}', true)
+          | from_yaml
+        ) if ltm_rke2_intent_settings_path else {}
+      }}
+    ltm_compiled_service: >-
+      {{
+        item
+        | compile_ltm_rke2_server_intent(
+            ltm_rke2_intent_settings_payload.ltm_rke2_server_intent_defaults | default({}),
+            ltm_rke2_intent_settings_payload.ltm_pool_defaults | default({}),
+            ltm_rke2_intent_settings_payload.ltm_member_defaults | default({}),
+            ltm_rke2_intent_settings_payload.ltm_monitor_sets | default({})
+          )
+      }}
+
+- name: Extend canonical LTM virtual server operations with compiled RKE2 intent output
+  ansible.builtin.set_fact:
+    ltm_virtual_servers_delete: "{{ (ltm_virtual_servers_delete | default([])) + (ltm_compiled_rke2_virtual_servers_delete | default([])) }}"
+    ltm_virtual_servers_present: "{{ (ltm_virtual_servers_present | default([])) + (ltm_compiled_rke2_virtual_servers_present | default([])) }}"
+
+- name: Extend canonical LTM pool operations with compiled RKE2 intent output
+  ansible.builtin.set_fact:
+    ltm_canonical_pools_delete: "{{ (ltm_canonical_pools_delete | default([])) + (ltm_compiled_rke2_pools_delete | default([])) }}"
+    ltm_canonical_pools_present: "{{ (ltm_canonical_pools_present | default([])) + (ltm_compiled_rke2_pools_present | default([])) }}"

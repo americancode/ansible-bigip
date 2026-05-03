@@ -59,3 +59,5 @@
         ).ltm_virtual_server_defaults | default({})
       }}
 
+- name: Load repo-known dedicated LTM intent fragments
+  ansible.builtin.import_tasks: "{{ playbook_dir }}/gtm/prep/load-repo-ltm-rke2-server-intents.yml"

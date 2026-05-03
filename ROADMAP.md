@@ -19,6 +19,7 @@ The repo already manages the main BIG-IP runtime domains through canonical playb
 - `system` for hostname, DNS, NTP/timezone, provisioning, users, management-plane admin authentication, login banners, and config save
 - `ha` for device connectivity, trust, sync groups, HA groups, traffic groups, and config sync actions
 - `ltm` for monitors, profiles, nodes, pools, virtual servers, persistence, iRules, data groups, and policies
+  - this now includes dedicated intent/compiler authoring for RKE2 server cluster virtual-server bundles under `vars/ltm/intents/`
 - `gtm` for monitors, datacenters, servers, pools, Wide IPs, regions, and topology records
 - `tls` for keys, certificates, CA bundles, and SSL profiles
 - `security` for AFM, WAF, and APM objects
@@ -50,7 +51,8 @@ These boundaries must stay explicit.
   - `ha_device_connectivity` is additionally an apply-oriented sub-surface whose deletion trees remain intentionally unsupported
 - the broader service/runtime domains are generally `runtime+validation+helper-tools`
   - helper-tool fidelity varies by object family
-  - newer families are generally closed at `basic field drift`, not universal full semantic parity
+- newer families are generally closed at `basic field drift`, not universal full semantic parity
+- intent trees are authoring abstractions, not separate live BIG-IP object families; helper tools continue to treat the compiled canonical objects as the lifecycle surface unless documented otherwise
 
 ## Acceptance Criteria
 

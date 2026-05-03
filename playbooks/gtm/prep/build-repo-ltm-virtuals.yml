@@ -14,6 +14,25 @@
         )
       }}
 
+- name: Classify repo-known LTM RKE2 server intent operations
+  ansible.builtin.set_fact:
+    repo_ltm_rke2_server_intents_present: >-
+      {{
+        (repo_ltm_rke2_server_intents | default([]))
+        | rejectattr('state', 'defined')
+        | list
+        +
+        (
+          (repo_ltm_rke2_server_intents | default([]))
+          | selectattr('state', 'defined')
+          | rejectattr('state', 'equalto', 'absent')
+          | list
+        )
+      }}
+
+- name: Compile repo-known LTM RKE2 intent virtual servers
+  ansible.builtin.import_tasks: "{{ playbook_dir }}/gtm/prep/compile-repo-ltm-rke2-server-intents.yml"
+
 - name: Build repo-known LTM virtual server lookup
   ansible.builtin.set_fact:
     repo_ltm_virtual_server_lookup: >-
@@ -30,4 +49,3 @@
     - item.name is defined
     - item.destination is defined
     - item.destination_port is defined
-

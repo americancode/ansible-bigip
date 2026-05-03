@@ -344,6 +344,9 @@
         ).ltm_virtual_server_defaults | default({})
       }}
 
+- name: Load dedicated LTM intent var fragments
+  ansible.builtin.import_tasks: "{{ playbook_dir }}/ltm/prep/load-rke2-server-intents.yml"
+
 - name: Discover LTM persistence profile fragments
   ansible.builtin.set_fact:
     ltm_persistence_profile_files: >-
@@ -587,4 +590,3 @@
           | from_yaml
         ).ltm_policy_defaults | default({})
       }}
-

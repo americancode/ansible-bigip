@@ -1,0 +1,42 @@
+---
+# Per-directory defaults for the dedicated RKE2 server intent in `rke2-east/`.
+# These defaults apply before `ltm/prep.yml` compiles `ltm_rke2_server_intents` into canonical
+# `ltm_virtual_servers` and `ltm_pools`.
+#
+# Compiled virtual-server naming is deterministic:
+# - `vs_<intent.name>_kubeapi_6443`
+# - `vs_<intent.name>_registration_9345`
+# - `vs_<intent.name>_<worker service key>_443`
+#
+# Compiled pool naming is deterministic:
+# - `pool_<intent.name>_kubeapi_6443`
+# - `pool_<intent.name>_registration_9345`
+# - `pool_<intent.name>_<worker service key>_443`
+ltm_rke2_server_intent_defaults:
+  partition: "Common"
+  enabled: true
+  snat: "Automap"
+  profiles:
+    - "tcp"
+  kubeapi_monitors:
+    - "kubeapi_tcp"
+  registration_monitors:
+    - "registration_tcp"
+
+ltm_pool_defaults:
+  lb_method: "round-robin"
+  enabled: true
+
+ltm_member_defaults:
+  reuse_nodes: true
+
+# These aliases resolve through `vars/ltm/monitors/platform-monitors.yml`.
+# Worker-service monitors can either use one of these aliases or a fully-qualified built-in
+# BIG-IP monitor like `/Common/https`.
+ltm_monitor_sets:
+  kubeapi_tcp:
+    - "/Common/mon_rke2_kubeapi_tcp"
+  registration_tcp:
+    - "/Common/mon_rke2_registration_tcp"
+  traefik_https:
+    - "/Common/mon_traefik_https"

@@ -70,6 +70,8 @@ The system var tree includes both basic device settings and management-plane adm
 
 Objects can be embedded directly in parent definitions or promoted to first-class trees. See [hybrid-authoring.md](hybrid-authoring.md) for the current model and [intent-authoring.md](intent-authoring.md) for the planned intent/compiler architecture that will absorb the growing shortcut patterns.
 
+The first dedicated intent tree is now live under `vars/ltm/intents/` for RKE2 server clusters. That tree is an authoring abstraction only: `prep.yml` compiles it into canonical `ltm_virtual_servers` and `ltm_pools` before runtime tasks run.
+
 ## Deletions
 
 Objects can be removed via deletion trees. See [deletion-workflows.md](deletion-workflows.md).

@@ -1,0 +1,35 @@
+- name: Initialize compiled repo-known LTM RKE2 virtual servers
+  ansible.builtin.set_fact:
+    repo_ltm_compiled_rke2_virtual_servers_present: []
+
+- name: Compile repo-known LTM RKE2 server intents
+  ansible.builtin.set_fact:
+    repo_ltm_compiled_rke2_virtual_servers_present: >-
+      {{
+        (repo_ltm_compiled_rke2_virtual_servers_present | default([])) + (repo_ltm_compiled_service.virtual_servers | default([]))
+      }}
+  loop: "{{ repo_ltm_rke2_server_intents_present | default([]) }}"
+  vars:
+    repo_ltm_rke2_intent_settings_path: "{{ item.__source_file | regex_replace('/[^/]+$', '/settings.yml') if item.__source_file is defined else '' }}"
+    repo_ltm_rke2_intent_settings_payload: >-
+      {{
+        (
+          lookup('ansible.builtin.file', repo_ltm_rke2_intent_settings_path, errors='ignore')
+          | default('{}', true)
+          | from_yaml
+        ) if repo_ltm_rke2_intent_settings_path else {}
+      }}
+    repo_ltm_compiled_service: >-
+      {{
+        item
+        | compile_ltm_rke2_server_intent(
+            repo_ltm_rke2_intent_settings_payload.ltm_rke2_server_intent_defaults | default({}),
+            repo_ltm_rke2_intent_settings_payload.ltm_pool_defaults | default({}),
+            repo_ltm_rke2_intent_settings_payload.ltm_member_defaults | default({}),
+            repo_ltm_rke2_intent_settings_payload.ltm_monitor_sets | default({})
+          )
+      }}
+
+- name: Extend repo-known LTM virtual servers with compiled RKE2 intent output
+  ansible.builtin.set_fact:
+    repo_ltm_virtual_servers_present: "{{ (repo_ltm_virtual_servers_present | default([])) + (repo_ltm_compiled_rke2_virtual_servers_present | default([])) }}"

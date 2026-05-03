@@ -8,6 +8,7 @@
 # - `gtm_wide_ips_present` / `gtm_wide_ips_delete`
 # - `gtm_canonical_datacenters_present` / `gtm_canonical_datacenters_delete`
 # - `gtm_canonical_pools_present` / `gtm_canonical_pools_delete`
+# `repo_ltm_virtual_servers_present` can include first-class LTM virtual-server vars plus compiled output from dedicated LTM intents such as RKE2 clusters.
 # The canonical GTM pool sets include both first-class pool vars and compiler output from Wide IP shortcut intents.
 
 - name: Load repo-known LTM virtual-server fragments

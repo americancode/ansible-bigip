@@ -1,0 +1,26 @@
+---
+ltm_rke2_server_intents:
+  - name: "rke2_west"
+    description_prefix: "West region RKE2"
+    control_plane_vip: "10.202.0.20"
+    control_plane_members:
+      - host: "10.202.10.11"
+      - host: "10.202.10.12"
+      - host: "10.202.10.13"
+    worker_members:
+      - host: "10.202.20.21"
+      - host: "10.202.20.22"
+      - host: "10.202.20.23"
+    worker_services:
+      traefik:
+        vip: "10.202.0.30"
+        node_port: 30443
+        monitors:
+          - "traefik_https"
+        description: "West region Traefik ingress VIP"
+      rancher:
+        vip: "10.202.0.31"
+        node_port: 30444
+        monitors:
+          - "/Common/https"
+        description: "West region Rancher management VIP"

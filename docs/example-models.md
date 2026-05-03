@@ -1,20 +1,34 @@
 # Example Models
 
-This repository intentionally shows both concise and verbose authoring models.
+This repository intentionally shows concise, verbose, and dedicated-intent authoring models.
 
-These examples reflect the current runtime-facing shortcuts. The roadmap direction is to move common convenience patterns into a dedicated intent/compiler layer documented in [intent-authoring.md](intent-authoring.md), while keeping the canonical object model as the stable apply/delete contract.
+These examples reflect the current authoring surface: concise shortcuts for small cases, verbose first-class objects for shared ownership, and dedicated intents for repeated platform patterns. The canonical object model remains the stable apply/delete contract.
 
 ## Concise LTM Model
 
 Use the app-local inline model when one file should explain the whole service.
 
 - Example files:
-  - `vars/ltm/virtual_servers/rke2-east/platform-cluster.yml`
   - `vars/ltm/virtual_servers/vm-apps/concise-inline-demo.yml`
 - Pattern: an LTM virtual server embeds its pool and members directly under `pool`
 - Compiler behavior: `ltm/prep.yml` compiles the embedded pool into canonical LTM pool objects and rewrites the virtual server to reference that pool by name before runtime apply/delete
 - Monitor linkage: monitor aliases such as `traefik_https` are expanded from the sibling `settings.yml` in the same directory
 - Built-in health check example: `/Common/https` in `vars/ltm/virtual_servers/vm-apps/concise-inline-demo.yml`
+
+## Dedicated LTM Intent Model
+
+Use a dedicated intent tree when a known platform pattern should emit several related BIG-IP objects but still be easy to author as one unit.
+
+- Example files:
+  - `vars/ltm/intents/rke2-east/platform-cluster.yml`
+  - `vars/ltm/intents/rke2-west/platform-cluster.yml`
+- Pattern: one `ltm_rke2_server_intents[*]` object compiles into four canonical virtual servers and four canonical pools
+- Compiler behavior: `ltm/prep.yml` compiles the intent into canonical `ltm_virtual_servers` and `ltm_pools` before runtime apply/delete
+- Linkage behavior:
+  - `control_plane_vip` becomes both the `6443` Kubernetes API virtual server destination and the `9345` registration virtual server destination
+  - `control_plane_members` are reused for both generated control-plane pools with ports rewritten to `6443` and `9345`
+  - `worker_services.<name>.vip` becomes the destination for a generated `443` virtual server named `vs_<intent.name>_<name>_443`
+  - `worker_members` are reused for every generated worker-service pool with member ports rewritten to each service's configured `node_port`
 
 ## Verbose LTM Model
 

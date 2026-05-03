@@ -113,6 +113,29 @@
         )
       }}
 
+- name: Classify LTM RKE2 server intent operations
+  ansible.builtin.set_fact:
+    ltm_rke2_server_intents_delete: >-
+      {{
+        ((ltm_rke2_server_intents | default([])) + (ltm_rke2_server_intent_deletions | default([])))
+        | selectattr('state', 'defined')
+        | selectattr('state', 'equalto', 'absent')
+        | list
+      }}
+    ltm_rke2_server_intents_present: >-
+      {{
+        (ltm_rke2_server_intents | default([]))
+        | rejectattr('state', 'defined')
+        | list
+        +
+        (
+          (ltm_rke2_server_intents | default([]))
+          | selectattr('state', 'defined')
+          | rejectattr('state', 'equalto', 'absent')
+          | list
+        )
+      }}
+
 - name: Classify LTM persistence profile operations
   ansible.builtin.set_fact:
     ltm_persistence_profiles_delete: >-
@@ -207,3 +230,6 @@
 
 - name: Compile LTM virtual-server intent shortcuts
   ansible.builtin.import_tasks: "{{ playbook_dir }}/ltm/prep/compile-virtual-server-intents.yml"
+
+- name: Compile dedicated LTM RKE2 server intents
+  ansible.builtin.import_tasks: "{{ playbook_dir }}/ltm/prep/compile-rke2-server-intents.yml"

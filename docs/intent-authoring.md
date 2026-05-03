@@ -150,6 +150,22 @@ Those paths now compile into canonical pools, virtual servers, and Wide IP pool 
 
 The next goal is not to add more convenience cases first. The next goal is to reuse this compiler pattern for any future simple-mode authoring without expanding runtime branching again.
 
+## Implemented Dedicated Intent Example
+
+The first dedicated intent tree is now in place for RKE2 server clusters:
+
+- `vars/ltm/intents/rke2-east/platform-cluster.yml`
+- `vars/ltm/intents/rke2-west/platform-cluster.yml`
+
+That intent exists because the cluster pattern is more opinionated than the generic inline-pool shortcut:
+
+- one control-plane VIP always produces a `6443` Kubernetes API virtual server
+- the same control-plane VIP always produces a `9345` RKE2 supervisor registration virtual server
+- exactly two worker-service VIPs always listen on `443`
+- those worker-service pools always target worker nodes on configurable NodePorts in the `30xxx` range
+
+The runtime playbook still does not know anything special about RKE2. The compiler in `filter_plugins/bigip_var_filters.py` expands the intent into canonical `ltm_virtual_servers` and `ltm_pools` before `tasks/apply.yml` runs.
+
 ## When To Use Which Model
 
 Use the canonical object trees when:

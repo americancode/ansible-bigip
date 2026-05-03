@@ -18,6 +18,7 @@ VARS_DIR = ROOT / "vars"
 
 from filter_plugins.bigip_var_filters import (
     compile_gtm_wide_ip_intent,
+    compile_ltm_rke2_server_intent,
     compile_ltm_virtual_server_intent,
     normalize_gtm_pool,
     normalize_ltm_pool,
@@ -346,6 +347,14 @@ class Validator:
                 deletion_dir=VARS_DIR / "ltm" / "deletions" / "virtual_servers",
                 top_key="ltm_virtual_servers",
                 settings_key="ltm_virtual_server_defaults",
+                extra_settings_keys=("ltm_pool_defaults", "ltm_member_defaults", "ltm_monitor_sets"),
+            ),
+            TreeSpec(
+                name="ltm_rke2_server_intents",
+                active_dir=VARS_DIR / "ltm" / "intents",
+                deletion_dir=VARS_DIR / "ltm" / "deletions" / "intents",
+                top_key="ltm_rke2_server_intents",
+                settings_key="ltm_rke2_server_intent_defaults",
                 extra_settings_keys=("ltm_pool_defaults", "ltm_member_defaults", "ltm_monitor_sets"),
             ),
             TreeSpec(
@@ -1429,6 +1438,7 @@ class Validator:
         pools = self.objects.get("ltm_pools", [])
         monitors = self.objects.get("ltm_monitors", [])
         virtual_servers = self.objects.get("ltm_virtual_servers", [])
+        rke2_server_intents = self.objects.get("ltm_rke2_server_intents", [])
         tls_client_ssl_profiles = self.objects.get("tls_client_ssl_profiles", [])
         tls_server_ssl_profiles = self.objects.get("tls_server_ssl_profiles", [])
         network_vlans = self.objects.get("network_vlans", [])
@@ -1478,6 +1488,8 @@ class Validator:
         self.check_duplicates(profiles, lambda obj: ("ltm_profile", obj.partition, obj.data.get("name")), "LTM profile")
 
         active_pool_names = set()
+        compiled_rke2_pools: list[tuple[LoadedObject, dict[str, Any]]] = []
+        compiled_rke2_virtual_servers: list[tuple[LoadedObject, dict[str, Any]]] = []
 
         for obj in pools:
             self.require_fields(obj, ["name"])
@@ -1509,6 +1521,84 @@ class Validator:
             self.validate_ltm_pool_members(obj.relpath, normalized_pool.get("name"), obj.partition, normalized_pool.get("members"), active_node_names)
 
         self.check_duplicates(pools, lambda obj: ("ltm_pool", obj.partition, obj.data.get("name")), "LTM pool")
+
+        allowed_rke2_service_name = re.compile(r"^[A-Za-z0-9_-]+$")
+        for obj in rke2_server_intents:
+            self.require_fields(obj, ["name"])
+            worker_services = obj.data.get("worker_services")
+            if not isinstance(worker_services, dict):
+                self.error(obj.relpath, f"RKE2 server intent `{obj.data.get('name')}` `worker_services` must be a mapping with exactly two named services")
+                continue
+            if len(worker_services) != 2:
+                self.error(obj.relpath, f"RKE2 server intent `{obj.data.get('name')}` must define exactly two `worker_services` entries")
+            for service_name, service in worker_services.items():
+                if not isinstance(service_name, str) or not allowed_rke2_service_name.match(service_name):
+                    self.error(obj.relpath, f"RKE2 server intent `{obj.data.get('name')}` worker service names must match `[A-Za-z0-9_-]+`")
+                    continue
+                if not isinstance(service, dict):
+                    self.error(obj.relpath, f"RKE2 server intent `{obj.data.get('name')}` worker service `{service_name}` must be a mapping")
+                    continue
+                if obj.effective_state != "absent":
+                    if service.get("vip") in (None, ""):
+                        self.error(obj.relpath, f"RKE2 server intent `{obj.data.get('name')}` worker service `{service_name}` must define `vip`")
+                    if service.get("node_port") in (None, ""):
+                        self.error(obj.relpath, f"RKE2 server intent `{obj.data.get('name')}` worker service `{service_name}` must define `node_port`")
+                    if service.get("monitors") in (None, ""):
+                        self.error(obj.relpath, f"RKE2 server intent `{obj.data.get('name')}` worker service `{service_name}` must define `monitors`")
+
+            if obj.effective_state != "absent":
+                self.require_fields(obj, ["control_plane_vip", "control_plane_members", "worker_members"])
+                if not isinstance(obj.data.get("control_plane_members"), list) or not obj.data.get("control_plane_members"):
+                    self.error(obj.relpath, f"RKE2 server intent `{obj.data.get('name')}` `control_plane_members` must be a non-empty list")
+                if not isinstance(obj.data.get("worker_members"), list) or not obj.data.get("worker_members"):
+                    self.error(obj.relpath, f"RKE2 server intent `{obj.data.get('name')}` `worker_members` must be a non-empty list")
+
+            settings_payload = self.load_settings_payload(obj.source_file.parent / "settings.yml")
+            compiled_service = compile_ltm_rke2_server_intent(
+                obj.data,
+                settings_payload.get("ltm_rke2_server_intent_defaults", {}),
+                settings_payload.get("ltm_pool_defaults", {}),
+                settings_payload.get("ltm_member_defaults", {}),
+                settings_payload.get("ltm_monitor_sets", {}),
+            )
+            for pool in compiled_service.get("pools", []) or []:
+                compiled_rke2_pools.append((obj, pool))
+            for virtual_server in compiled_service.get("virtual_servers", []) or []:
+                compiled_rke2_virtual_servers.append((obj, virtual_server))
+
+        self.check_duplicates(
+            rke2_server_intents,
+            lambda obj: ("ltm_rke2_server_intent", obj.partition, obj.data.get("name")),
+            "LTM RKE2 server intent",
+        )
+
+        for source_obj, normalized_pool in compiled_rke2_pools:
+            if normalized_pool.get("state") == "absent":
+                continue
+            pool_name = normalized_pool.get("name")
+            if pool_name in (None, ""):
+                self.error(source_obj.relpath, f"RKE2 server intent `{source_obj.data.get('name')}` compiled an unnamed pool")
+                continue
+            pool_partition = str(normalized_pool.get("partition", source_obj.partition))
+            fq_pool_name = self.fq_name(pool_partition, str(pool_name))
+            if fq_pool_name in active_pool_names:
+                self.error(source_obj.relpath, f"RKE2 server intent `{source_obj.data.get('name')}` compiles duplicate pool `{fq_pool_name}`")
+                continue
+            active_pool_names.add(fq_pool_name)
+
+            monitors_list = normalized_pool.get("monitors", [])
+            if monitors_list is not None and not isinstance(monitors_list, list):
+                self.error(source_obj.relpath, f"RKE2 compiled pool `{pool_name}` `monitors` must be a list")
+            else:
+                for monitor in monitors_list or []:
+                    self.validate_monitor_reference(
+                        source=source_obj.relpath,
+                        reference=monitor,
+                        known_monitors=active_monitor_names,
+                        kind="LTM pool monitor",
+                    )
+
+            self.validate_ltm_pool_members(source_obj.relpath, pool_name, pool_partition, normalized_pool.get("members"), active_node_names)
 
         active_vlan_names = set()
         for obj in network_vlans:
@@ -1606,6 +1696,59 @@ class Validator:
             lambda obj: ("ltm_virtual_server", obj.partition, obj.data.get("name")),
             "LTM virtual server",
         )
+
+        active_virtual_server_names = {
+            self.fq_name(obj.partition, str(obj.data["name"]))
+            for obj in virtual_servers
+            if obj.effective_state != "absent" and obj.data.get("name")
+        }
+
+        for source_obj, virtual_server in compiled_rke2_virtual_servers:
+            if virtual_server.get("state") == "absent":
+                continue
+            name = virtual_server.get("name")
+            if name in (None, ""):
+                self.error(source_obj.relpath, f"RKE2 server intent `{source_obj.data.get('name')}` compiled an unnamed virtual server")
+                continue
+            vs_partition = str(virtual_server.get("partition", source_obj.partition))
+            fq_virtual_name = self.fq_name(vs_partition, str(name))
+            if fq_virtual_name in active_virtual_server_names:
+                self.error(source_obj.relpath, f"RKE2 server intent `{source_obj.data.get('name')}` compiles duplicate virtual server `{fq_virtual_name}`")
+                continue
+            active_virtual_server_names.add(fq_virtual_name)
+
+            if virtual_server.get("destination") in (None, "") or virtual_server.get("destination_port") in (None, ""):
+                self.error(source_obj.relpath, f"RKE2 compiled virtual server `{name}` must define `destination` and `destination_port`")
+                continue
+            pool_ref = self.normalize_pool_reference(virtual_server.get("pool"), vs_partition)
+            if pool_ref not in active_pool_names:
+                self.error(source_obj.relpath, f"RKE2 compiled virtual server `{name}` references undefined pool `{pool_ref}`")
+            profiles = virtual_server.get("profiles")
+            if profiles is not None:
+                if not isinstance(profiles, list):
+                    self.error(source_obj.relpath, f"RKE2 compiled virtual server `{name}` `profiles` must be a list")
+                else:
+                    for profile_reference in profiles:
+                        self.validate_profile_reference(
+                            source=source_obj.relpath,
+                            reference=profile_reference,
+                            default_partition=vs_partition,
+                            known_profiles=active_profile_names,
+                            kind="LTM virtual server profile",
+                        )
+            vs_vlans = virtual_server.get("vlans")
+            if vs_vlans is not None:
+                if not isinstance(vs_vlans, list):
+                    self.error(source_obj.relpath, f"RKE2 compiled virtual server `{name}` `vlans` must be a list")
+                else:
+                    for vlan in vs_vlans:
+                        self.validate_named_or_fq_reference(
+                            source_obj.relpath,
+                            vlan,
+                            vs_partition,
+                            active_vlan_names,
+                            "virtual server VLAN",
+                        )
 
         supported_persistence_types = {"cookie", "source_addr", "universal"}
         active_persistence_names = set()
@@ -2520,6 +2663,28 @@ class Validator:
                 "destination": destination,
                 "destination_port": destination_port,
             }
+        for obj in self.objects.get("ltm_rke2_server_intents", []):
+            if obj.effective_state == "absent":
+                continue
+            settings_payload = self.load_settings_payload(obj.source_file.parent / "settings.yml")
+            compiled_service = compile_ltm_rke2_server_intent(
+                obj.data,
+                settings_payload.get("ltm_rke2_server_intent_defaults", {}),
+                settings_payload.get("ltm_pool_defaults", {}),
+                settings_payload.get("ltm_member_defaults", {}),
+                settings_payload.get("ltm_monitor_sets", {}),
+            )
+            for virtual_server in compiled_service.get("virtual_servers", []) or []:
+                name = virtual_server.get("name")
+                destination = virtual_server.get("destination")
+                destination_port = virtual_server.get("destination_port")
+                partition = str(virtual_server.get("partition", obj.partition))
+                if name in (None, "") or destination in (None, "") or destination_port in (None, ""):
+                    continue
+                lookup[self.fq_name(partition, str(name))] = {
+                    "destination": destination,
+                    "destination_port": destination_port,
+                }
         return lookup
 
     def validate_monitor_reference(

@@ -68,8 +68,9 @@ These are also binding. A feature is not complete just because syntax-check pass
 - Preserve the separation between canonical runtime objects and higher-level convenience authoring:
   - `playbooks/ltm.yml`, `playbooks/gtm.yml`, and other canonical runtime playbooks should operate on normalized first-class BIG-IP objects
   - do not keep adding shortcut-specific branching directly into `tasks/apply.yml` or `tasks/delete.yml` for common service patterns
-  - when a new “simple thing” or common pattern is needed, prefer adding it as an intent/compiler layer ahead of runtime tasks
-  - intent-style inputs should compile into the same canonical object model the runtime already manages
+- when a new “simple thing” or common pattern is needed, prefer adding it as an intent/compiler layer ahead of runtime tasks
+- intent-style inputs should compile into the same canonical object model the runtime already manages
+- when a repeated platform pattern becomes more opinionated than a single embedded object shortcut, prefer a dedicated intent tree such as `vars/<domain>/intents/...` plus a focused compiler snippet in `playbooks/<domain>/prep/*.yml`
   - runtime task files should remain the stable apply/delete contract; convenience models belong in normalization, prep, or dedicated compiler helpers
   - if an existing shortcut path becomes more complex, refactor it toward the intent/compiler design instead of extending ad hoc hybrid logic in-place
   - document clearly whether a var tree is canonical object data or higher-level intent data, and keep validators aligned to both layers where supported
