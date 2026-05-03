@@ -80,7 +80,7 @@
     partition: "{{ item.partition | default('Common') }}"
     name: "{{ item.name }}"
     state: absent
-  loop: "{{ ltm_all_pools_delete | default([]) }}"
+  loop: "{{ ltm_canonical_pools_delete | default([]) }}"
   loop_control:
     label: "{{ item.partition | default('Common') }}/{{ item.name }}"
 

@@ -172,7 +172,7 @@
     description: "{{ item.description | default(omit) }}"
     location: "{{ item.location | default(omit) }}"
     state: "{{ item.state | default((item.enabled | default(true)) | ternary('enabled', 'disabled')) }}"
-  loop: "{{ gtm_all_datacenters_present | default([]) }}"
+  loop: "{{ gtm_canonical_datacenters_present | default([]) }}"
   loop_control:
     label: "{{ item.partition | default('Common') }}/{{ item.name }}"
 
@@ -210,7 +210,7 @@
     translation_port: "{{ item.1.translation_port | default('') }}"
     monitors: "{{ item.1.monitors | default(item.0.monitors | default(item.0.default_monitors | default(omit))) }}"
     state: "{{ item.1.state | default((item.1.enabled | default(true)) | ternary('enabled', 'disabled')) }}"
-  loop: "{{ query('subelements', gtm_all_pools_present | default([]), 'members', {'skip_missing': True}) }}"
+  loop: "{{ query('subelements', gtm_canonical_pools_present | default([]), 'members', {'skip_missing': True}) }}"
   loop_control:
     label: "{{ item.1.partition | default(item.0.partition | default('Common')) }}/{{ item.1.server }}/{{ item.1.virtual_server }}"
 
@@ -236,7 +236,7 @@
           )
         })
       }}
-  loop: "{{ query('subelements', gtm_all_pools_present | default([]), 'members', {'skip_missing': True}) }}"
+  loop: "{{ query('subelements', gtm_canonical_pools_present | default([]), 'members', {'skip_missing': True}) }}"
 
 - name: Create GTM pools
   f5networks.f5_modules.bigip_gtm_pool:
@@ -254,7 +254,7 @@
     monitors: "{{ item.monitors | default(item.default_monitors | default(omit)) }}"
     members: "{{ gtm_pool_members_by_pool[((item.partition | default('Common')) ~ '|' ~ (item.record_type | default('a')) ~ '|' ~ item.name)] | default([]) }}"
     state: "{{ item.state | default((item.enabled | default(true)) | ternary('enabled', 'disabled')) }}"
-  loop: "{{ gtm_all_pools_present | default([]) }}"
+  loop: "{{ gtm_canonical_pools_present | default([]) }}"
   loop_control:
     label: "{{ item.partition | default('Common') }}/{{ item.name }}"
 

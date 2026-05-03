@@ -280,7 +280,7 @@
     service_down_action: "{{ item.service_down_action | default(omit) }}"
     slow_ramp_time: "{{ item.slow_ramp_time | default(omit) }}"
     state: "{{ item.state | default('present') }}"
-  loop: "{{ ltm_all_pools_present | default([]) }}"
+  loop: "{{ ltm_canonical_pools_present | default([]) }}"
   loop_control:
     label: "{{ item.partition | default('Common') }}/{{ item.name }}"
 
@@ -305,7 +305,7 @@
     ratio: "{{ item.1.ratio | default(omit) }}"
     reuse_nodes: "{{ item.1.reuse_nodes | default(omit) }}"
     state: "{{ item.1.state | default((item.1.enabled | default(true)) | ternary('enabled', 'disabled')) }}"
-  loop: "{{ query('subelements', ltm_all_pools_present | default([]), 'members', {'skip_missing': True}) }}"
+  loop: "{{ query('subelements', ltm_canonical_pools_present | default([]), 'members', {'skip_missing': True}) }}"
   loop_control:
     label: "{{ item.0.partition | default('Common') }}/{{ item.0.name }}:{{ item.1.name | default(item.1.host | default(item.1.address | default(item.1.fqdn | default('member')))) }}:{{ item.1.port }}"
 

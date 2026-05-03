@@ -27,7 +27,7 @@
     name: "{{ item.name }}"
     type: "{{ item.record_type | default('a') }}"
     state: absent
-  loop: "{{ gtm_all_pools_delete | default([]) }}"
+  loop: "{{ gtm_canonical_pools_delete | default([]) }}"
   loop_control:
     label: "{{ item.partition | default('Common') }}/{{ item.name }}"
 
@@ -38,7 +38,7 @@
     server_name: "{{ item.1.server }}"
     name: "{{ item.1.virtual_server }}"
     state: absent
-  loop: "{{ query('subelements', gtm_all_pools_delete | default([]), 'members', {'skip_missing': True}) }}"
+  loop: "{{ query('subelements', gtm_canonical_pools_delete | default([]), 'members', {'skip_missing': True}) }}"
   loop_control:
     label: "{{ item.1.partition | default(item.0.partition | default('Common')) }}/{{ item.1.server }}/{{ item.1.virtual_server }}"
 
@@ -58,7 +58,7 @@
     partition: "{{ item.partition | default('Common') }}"
     name: "{{ item.name }}"
     state: absent
-  loop: "{{ gtm_all_datacenters_delete | default([]) }}"
+  loop: "{{ gtm_canonical_datacenters_delete | default([]) }}"
   loop_control:
     label: "{{ item.partition | default('Common') }}/{{ item.name }}"
 
@@ -154,4 +154,3 @@
     label: "{{ item.partition | default('Common') }}/{{ item.name }}"
   when:
     - item.type == 'tcp_half_open'
-

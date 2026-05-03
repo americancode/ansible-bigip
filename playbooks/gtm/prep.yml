@@ -743,10 +743,10 @@
     gtm_embedded_datacenters_present: "{{ (gtm_embedded_datacenters_present | default([])) + [ {'name': item} ] }}"
   loop: "{{ gtm_embedded_datacenter_names_present | default([]) }}"
 
-- name: Combine first-class and embedded GTM datacenter operations
+- name: Build canonical GTM datacenter operations
   ansible.builtin.set_fact:
-    gtm_all_datacenters_delete: "{{ (gtm_datacenters_delete | default([])) + (gtm_embedded_datacenters_delete | default([])) }}"
-    gtm_all_datacenters_present: "{{ (gtm_datacenters_present | default([])) + (gtm_embedded_datacenters_present | default([])) }}"
+    gtm_canonical_datacenters_delete: "{{ (gtm_datacenters_delete | default([])) + (gtm_embedded_datacenters_delete | default([])) }}"
+    gtm_canonical_datacenters_present: "{{ (gtm_datacenters_present | default([])) + (gtm_embedded_datacenters_present | default([])) }}"
 
 - name: Initialize compiled GTM shortcut objects from deleted Wide IPs
   ansible.builtin.set_fact:
@@ -833,7 +833,7 @@
     gtm_wide_ips_delete: "{{ gtm_compiled_wide_ips_delete | default([]) }}"
     gtm_wide_ips_present: "{{ gtm_compiled_wide_ips_present | default([]) }}"
 
-- name: Combine first-class and compiled GTM pool operations
+- name: Build canonical GTM pool operations
   ansible.builtin.set_fact:
-    gtm_all_pools_delete: "{{ (gtm_pools_delete | default([])) + (gtm_compiled_pools_delete | default([])) }}"
-    gtm_all_pools_present: "{{ (gtm_pools_present | default([])) + (gtm_compiled_pools_present | default([])) }}"
+    gtm_canonical_pools_delete: "{{ (gtm_pools_delete | default([])) + (gtm_compiled_pools_delete | default([])) }}"
+    gtm_canonical_pools_present: "{{ (gtm_pools_present | default([])) + (gtm_compiled_pools_present | default([])) }}"

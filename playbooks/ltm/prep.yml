@@ -878,7 +878,7 @@
     ltm_virtual_servers_delete: "{{ ltm_compiled_virtual_servers_delete | default([]) }}"
     ltm_virtual_servers_present: "{{ ltm_compiled_virtual_servers_present | default([]) }}"
 
-- name: Combine first-class and compiled LTM pool operations
+- name: Build canonical LTM pool operations
   ansible.builtin.set_fact:
-    ltm_all_pools_delete: "{{ (ltm_pools_delete | default([])) + (ltm_compiled_pools_delete | default([])) }}"
-    ltm_all_pools_present: "{{ (ltm_pools_present | default([])) + (ltm_compiled_pools_present | default([])) }}"
+    ltm_canonical_pools_delete: "{{ (ltm_pools_delete | default([])) + (ltm_compiled_pools_delete | default([])) }}"
+    ltm_canonical_pools_present: "{{ (ltm_pools_present | default([])) + (ltm_compiled_pools_present | default([])) }}"
