@@ -1,2 +1,0 @@
-apm_per_session_policy_defaults:
-  partition: Common

@@ -1,3 +1,0 @@
----
-ha_device_connectivity_defaults:
-  failover_multicast: false

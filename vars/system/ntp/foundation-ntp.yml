@@ -1,6 +1,0 @@
----
-system_ntp:
-  - ntp_servers:
-      - "time1.my.domain.com"
-      - "time2.my.domain.com"
-    timezone: "America/New_York"

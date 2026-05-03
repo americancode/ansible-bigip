@@ -1,5 +1,0 @@
----
-# APM ACL settings.
-# ACLs are referenced by APM network access resources in `vars/security/apm/network_access/`.
-apm_acl_defaults:
-  partition: Common

@@ -1,7 +1,0 @@
----
-bigip_snat_pools:
-  - name: "platform-egress"
-    description: "Default outbound SNAT pool for shared applications"
-    members:
-      - "platform-egress-a"
-      - "platform-egress-b"
