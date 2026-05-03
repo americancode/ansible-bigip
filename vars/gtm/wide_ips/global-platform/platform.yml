@@ -1,6 +1,8 @@
 ---
 # Concise/hybrid GTM example.
 # Each Wide IP embeds its GTM pools inline so one file tells the story for the service.
+# The embedded pools are authoring-time convenience data; `gtm/prep.yml` compiles them into
+# canonical GTM pool objects and rewrites the Wide IP to reference those pools before runtime apply.
 # The embedded `members` point to GTM servers in `vars/gtm/servers/regional-bigips.yml`.
 # The `virtual_server` strings point to repo-known LTM virtual servers in:
 # - `vars/ltm/virtual_servers/rke2-east/platform-cluster.yml`

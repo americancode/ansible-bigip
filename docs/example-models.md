@@ -12,6 +12,7 @@ Use the app-local inline model when one file should explain the whole service.
   - `vars/ltm/virtual_servers/rke2-east/platform-cluster.yml`
   - `vars/ltm/virtual_servers/vm-apps/concise-inline-demo.yml`
 - Pattern: an LTM virtual server embeds its pool and members directly under `pool`
+- Compiler behavior: `ltm/prep.yml` compiles the embedded pool into canonical LTM pool objects and rewrites the virtual server to reference that pool by name before runtime apply/delete
 - Monitor linkage: monitor aliases such as `traefik_https` are expanded from the sibling `settings.yml` in the same directory
 - Built-in health check example: `/Common/https` in `vars/ltm/virtual_servers/vm-apps/concise-inline-demo.yml`
 
@@ -38,6 +39,7 @@ Use the app-local GTM model when a Wide IP and its pools should be reviewed toge
 
 - Example file: `vars/gtm/wide_ips/global-platform/platform.yml`
 - Pattern: `gtm_wide_ips[*].pools[*]` embeds full GTM pool definitions under a Wide IP
+- Compiler behavior: `gtm/prep.yml` compiles the embedded pools into canonical GTM pool objects and rewrites the Wide IP to carry only pool references before runtime apply/delete
 - Monitor linkage: aliases such as `platform_https` expand from `vars/gtm/wide_ips/global-platform/settings.yml`
 
 ## Verbose GTM Model

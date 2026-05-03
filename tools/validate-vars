@@ -16,7 +16,12 @@ ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT))
 VARS_DIR = ROOT / "vars"
 
-from filter_plugins.bigip_var_filters import normalize_gtm_pool, normalize_ltm_pool
+from filter_plugins.bigip_var_filters import (
+    compile_gtm_wide_ip_intent,
+    compile_ltm_virtual_server_intent,
+    normalize_gtm_pool,
+    normalize_ltm_pool,
+)
 
 
 class AnsibleVarLoader(yaml.SafeLoader):
@@ -1561,17 +1566,17 @@ class Validator:
                 self.error(obj.relpath, f"virtual server `{obj.data.get('name')}` pool must be a string reference or embedded pool mapping")
                 continue
 
-            if not pool.get("name"):
-                self.error(obj.relpath, f"virtual server `{obj.data.get('name')}` embedded pool must define `name`")
-                continue
-
             settings_payload = self.load_settings_payload(obj.source_file.parent / "settings.yml")
-            normalized_pool = normalize_ltm_pool(
-                pool,
+            compiled_service = compile_ltm_virtual_server_intent(
+                obj.data,
                 settings_payload.get("ltm_pool_defaults", {}),
                 settings_payload.get("ltm_member_defaults", {}),
                 settings_payload.get("ltm_monitor_sets", {}),
             )
+            normalized_pool = (compiled_service.get("pools") or [None])[0]
+            if normalized_pool is None or not normalized_pool.get("name"):
+                self.error(obj.relpath, f"virtual server `{obj.data.get('name')}` embedded pool must define `name`")
+                continue
 
             pool_partition = str(normalized_pool.get("partition", obj.partition))
             active_pool_names.add(self.fq_name(pool_partition, str(normalized_pool["name"])))
@@ -1803,13 +1808,17 @@ class Validator:
                 pool_partition = str(pool.get("partition", obj.partition))
                 if self.is_inline_gtm_pool(pool):
                     settings_payload = self.load_settings_payload(obj.source_file.parent / "settings.yml")
-                    normalized_pool = normalize_gtm_pool(
-                        pool,
+                    compiled_service = compile_gtm_wide_ip_intent(
+                        {"partition": obj.partition, "record_type": record_type, "pools": [pool]},
                         settings_payload.get("gtm_pool_defaults", {}),
                         settings_payload.get("gtm_member_defaults", {}),
                         settings_payload.get("gtm_monitor_sets", {}),
                         active_ltm_virtual_servers,
                     )
+                    normalized_pool = (compiled_service.get("pools") or [None])[0]
+                    if normalized_pool is None:
+                        self.error(obj.relpath, f"GTM Wide IP `{obj.data.get('name')}` pool {pool_index} could not be compiled")
+                        continue
                     pool_partition = str(normalized_pool.get("partition", obj.partition))
                     active_pool_names.add(self.fq_gtm_pool_name(pool_partition, record_type, str(normalized_pool["name"])))
                     for monitor in normalized_pool.get("monitors", normalized_pool.get("default_monitors", [])) or []:

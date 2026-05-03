@@ -18,6 +18,8 @@ Example walkthroughs live in [example-models.md](example-models.md):
 - Concise LTM: `vars/ltm/virtual_servers/rke2-east/platform-cluster.yml`
 - Concise GTM: `vars/gtm/wide_ips/global-platform/platform.yml`
 
+These concise paths now compile into canonical pools and pool references during `prep.yml`, so runtime `apply.yml` and `delete.yml` operate on normalized first-class objects rather than mixed inline shortcut shapes.
+
 ## First-Class Model (Verbose)
 
 Use when objects are reused, owned by another team, or need clearer separation:

@@ -2,6 +2,8 @@
 # Concise/app-local LTM example.
 # This file is the shortest supported authoring model: the virtual server, pool, members, and
 # health check live together in one object.
+# The embedded `pool` is authoring-time convenience data; `ltm/prep.yml` compiles it into a
+# canonical pool object and rewrites the virtual server to reference that pool by name before runtime apply.
 # The pool is embedded inline under `pool`, so there is no reference into `vars/ltm/pools/...`.
 # The monitor reference `/Common/https` is an out-of-the-box BIG-IP health check, not a custom
 # monitor declared in `vars/ltm/monitors/platform-monitors.yml`.

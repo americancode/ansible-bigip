@@ -258,55 +258,6 @@
   loop_control:
     label: "{{ item.partition | default('Common') }}/{{ item.name }}"
 
-- name: Build Wide IP pool references
-  ansible.builtin.set_fact:
-    gtm_wide_ip_pool_refs: >-
-      {{
-        gtm_wide_ip_pool_refs | default({}) | combine({
-          item.0.partition | default('Common') ~ '|' ~ item.0.record_type | default('a') ~ '|' ~ item.0.name:
-          (
-            (gtm_wide_ip_pool_refs | default({})).get(
-              item.0.partition | default('Common') ~ '|' ~ item.0.record_type | default('a') ~ '|' ~ item.0.name,
-              []
-            ) + [
-              {
-                'name': (item.1 if item.1 is string else item.1.name),
-                'partition': (item.0.partition | default('Common')) if item.1 is string else (item.1.partition | default(item.0.partition | default('Common'))),
-                'ratio': 1 if item.1 is string else (item.1.ratio | default(1))
-              }
-            ]
-          )
-        })
-      }}
-  loop: "{{ query('subelements', gtm_wide_ips_present | default([]), 'pools', {'skip_missing': True}) }}"
-  when:
-    - item.1 is string or (item.1 is mapping and item.1.members is not defined)
-
-- name: Add embedded GTM pool references from Wide IPs
-  ansible.builtin.set_fact:
-    gtm_wide_ip_pool_refs: >-
-      {{
-        gtm_wide_ip_pool_refs | default({}) | combine({
-          item.0.partition | default('Common') ~ '|' ~ item.0.record_type | default('a') ~ '|' ~ item.0.name:
-          (
-            (gtm_wide_ip_pool_refs | default({})).get(
-              item.0.partition | default('Common') ~ '|' ~ item.0.record_type | default('a') ~ '|' ~ item.0.name,
-              []
-            ) + [
-              {
-                'name': item.1.name,
-                'partition': item.1.partition | default(item.0.partition | default('Common')),
-                'ratio': item.1.ratio | default(1)
-              }
-            ]
-          )
-        })
-      }}
-  loop: "{{ query('subelements', gtm_wide_ips_present | default([]), 'pools', {'skip_missing': True}) }}"
-  when:
-    - item.1 is mapping
-    - item.1.members is defined
-
 - name: Create Wide IPs
   f5networks.f5_modules.bigip_gtm_wide_ip:
     provider: "{{ provider }}"
@@ -314,7 +265,7 @@
     name: "{{ item.name }}"
     type: "{{ item.record_type | default('a') }}"
     pool_lb_method: "{{ item.pool_lb_method | default('topology') }}"
-    pools: "{{ gtm_wide_ip_pool_refs[(item.partition | default('Common')) ~ '|' ~ (item.record_type | default('a')) ~ '|' ~ item.name] | default([]) }}"
+    pools: "{{ item.pools | default([]) }}"
     state: "{{ item.state | default((item.enabled | default(true)) | ternary('enabled', 'disabled')) }}"
   loop: "{{ gtm_wide_ips_present | default([]) }}"
   loop_control:
@@ -346,5 +297,5 @@
   ansible.builtin.debug:
     msg:
       - "Custom GTM monitors are declared in `gtm_monitors` and created before pools and Wide IPs."
-      - "GTM supports a hybrid model: inline pools under a Wide IP for readability, or first-class objects in `vars/gtm/pools` for reuse."
+      - "GTM shortcut authoring is compiled into canonical GTM pools and Wide IP pool references before runtime apply tasks run."
       - "Datacenters can be declared explicitly or inferred from `gtm_servers`."

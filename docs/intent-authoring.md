@@ -140,12 +140,14 @@ The roadmap direction is to refactor those patterns into the new intent/compiler
 
 ## First Refactor Targets
 
-The first two refactor targets should be:
+The first two refactor targets were:
 
 1. LTM concise inline app-service behavior
 2. GTM concise inline Wide IP / pool behavior
 
-The immediate goal is not to add more convenience cases first. The immediate goal is to move the current shortcut logic into the correct architectural layer.
+Those paths now compile into canonical pools, virtual servers, and Wide IP pool references during `prep.yml` instead of depending on mixed-shape runtime task logic.
+
+The next goal is not to add more convenience cases first. The next goal is to reuse this compiler pattern for any future simple-mode authoring without expanding runtime branching again.
 
 ## When To Use Which Model
 

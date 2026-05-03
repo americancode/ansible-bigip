@@ -199,6 +199,81 @@ def normalize_gtm_pool(pool, pool_defaults=None, member_defaults=None, monitor_s
     return normalized
 
 
+def compile_ltm_virtual_server_intent(virtual_server, pool_defaults=None, member_defaults=None, monitor_sets=None):
+    if not isinstance(virtual_server, dict):
+        return {"virtual_server": virtual_server, "pools": []}
+
+    compiled_virtual_server = dict(virtual_server)
+    compiled_pools = []
+    pool = compiled_virtual_server.get("pool")
+
+    if isinstance(pool, dict):
+        virtual_partition = compiled_virtual_server.get("partition", "Common")
+        normalized_pool = normalize_ltm_pool(pool, pool_defaults, member_defaults, monitor_sets)
+        normalized_pool = dict(normalized_pool)
+        normalized_pool.setdefault("partition", virtual_partition)
+        compiled_pools.append(normalized_pool)
+
+        if normalized_pool.get("partition", virtual_partition) == virtual_partition:
+            compiled_virtual_server["pool"] = normalized_pool["name"]
+        else:
+            compiled_virtual_server["pool"] = _fq_name(normalized_pool.get("partition"), normalized_pool["name"])
+
+    return {
+        "virtual_server": compiled_virtual_server,
+        "pools": compiled_pools,
+    }
+
+
+def compile_gtm_wide_ip_intent(wide_ip, pool_defaults=None, member_defaults=None, monitor_sets=None, ltm_virtual_servers=None):
+    if not isinstance(wide_ip, dict):
+        return {"wide_ip": wide_ip, "pools": []}
+
+    compiled_wide_ip = dict(wide_ip)
+    compiled_pools = []
+    compiled_pool_refs = []
+    wide_ip_partition = compiled_wide_ip.get("partition", "Common")
+    record_type = compiled_wide_ip.get("record_type", "a")
+
+    for pool in compiled_wide_ip.get("pools", []) or []:
+        if isinstance(pool, str):
+            compiled_pool_refs.append({
+                "name": pool,
+                "partition": wide_ip_partition,
+                "ratio": 1,
+            })
+            continue
+
+        if not isinstance(pool, dict) or not pool.get("name"):
+            continue
+
+        if pool.get("members") is not None:
+            normalized_pool = normalize_gtm_pool(pool, pool_defaults, member_defaults, monitor_sets, ltm_virtual_servers)
+            normalized_pool = dict(normalized_pool)
+            normalized_pool.setdefault("partition", wide_ip_partition)
+            normalized_pool.setdefault("record_type", record_type)
+            compiled_pools.append(normalized_pool)
+            compiled_pool_refs.append({
+                "name": normalized_pool["name"],
+                "partition": normalized_pool.get("partition", wide_ip_partition),
+                "ratio": pool.get("ratio", 1),
+            })
+            continue
+
+        compiled_pool_refs.append({
+            "name": pool["name"],
+            "partition": pool.get("partition", wide_ip_partition),
+            "ratio": pool.get("ratio", 1),
+        })
+
+    compiled_wide_ip["pools"] = compiled_pool_refs
+
+    return {
+        "wide_ip": compiled_wide_ip,
+        "pools": compiled_pools,
+    }
+
+
 class FilterModule(object):
     def filters(self):
         return {
@@ -210,4 +285,6 @@ class FilterModule(object):
             "build_management_route_tmsh_command": build_management_route_tmsh_command,
             "build_management_ip_tmsh_command": build_management_ip_tmsh_command,
             "build_login_banner_tmsh_command": build_login_banner_tmsh_command,
+            "compile_ltm_virtual_server_intent": compile_ltm_virtual_server_intent,
+            "compile_gtm_wide_ip_intent": compile_gtm_wide_ip_intent,
         }

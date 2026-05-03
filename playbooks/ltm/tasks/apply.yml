@@ -316,7 +316,7 @@
     name: "{{ item.name }}"
     destination: "{{ item.destination }}"
     port: "{{ item.destination_port }}"
-    pool: "{{ item.pool.name if item.pool is mapping else item.pool }}"
+    pool: "{{ item.pool }}"
     snat: "{{ item.snat | default('Automap') }}"
     all_profiles: "{{ item.profiles | default(['tcp']) }}"
     default_persistence_profile: "{{ item.default_persistence_profile | default(omit) }}"

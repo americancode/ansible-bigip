@@ -108,19 +108,15 @@ Do not call work complete when any of the following is true:
 
 These are the highest-value open items.
 
-1. Refactor existing LTM and GTM shortcut patterns onto the documented intent-layer design
-   - migrate current inline/nested shortcut handling out of runtime-task logic and into the proposed normalization/compiler layer
-   - preserve the existing canonical object model as the apply/delete contract
-
-2. Helper-tool maturity decisions for `system` and `ha`
+1. Helper-tool maturity decisions for `system` and `ha`
    - either add drift/import coverage
    - or keep them explicitly documented as `runtime+validation` for the current phase
 
-3. Configuration snapshot and recovery workflows
+2. Configuration snapshot and recovery workflows
    - UCS backup/export workflow
    - explicit operational guidance for snapshot use in change and rollback paths
 
-4. Certificate lifecycle automation
+3. Certificate lifecycle automation
    - certificate rotation workflows
    - renewal/expiry detection
 
@@ -128,25 +124,19 @@ These are the highest-value open items.
 
 These are the concrete remaining backlog items.
 
-1. Refactor existing LTM and GTM shortcut models onto the intent/compiler design
-   - move the current LTM inline pool/member shortcut behavior into the new design
-   - move the current GTM inline/derived shortcut behavior into the new design
-   - keep `playbooks/ltm.yml` and `playbooks/gtm.yml` structurally simpler after the refactor
-   - the architecture target is documented in `docs/intent-authoring.md`
-
-2. Decide the helper-tool lifecycle target for `system` and `ha`
+1. Decide the helper-tool lifecycle target for `system` and `ha`
    - either implement drift/import support
    - or document them as intentional `runtime+validation` boundaries in long-term steady state
 
-3. UCS backup/export workflow for configuration snapshots
+2. UCS backup/export workflow for configuration snapshots
    - priority: lower than management-plane auth, compliance, and current repo-boundary decisions
    - completion target: `runtime+validation`
 
-4. Certificate rotation automation with renewal detection
+3. Certificate rotation automation with renewal detection
    - priority: lower than management-plane auth, compliance, and current repo-boundary decisions
    - completion target: `runtime+validation+helper-tools` where practical
 
-5. Future deeper helper-tool fidelity
+4. Future deeper helper-tool fidelity
    - if needed, promote selected object families from `basic field drift` toward `model-aware`
    - only pursue this when the operational value is clear
 

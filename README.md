@@ -75,7 +75,6 @@ Canonical playbooks live under `playbooks/`. Root-level `*.yml` files are compat
 
 The main remaining roadmap items are:
 
-- refactoring existing LTM and GTM shortcuts onto the documented intent/compiler design
 - deciding whether `system` and `ha` should gain full drift/import support
 - lower-priority lifecycle work such as UCS backup/export and certificate rotation automation
 

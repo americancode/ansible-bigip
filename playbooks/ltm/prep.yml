@@ -795,39 +795,27 @@
         )
       }}
 
-- name: Derive embedded LTM pool deletions from virtual servers
+- name: Initialize compiled LTM shortcut objects from virtual servers
   ansible.builtin.set_fact:
-    ltm_embedded_pool_deletions: []
+    ltm_compiled_virtual_servers_delete: []
+    ltm_compiled_pools_delete: []
 
-- name: Derive embedded LTM pools from active virtual servers
+- name: Initialize compiled active LTM shortcut objects from virtual servers
   ansible.builtin.set_fact:
-    ltm_embedded_pools_present: []
+    ltm_compiled_virtual_servers_present: []
+    ltm_compiled_pools_present: []
 
-- name: Collect embedded LTM pool deletions
+- name: Compile deleted LTM virtual-server shortcut objects
   ansible.builtin.set_fact:
-    ltm_embedded_pool_deletions: >-
+    ltm_compiled_virtual_servers_delete: >-
       {{
-        (ltm_embedded_pool_deletions | default([])) + [
-          (
-            {'partition': item.partition | default('Common')}
-            | combine(
-                (
-                  item.pool
-                  | normalize_ltm_pool(
-                      ltm_virtual_server_pool_defaults,
-                      ltm_virtual_server_member_defaults,
-                      ltm_virtual_server_monitor_sets
-                    )
-                ),
-                recursive=True
-              )
-          )
-        ]
+        (ltm_compiled_virtual_servers_delete | default([])) + [ltm_compiled_service.virtual_server]
+      }}
+    ltm_compiled_pools_delete: >-
+      {{
+        (ltm_compiled_pools_delete | default([])) + (ltm_compiled_service.pools | default([]))
       }}
   loop: "{{ ltm_virtual_servers_delete | default([]) }}"
-  when:
-    - item.pool is defined
-    - item.pool is mapping
   vars:
     ltm_virtual_server_settings_path: "{{ item.__source_file | regex_replace('/[^/]+$', '/settings.yml') if item.__source_file is defined else '' }}"
     ltm_virtual_server_settings_payload: >-
@@ -841,32 +829,27 @@
     ltm_virtual_server_pool_defaults: "{{ ltm_virtual_server_settings_payload.ltm_pool_defaults | default({}) }}"
     ltm_virtual_server_member_defaults: "{{ ltm_virtual_server_settings_payload.ltm_member_defaults | default({}) }}"
     ltm_virtual_server_monitor_sets: "{{ ltm_virtual_server_settings_payload.ltm_monitor_sets | default({}) }}"
-
-- name: Collect embedded LTM pools
-  ansible.builtin.set_fact:
-    ltm_embedded_pools_present: >-
+    ltm_compiled_service: >-
       {{
-        (ltm_embedded_pools_present | default([])) + [
-          (
-            {'partition': item.partition | default('Common')}
-            | combine(
-                (
-                  item.pool
-                  | normalize_ltm_pool(
-                      ltm_virtual_server_pool_defaults,
-                      ltm_virtual_server_member_defaults,
-                      ltm_virtual_server_monitor_sets
-                    )
-                ),
-                recursive=True
-              )
+        item
+        | compile_ltm_virtual_server_intent(
+            ltm_virtual_server_pool_defaults,
+            ltm_virtual_server_member_defaults,
+            ltm_virtual_server_monitor_sets
           )
-        ]
+      }}
+
+- name: Compile active LTM virtual-server shortcut objects
+  ansible.builtin.set_fact:
+    ltm_compiled_virtual_servers_present: >-
+      {{
+        (ltm_compiled_virtual_servers_present | default([])) + [ltm_compiled_service.virtual_server]
+      }}
+    ltm_compiled_pools_present: >-
+      {{
+        (ltm_compiled_pools_present | default([])) + (ltm_compiled_service.pools | default([]))
       }}
   loop: "{{ ltm_virtual_servers_present | default([]) }}"
-  when:
-    - item.pool is defined
-    - item.pool is mapping
   vars:
     ltm_virtual_server_settings_path: "{{ item.__source_file | regex_replace('/[^/]+$', '/settings.yml') if item.__source_file is defined else '' }}"
     ltm_virtual_server_settings_payload: >-
@@ -880,8 +863,22 @@
     ltm_virtual_server_pool_defaults: "{{ ltm_virtual_server_settings_payload.ltm_pool_defaults | default({}) }}"
     ltm_virtual_server_member_defaults: "{{ ltm_virtual_server_settings_payload.ltm_member_defaults | default({}) }}"
     ltm_virtual_server_monitor_sets: "{{ ltm_virtual_server_settings_payload.ltm_monitor_sets | default({}) }}"
+    ltm_compiled_service: >-
+      {{
+        item
+        | compile_ltm_virtual_server_intent(
+            ltm_virtual_server_pool_defaults,
+            ltm_virtual_server_member_defaults,
+            ltm_virtual_server_monitor_sets
+          )
+      }}
 
-- name: Combine first-class and embedded LTM pool operations
+- name: Replace raw virtual-server shortcut objects with compiled canonical virtual servers
   ansible.builtin.set_fact:
-    ltm_all_pools_delete: "{{ (ltm_pools_delete | default([])) + (ltm_embedded_pool_deletions | default([])) }}"
-    ltm_all_pools_present: "{{ (ltm_pools_present | default([])) + (ltm_embedded_pools_present | default([])) }}"
+    ltm_virtual_servers_delete: "{{ ltm_compiled_virtual_servers_delete | default([]) }}"
+    ltm_virtual_servers_present: "{{ ltm_compiled_virtual_servers_present | default([]) }}"
+
+- name: Combine first-class and compiled LTM pool operations
+  ansible.builtin.set_fact:
+    ltm_all_pools_delete: "{{ (ltm_pools_delete | default([])) + (ltm_compiled_pools_delete | default([])) }}"
+    ltm_all_pools_present: "{{ (ltm_pools_present | default([])) + (ltm_compiled_pools_present | default([])) }}"

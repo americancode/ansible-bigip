@@ -748,43 +748,29 @@
     gtm_all_datacenters_delete: "{{ (gtm_datacenters_delete | default([])) + (gtm_embedded_datacenters_delete | default([])) }}"
     gtm_all_datacenters_present: "{{ (gtm_datacenters_present | default([])) + (gtm_embedded_datacenters_present | default([])) }}"
 
-- name: Derive embedded GTM pool deletions from Wide IPs
+- name: Initialize compiled GTM shortcut objects from deleted Wide IPs
   ansible.builtin.set_fact:
-    gtm_inline_pool_deletions: []
+    gtm_compiled_wide_ips_delete: []
+    gtm_compiled_pools_delete: []
 
-- name: Derive embedded GTM pools from active Wide IPs
+- name: Initialize compiled GTM shortcut objects from active Wide IPs
   ansible.builtin.set_fact:
-    gtm_inline_pools_present: []
+    gtm_compiled_wide_ips_present: []
+    gtm_compiled_pools_present: []
 
-- name: Collect embedded GTM pool deletions from deleted Wide IPs
+- name: Compile deleted GTM Wide IP shortcut objects
   ansible.builtin.set_fact:
-    gtm_inline_pool_deletions: >-
+    gtm_compiled_wide_ips_delete: >-
       {{
-        (gtm_inline_pool_deletions | default([])) + [
-          (
-            {'partition': item.0.partition | default('Common'), 'record_type': item.0.record_type | default('a')}
-            | combine(
-                (
-                  item.1
-                  | normalize_gtm_pool(
-                      gtm_wide_ip_pool_defaults,
-                      gtm_wide_ip_member_defaults,
-                      gtm_wide_ip_monitor_sets,
-                      repo_ltm_virtual_server_lookup | default({})
-                    )
-                ),
-                recursive=True
-              )
-          )
-        ]
+        (gtm_compiled_wide_ips_delete | default([])) + [gtm_compiled_service.wide_ip]
       }}
-  loop: "{{ query('subelements', gtm_wide_ips_delete | default([]), 'pools', {'skip_missing': True}) }}"
-  when:
-    - item.1 is mapping
-    - item.1.name is defined
-    - item.1.members is defined
+    gtm_compiled_pools_delete: >-
+      {{
+        (gtm_compiled_pools_delete | default([])) + (gtm_compiled_service.pools | default([]))
+      }}
+  loop: "{{ gtm_wide_ips_delete | default([]) }}"
   vars:
-    gtm_wide_ip_settings_path: "{{ item.0.__source_file | regex_replace('/[^/]+$', '/settings.yml') if item.0.__source_file is defined else '' }}"
+    gtm_wide_ip_settings_path: "{{ item.__source_file | regex_replace('/[^/]+$', '/settings.yml') if item.__source_file is defined else '' }}"
     gtm_wide_ip_settings_payload: >-
       {{
         (
@@ -796,36 +782,30 @@
     gtm_wide_ip_pool_defaults: "{{ gtm_wide_ip_settings_payload.gtm_pool_defaults | default({}) }}"
     gtm_wide_ip_member_defaults: "{{ gtm_wide_ip_settings_payload.gtm_member_defaults | default({}) }}"
     gtm_wide_ip_monitor_sets: "{{ gtm_wide_ip_settings_payload.gtm_monitor_sets | default({}) }}"
-
-- name: Collect embedded GTM pools from active Wide IPs
-  ansible.builtin.set_fact:
-    gtm_inline_pools_present: >-
+    gtm_compiled_service: >-
       {{
-        (gtm_inline_pools_present | default([])) + [
-          (
-            {'partition': item.0.partition | default('Common'), 'record_type': item.0.record_type | default('a')}
-            | combine(
-                (
-                  item.1
-                  | normalize_gtm_pool(
-                      gtm_wide_ip_pool_defaults,
-                      gtm_wide_ip_member_defaults,
-                      gtm_wide_ip_monitor_sets,
-                      repo_ltm_virtual_server_lookup | default({})
-                    )
-                ),
-                recursive=True
-              )
+        item
+        | compile_gtm_wide_ip_intent(
+            gtm_wide_ip_pool_defaults,
+            gtm_wide_ip_member_defaults,
+            gtm_wide_ip_monitor_sets,
+            repo_ltm_virtual_server_lookup | default({})
           )
-        ]
       }}
-  loop: "{{ query('subelements', gtm_wide_ips_present | default([]), 'pools', {'skip_missing': True}) }}"
-  when:
-    - item.1 is mapping
-    - item.1.name is defined
-    - item.1.members is defined
+
+- name: Compile active GTM Wide IP shortcut objects
+  ansible.builtin.set_fact:
+    gtm_compiled_wide_ips_present: >-
+      {{
+        (gtm_compiled_wide_ips_present | default([])) + [gtm_compiled_service.wide_ip]
+      }}
+    gtm_compiled_pools_present: >-
+      {{
+        (gtm_compiled_pools_present | default([])) + (gtm_compiled_service.pools | default([]))
+      }}
+  loop: "{{ gtm_wide_ips_present | default([]) }}"
   vars:
-    gtm_wide_ip_settings_path: "{{ item.0.__source_file | regex_replace('/[^/]+$', '/settings.yml') if item.0.__source_file is defined else '' }}"
+    gtm_wide_ip_settings_path: "{{ item.__source_file | regex_replace('/[^/]+$', '/settings.yml') if item.__source_file is defined else '' }}"
     gtm_wide_ip_settings_payload: >-
       {{
         (
@@ -837,9 +817,23 @@
     gtm_wide_ip_pool_defaults: "{{ gtm_wide_ip_settings_payload.gtm_pool_defaults | default({}) }}"
     gtm_wide_ip_member_defaults: "{{ gtm_wide_ip_settings_payload.gtm_member_defaults | default({}) }}"
     gtm_wide_ip_monitor_sets: "{{ gtm_wide_ip_settings_payload.gtm_monitor_sets | default({}) }}"
+    gtm_compiled_service: >-
+      {{
+        item
+        | compile_gtm_wide_ip_intent(
+            gtm_wide_ip_pool_defaults,
+            gtm_wide_ip_member_defaults,
+            gtm_wide_ip_monitor_sets,
+            repo_ltm_virtual_server_lookup | default({})
+          )
+      }}
 
-- name: Combine first-class and embedded GTM pool operations
+- name: Replace raw Wide IP shortcut objects with compiled canonical Wide IPs
   ansible.builtin.set_fact:
-    gtm_all_pools_delete: "{{ (gtm_pools_delete | default([])) + (gtm_inline_pool_deletions | default([])) }}"
-    gtm_all_pools_present: "{{ (gtm_pools_present | default([])) + (gtm_inline_pools_present | default([])) }}"
+    gtm_wide_ips_delete: "{{ gtm_compiled_wide_ips_delete | default([]) }}"
+    gtm_wide_ips_present: "{{ gtm_compiled_wide_ips_present | default([]) }}"
 
+- name: Combine first-class and compiled GTM pool operations
+  ansible.builtin.set_fact:
+    gtm_all_pools_delete: "{{ (gtm_pools_delete | default([])) + (gtm_compiled_pools_delete | default([])) }}"
+    gtm_all_pools_present: "{{ (gtm_pools_present | default([])) + (gtm_compiled_pools_present | default([])) }}"
