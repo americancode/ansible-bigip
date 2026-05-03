@@ -119,6 +119,7 @@ These are the highest-value open items.
    - the split filter/helper module structure is in place
    - shared prep snippets now cover fragment discovery, settings-aware aggregation, and present/delete classification across `bootstrap`, `network`, `system`, `ha`, `tls`, and `security`
    - the remaining scope is the more specialized LTM/GTM prep logic that still has domain-specific loader/build behavior beyond the shared helper layer
+   - nested directory discovery already works repo-wide, but hierarchical multi-level `settings.yml` inheritance is not yet universal in the older specialized LTM/GTM loaders
    - this refactor still applies everywhere it makes sense across canonical playbooks, but the open work is now concentrated in the specialized canonical and intent-heavy domains
 
 2. Helper-tool maturity decisions for `system` and `ha`
@@ -141,6 +142,7 @@ These are the concrete remaining backlog items.
    - the shared prep helper layer is now established under `playbooks/shared/prep/`
    - most standard fragment-loading domains already use it
    - the remaining work is to push the same architecture deeper into the specialized LTM/GTM prep flows where canonical loading, lookup building, and intent compilation still require custom YAML
+   - as part of that work, make nested directories and hierarchical `settings.yml` inheritance behave the same way across all canonical playbooks, including older LTM/GTM trees such as `vars/ltm/nodes/<team>/<site>/...`
    - top-level `prep.yml` and focused prep snippets should remain the readable orchestration layer
 
 2. Decide the helper-tool lifecycle target for `system` and `ha`
