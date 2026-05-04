@@ -3,7 +3,7 @@ from __future__ import annotations
 from .common import fq_name, quote_tmsh
 
 
-def build_nat_tmsh_command(action, nat):
+def build_nat_tmsh_command(nat, action="modify"):
     """Build a tmsh command string for an LTM NAT (Network Address Translation) object.
 
     Purpose:
@@ -11,14 +11,15 @@ def build_nat_tmsh_command(action, nat):
         or deleting an ltm nat object.
 
     Inputs:
-        action (str): One of "show", "create", "modify", or "delete".
         nat (dict): NAT object dict with fields like name, partition, originating_address,
             translation_address, traffic_group, vlans, etc.
+        action (str): One of "show", "create", "modify", or "delete".
 
     Outputs:
         str|None: A ready-to-execute tmsh command, or None if inputs are invalid.
 
     Constraints:
+        - Designed as a Jinja filter, so the NAT object is the first argument.
         - name is required; returns None if missing.
         - Uses fq_name() to fully qualify the NAT name with its partition.
         - "show" returns a read-only "list" command; "delete" returns a delete command.

@@ -150,7 +150,7 @@ Documentation is not limited to markdown docs. The code paths themselves must st
   - important constraints or assumptions
 - add inline comments in Python where transformation logic, emitted naming, or normalization behavior would otherwise require reverse-engineering
 - every top-level playbook prep/task file should have a short header comment block that explains what major facts, runtime collections, or side effects it produces
-- add inline playbook comments where task ordering, data reshaping, intent compilation, lookup building, or delete/apply merging would not be obvious to a new contributor
+- add inline playbook comments where task ordering, data reshaping, intent compilation, lookup building, or delete/apply merging would not be obvious to a new contributor, but keep those comments in YAML task/comment structure (not inside Jinja expressions or templated strings)
 - do not add noise comments to trivial tasks, but do comment any place where a reader would otherwise need to infer hidden data flow
 
 ### Intent And Shortcut Design

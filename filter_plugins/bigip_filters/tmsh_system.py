@@ -3,7 +3,7 @@ from __future__ import annotations
 from .common import quote_tmsh
 
 
-def build_management_route_tmsh_command(action, management):
+def build_management_route_tmsh_command(management, action="modify"):
     """Build a tmsh command string for a BIG-IP management route.
 
     Purpose:
@@ -11,13 +11,14 @@ def build_management_route_tmsh_command(action, management):
         modifying a sys management-route object.
 
     Inputs:
-        action (str): One of "show", "create", or "modify".
         management (dict): Management route dict with keys like route_name and gateway.
+        action (str): One of "show", "create", or "modify".
 
     Outputs:
         str|None: A ready-to-execute tmsh command, or None if inputs are invalid.
 
     Constraints:
+        - Designed as a Jinja filter, so the management object is the first argument.
         - route_name defaults to "default" if not specified.
         - "show" uses the read-only "list" verb; others use "create" or "modify".
         - gateway is only appended when present.
@@ -66,7 +67,7 @@ def build_management_ip_tmsh_command(management):
     return f"modify sys management-ip {address}"
 
 
-def build_login_banner_tmsh_command(action, banner):
+def build_login_banner_tmsh_command(banner, action="modify"):
     """Build a tmsh command string for the BIG-IP login banner (gui-security-banner).
 
     Purpose:
@@ -74,13 +75,14 @@ def build_login_banner_tmsh_command(action, banner):
         security banner.
 
     Inputs:
-        action (str): "delete" to disable the banner, or any other value to configure it.
         banner (dict): Dict with optional "enabled" (bool) and "text" (str) keys.
+        action (str): "delete" to disable the banner, or any other value to configure it.
 
     Outputs:
         str|None: A tmsh command string, or None if inputs are invalid.
 
     Constraints:
+        - Designed as a Jinja filter, so the banner object is the first argument.
         - action "delete" simply disables the banner (ignores text).
         - Banner text is passed through quote_tmsh() for safe embedding.
         - "enabled" being None means the field is omitted from the command.
