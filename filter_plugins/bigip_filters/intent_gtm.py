@@ -46,7 +46,7 @@ def compile_gtm_wide_ip_intent(wide_ip, pool_defaults=None, member_defaults=None
         if isinstance(pool, str):
             compiled_pool_refs.append({
                 "name": pool,
-                "partition": wide_ip_partition,
+                # "partition": wide_ip_partition,
                 "ratio": 1,
             })
             continue
@@ -62,14 +62,14 @@ def compile_gtm_wide_ip_intent(wide_ip, pool_defaults=None, member_defaults=None
             compiled_pools.append(normalized_pool)
             compiled_pool_refs.append({
                 "name": normalized_pool["name"],
-                "partition": normalized_pool.get("partition", wide_ip_partition),
+                # "partition": normalized_pool.get("partition", wide_ip_partition),
                 "ratio": pool.get("ratio", 1),
             })
             continue
 
         compiled_pool_refs.append({
             "name": pool["name"],
-            "partition": pool.get("partition", wide_ip_partition),
+            # "partition": pool.get("partition", wide_ip_partition),
             "ratio": pool.get("ratio", 1),
         })
 
