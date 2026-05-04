@@ -1,13 +1,13 @@
-- name: Initialize compiled LTM RKE2 server intent objects
+- name: Initialize built LTM RKE2 server intent objects
   ansible.builtin.set_fact:
-    # The compiler always emits canonical virtual servers.
+    # The intent build always emits canonical virtual servers.
     # It emits canonical pools only for services that choose `pool_mode: inline`.
     ltm_compiled_rke2_virtual_servers_delete: []
     ltm_compiled_rke2_pools_delete: []
     ltm_compiled_rke2_virtual_servers_present: []
     ltm_compiled_rke2_pools_present: []
 
-- name: Compile deleted LTM RKE2 server intents
+- name: Build deleted LTM RKE2 server intents
   ansible.builtin.set_fact:
     ltm_compiled_rke2_virtual_servers_delete: >-
       {{
@@ -35,7 +35,7 @@
           )
       }}
 
-- name: Compile active LTM RKE2 server intents
+- name: Build active LTM RKE2 server intents
   ansible.builtin.set_fact:
     ltm_compiled_rke2_virtual_servers_present: >-
       {{
@@ -63,14 +63,14 @@
           )
       }}
 
-- name: Extend canonical LTM virtual server operations with compiled RKE2 intent output
+- name: Extend canonical LTM virtual server operations with built RKE2 intent output
   ansible.builtin.set_fact:
     # After this merge, runtime tasks no longer care whether the object came from canonical vars
     # or from an RKE2 intent. Everything is just an LTM virtual server.
     ltm_virtual_servers_delete: "{{ (ltm_virtual_servers_delete | default([])) + (ltm_compiled_rke2_virtual_servers_delete | default([])) }}"
     ltm_virtual_servers_present: "{{ (ltm_virtual_servers_present | default([])) + (ltm_compiled_rke2_virtual_servers_present | default([])) }}"
 
-- name: Extend canonical LTM pool operations with compiled RKE2 intent output
+- name: Extend canonical LTM pool operations with built RKE2 intent output
   ansible.builtin.set_fact:
     # The same merge happens for pools so delete/apply ordering stays based on canonical object families.
     ltm_canonical_pools_delete: "{{ (ltm_canonical_pools_delete | default([])) + (ltm_compiled_rke2_pools_delete | default([])) }}"

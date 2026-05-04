@@ -1,14 +1,14 @@
-- name: Initialize compiled LTM shortcut objects from virtual servers
+- name: Initialize built LTM shortcut objects from virtual servers
   ansible.builtin.set_fact:
     ltm_compiled_virtual_servers_delete: []
     ltm_compiled_pools_delete: []
 
-- name: Initialize compiled active LTM shortcut objects from virtual servers
+- name: Initialize built active LTM shortcut objects from virtual servers
   ansible.builtin.set_fact:
     ltm_compiled_virtual_servers_present: []
     ltm_compiled_pools_present: []
 
-- name: Compile deleted LTM virtual-server shortcut objects
+- name: Build deleted LTM virtual-server shortcut objects
   ansible.builtin.set_fact:
     ltm_compiled_virtual_servers_delete: >-
       {{
@@ -38,7 +38,7 @@
           )
       }}
 
-- name: Compile active LTM virtual-server shortcut objects
+- name: Build active LTM virtual-server shortcut objects
   ansible.builtin.set_fact:
     ltm_compiled_virtual_servers_present: >-
       {{
@@ -68,7 +68,7 @@
           )
       }}
 
-- name: Replace raw virtual-server shortcut objects with compiled canonical virtual servers
+- name: Replace raw virtual-server shortcut objects with built canonical virtual servers
   ansible.builtin.set_fact:
     ltm_virtual_servers_delete: "{{ ltm_compiled_virtual_servers_delete | default([]) }}"
     ltm_virtual_servers_present: "{{ ltm_compiled_virtual_servers_present | default([]) }}"

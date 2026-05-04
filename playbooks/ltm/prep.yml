@@ -1,6 +1,6 @@
 ---
 # LTM prep orchestrator.
-# Produces canonical runtime sets and compiler outputs, including:
+# Produces canonical runtime sets and built intent outputs, including:
 # - `ltm_monitors_present` / `ltm_monitors_delete`
 # - `ltm_nodes_present` / `ltm_nodes_delete`
 # - `ltm_profiles_present` / `ltm_profiles_delete`
@@ -11,12 +11,12 @@
 # - `ltm_policies_present` / `ltm_policies_delete`
 # - `ltm_rke2_server_intents_present` / `ltm_rke2_server_intents_delete`
 # - `ltm_canonical_pools_present` / `ltm_canonical_pools_delete`
-# The canonical pool sets include first-class pools plus compiler output from virtual-server shortcuts and dedicated LTM intents such as RKE2 server clusters.
-# Intent compiler snippets live under `prep/intents/<category>/...`; current categories include
+# The canonical pool sets include first-class pools plus built output from virtual-server shortcuts and dedicated LTM intents such as RKE2 server clusters.
+# Intent build snippets live under `prep/intents/<category>/...`; current categories include
 # `inline/` for embedded shortcut models and `clusters/` for opinionated cluster bundles.
 
 - name: Load LTM var fragments
   ansible.builtin.import_tasks: "{{ playbook_dir }}/ltm/prep/load-vars.yml"
 
-- name: Build LTM runtime facts and compile intents
+- name: Build LTM runtime facts and intent outputs
   ansible.builtin.import_tasks: "{{ playbook_dir }}/ltm/prep/build-runtime.yml"

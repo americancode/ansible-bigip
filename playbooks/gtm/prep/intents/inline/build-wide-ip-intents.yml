@@ -1,4 +1,4 @@
-- name: Initialize compiled GTM shortcut objects from deleted Wide IPs
+- name: Initialize built GTM shortcut objects from deleted Wide IPs
   ansible.builtin.set_fact:
     # One Wide IP intent can emit several canonical object families.
     # These buckets keep object ownership explicit until the final merge below.
@@ -7,14 +7,14 @@
     gtm_compiled_servers_delete: []
     gtm_compiled_datacenters_delete: []
 
-- name: Initialize compiled GTM shortcut objects from active Wide IPs
+- name: Initialize built GTM shortcut objects from active Wide IPs
   ansible.builtin.set_fact:
     gtm_compiled_wide_ips_present: []
     gtm_compiled_pools_present: []
     gtm_compiled_servers_present: []
     gtm_compiled_datacenters_present: []
 
-- name: Compile deleted GTM Wide IP shortcut objects
+- name: Build deleted GTM Wide IP shortcut objects
   ansible.builtin.set_fact:
     gtm_compiled_wide_ips_delete: >-
       {{
@@ -53,7 +53,7 @@
           )
       }}
 
-- name: Compile active GTM Wide IP shortcut objects
+- name: Build active GTM Wide IP shortcut objects
   ansible.builtin.set_fact:
     gtm_compiled_wide_ips_present: >-
       {{
@@ -92,7 +92,7 @@
           )
       }}
 
-- name: Replace raw Wide IP shortcut objects with compiled canonical Wide IPs
+- name: Replace raw Wide IP shortcut objects with built canonical Wide IPs
   ansible.builtin.set_fact:
     gtm_wide_ips_delete: "{{ gtm_compiled_wide_ips_delete | default([]) }}"
     gtm_wide_ips_present: "{{ gtm_compiled_wide_ips_present | default([]) }}"
@@ -100,7 +100,7 @@
 - name: Build canonical GTM pool operations
   ansible.builtin.set_fact:
     # Runtime tasks stay canonical-only.
-    # After this merge, apply/delete paths no longer distinguish authored-vs-compiled pools.
+    # After this merge, apply/delete paths no longer distinguish authored-vs-built pools.
     gtm_canonical_pools_delete: "{{ (gtm_pools_delete | default([])) + (gtm_compiled_pools_delete | default([])) }}"
     gtm_canonical_pools_present: "{{ (gtm_pools_present | default([])) + (gtm_compiled_pools_present | default([])) }}"
 
@@ -112,7 +112,7 @@
 
 - name: Build canonical GTM datacenter operations
   ansible.builtin.set_fact:
-    # Datacenters must exist before their servers, so compiled datacenters merge into the
+    # Datacenters must exist before their servers, so built datacenters merge into the
     # same canonical collection used by the normal GTM datacenter apply/delete tasks.
     gtm_canonical_datacenters_delete: "{{ (gtm_canonical_datacenters_delete | default([])) + (gtm_compiled_datacenters_delete | default([])) }}"
     gtm_canonical_datacenters_present: "{{ (gtm_canonical_datacenters_present | default([])) + (gtm_compiled_datacenters_present | default([])) }}"
