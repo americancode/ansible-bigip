@@ -60,15 +60,13 @@ def compile_ltm_rke2_server_intent(intent, intent_defaults=None, pool_defaults=N
     """Compile a higher-level RKE2 cluster intent into canonical LTM virtual servers and pools.
 
     Purpose:
-        Turns one cluster intent (under vars/ltm/intents/clusters/) into the canonical
-        LTM objects the runtime playbook already manages:
-        - 2 control-plane virtual servers on the shared control-plane VIP (ports 6443 and 9345)
-        - N worker-service virtual servers on port 443, each backed by a worker NodePort pool
+        Turns one cluster intent (under vars/ltm/intents/clusters/) into canonical
+        LTM virtual servers and pools using a service-first schema where each
+        service embeds one `virtual_server` and one `pool` mapping.
 
     Inputs:
-        intent (dict|None): The cluster intent dict with keys like name, partition,
-            control_plane_vip, control_plane_members, worker_members, worker_services,
-            kubeapi_monitors, registration_monitors, description_prefix.
+        intent (dict|None): Cluster intent dict with keys like name, partition,
+            and services (list of service mappings).
         intent_defaults (dict|None): Compiler-level defaults from settings.yml hierarchy.
         pool_defaults (dict|None): Defaults applied to every generated pool.
         member_defaults (dict|None): Defaults applied to every generated pool member.
@@ -81,12 +79,12 @@ def compile_ltm_rke2_server_intent(intent, intent_defaults=None, pool_defaults=N
 
     Constraints:
         - intent.name is required; returns empty lists if missing.
-        - control_plane_members and worker_members are normalized via normalize_members.
-        - Generated object names follow the pattern:
-            vs_{intent_name}_{suffix} and pool_{intent_name}_{suffix}.
+        - Each service must define `virtual_server.name` and `pool.name`.
+        - `pool.members` are normalized via normalize_members(member_defaults).
+        - `pool.monitors` aliases are expanded via monitor_sets.
         - Delete support: if intent state is "absent", all generated objects also get
           state: absent for symmetric delete.
-        - Intent-only keys (e.g., control_plane_vip, worker_members) are consumed here
+        - Intent-only keys (e.g., services, state) are consumed here
           and NOT passed through to the emitted virtual servers.
     """
     if not isinstance(intent, dict):
@@ -101,11 +99,7 @@ def compile_ltm_rke2_server_intent(intent, intent_defaults=None, pool_defaults=N
     if not intent_name:
         return {"virtual_servers": [], "pools": []}
 
-    # Normalize member inputs once so the generated pools inherit the same member-default logic
-    # used by first-class canonical pool authoring.
-    control_plane_members = normalize_members(resolved_intent.get("control_plane_members"), member_defaults) or []
-    worker_members = normalize_members(resolved_intent.get("worker_members"), member_defaults) or []
-    worker_services = resolved_intent.get("worker_services") or {}
+    services = resolved_intent.get("services") or []
 
     # Carry forward only the fields that are valid on the emitted canonical virtual servers.
     # Intent-only keys such as worker member lists and service maps are consumed here, not by runtime tasks.
@@ -116,27 +110,11 @@ def compile_ltm_rke2_server_intent(intent, intent_defaults=None, pool_defaults=N
         not in {
             "__source_file",
             "name",
-            "control_plane_vip",
-            "control_plane_members",
-            "worker_members",
-            "worker_services",
-            "kubeapi_monitors",
-            "registration_monitors",
-            "description_prefix",
+            "services",
             "state",
         }
     }
     base_virtual_server.setdefault("partition", partition)
-
-    description_prefix = resolved_intent.get("description_prefix", str(intent_name).replace("_", " "))
-    kubeapi_monitors = expand_monitor_list(
-        ensure_list(resolved_intent.get("kubeapi_monitors", ["kubeapi_tcp"])),
-        monitor_sets,
-    )
-    registration_monitors = expand_monitor_list(
-        ensure_list(resolved_intent.get("registration_monitors", ["registration_tcp"])),
-        monitor_sets,
-    )
 
     state = resolved_intent.get("state")
     deleting = state == "absent"
@@ -144,87 +122,43 @@ def compile_ltm_rke2_server_intent(intent, intent_defaults=None, pool_defaults=N
     compiled_virtual_servers = []
     compiled_pools = []
 
-    def build_members(source_members, port):
-        """Reuse the declared member objects but rewrite the port for the generated pool.
-
-        The same control-plane members feed both 6443 and 9345, and worker members
-        are reused for each worker service with its own NodePort.
-        """
-        members = []
-        for member in source_members:
-            if not isinstance(member, dict):
-                continue
-            compiled_member = dict(member)
-            compiled_member["port"] = port
-            members.append(compiled_member)
-        return members
-
-    def add_service(*, suffix, destination, destination_port, pool_name, monitors, members, description):
+    def add_service(*, virtual_server_payload, pool_payload):
         """Every generated service emits one canonical virtual server and one canonical pool.
 
         Delete support stays symmetric by emitting the same names with state: absent.
         """
         virtual_server = dict(base_virtual_server)
-        virtual_server["name"] = f"vs_{intent_name}_{suffix}"
+        virtual_server.update(virtual_server_payload)
         virtual_server["partition"] = partition
-        virtual_server["pool"] = pool_name
+        virtual_server["pool"] = pool_payload.get("name")
         if deleting:
             virtual_server["state"] = "absent"
         else:
-            virtual_server["destination"] = destination
-            virtual_server["destination_port"] = destination_port
-            virtual_server["description"] = description
+            virtual_server["destination"] = virtual_server_payload.get("vip")
+            virtual_server["destination_port"] = virtual_server_payload.get("port")
 
         pool = dict(pool_defaults or {})
-        pool.update(
-            {
-                "name": pool_name,
-                "partition": partition,
-            }
-        )
+        pool.update(pool_payload)
+        pool["partition"] = partition
         if deleting:
             pool["state"] = "absent"
         else:
-            pool["monitors"] = monitors
-            pool["members"] = members
+            pool["monitors"] = expand_monitor_list(ensure_list(pool.get("monitors")), monitor_sets)
+            pool["members"] = normalize_members(pool.get("members"), member_defaults)
 
         compiled_virtual_servers.append(virtual_server)
         compiled_pools.append(pool)
 
-    add_service(
-        suffix="kubeapi_6443",
-        destination=resolved_intent.get("control_plane_vip"),
-        destination_port=6443,
-        pool_name=f"pool_{intent_name}_kubeapi_6443",
-        monitors=kubeapi_monitors,
-        members=build_members(control_plane_members, 6443),
-        description=f"{description_prefix} Kubernetes API VIP",
-    )
-    add_service(
-        suffix="registration_9345",
-        destination=resolved_intent.get("control_plane_vip"),
-        destination_port=9345,
-        pool_name=f"pool_{intent_name}_registration_9345",
-        monitors=registration_monitors,
-        members=build_members(control_plane_members, 9345),
-        description=f"{description_prefix} RKE2 supervisor registration VIP",
-    )
-
-    for service_name, service in worker_services.items():
-        if not isinstance(service_name, str):
+    for service in services:
+        if not isinstance(service, dict):
             continue
-        service = service if isinstance(service, dict) else {}
-        node_port = service.get("node_port")
-        # Worker services front 443 externally but forward to a configurable NodePort internally.
-        monitors = expand_monitor_list(ensure_list(service.get("monitors")), monitor_sets)
+        service_virtual_server = service.get("virtual_server")
+        service_pool = service.get("pool")
+        if not isinstance(service_virtual_server, dict) or not isinstance(service_pool, dict):
+            continue
         add_service(
-            suffix=f"{service_name}_443",
-            destination=service.get("vip"),
-            destination_port=443,
-            pool_name=f"pool_{intent_name}_{service_name}_443",
-            monitors=monitors,
-            members=build_members(worker_members, node_port),
-            description=service.get("description", f"{description_prefix} {service_name} VIP"),
+            virtual_server_payload=service_virtual_server,
+            pool_payload=service_pool,
         )
 
     return {

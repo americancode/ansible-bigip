@@ -298,4 +298,4 @@
     msg:
       - "Custom GTM monitors are declared in `gtm_monitors` and created before pools and Wide IPs."
       - "GTM shortcut authoring is compiled into canonical GTM pools and Wide IP pool references before runtime apply tasks run."
-      - "Datacenters can be declared explicitly or inferred from `gtm_servers`."
+      - "GTM datacenters are canonical objects and must be declared in `gtm_datacenters`."

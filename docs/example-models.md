@@ -28,10 +28,10 @@ Use a dedicated intent tree when a known platform pattern should emit several re
 - Category behavior: these files live under `intents/clusters/` because they represent an opinionated cluster bundle, not a generic app-local shortcut
 - Delete behavior: entries under `vars/ltm/deletions/intents/clusters/...` still compile into absent canonical pools and virtual servers
 - Linkage behavior:
-  - `control_plane_vip` becomes both the `6443` Kubernetes API virtual server destination and the `9345` registration virtual server destination
-  - `control_plane_members` are reused for both generated control-plane pools with ports rewritten to `6443` and `9345`
-  - `worker_services.<name>.vip` becomes the destination for a generated `443` virtual server named `vs_<intent.name>_<name>_443`
-  - `worker_members` are reused for every generated worker-service pool with member ports rewritten to each service's configured `node_port`
+  - each service under `services[*]` embeds one `virtual_server` object and one `pool` object
+  - `virtual_server.name` is the canonical object name GTM and other consumers reference
+  - `pool.members[*].port` is explicit per member, so service back-end port intent is directly declared
+  - monitor aliases in `pool.monitors` expand through `vars/ltm/intents/clusters/settings.yml`
 
 ## Verbose LTM Model
 

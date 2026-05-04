@@ -1729,33 +1729,63 @@ class Validator:
         allowed_rke2_service_name = re.compile(r"^[A-Za-z0-9_-]+$")
         for obj in rke2_server_intents:
             self.require_fields(obj, ["name"])
-            worker_services = obj.data.get("worker_services")
-            if not isinstance(worker_services, dict):
-                self.error(obj.relpath, f"RKE2 server intent `{obj.data.get('name')}` `worker_services` must be a mapping with exactly two named services")
+            services = obj.data.get("services")
+            if not isinstance(services, list) or not services:
+                self.error(obj.relpath, f"RKE2 server intent `{obj.data.get('name')}` `services` must be a non-empty list")
                 continue
-            if len(worker_services) != 2:
-                self.error(obj.relpath, f"RKE2 server intent `{obj.data.get('name')}` must define exactly two `worker_services` entries")
-            for service_name, service in worker_services.items():
-                if not isinstance(service_name, str) or not allowed_rke2_service_name.match(service_name):
-                    self.error(obj.relpath, f"RKE2 server intent `{obj.data.get('name')}` worker service names must match `[A-Za-z0-9_-]+`")
-                    continue
+            service_names_seen = set()
+            for index, service in enumerate(services):
                 if not isinstance(service, dict):
-                    self.error(obj.relpath, f"RKE2 server intent `{obj.data.get('name')}` worker service `{service_name}` must be a mapping")
+                    self.error(obj.relpath, f"RKE2 server intent `{obj.data.get('name')}` service entry {index} must be a mapping")
                     continue
-                if obj.effective_state != "absent":
-                    if service.get("vip") in (None, ""):
-                        self.error(obj.relpath, f"RKE2 server intent `{obj.data.get('name')}` worker service `{service_name}` must define `vip`")
-                    if service.get("node_port") in (None, ""):
-                        self.error(obj.relpath, f"RKE2 server intent `{obj.data.get('name')}` worker service `{service_name}` must define `node_port`")
-                    if service.get("monitors") in (None, ""):
-                        self.error(obj.relpath, f"RKE2 server intent `{obj.data.get('name')}` worker service `{service_name}` must define `monitors`")
 
-            if obj.effective_state != "absent":
-                self.require_fields(obj, ["control_plane_vip", "control_plane_members", "worker_members"])
-                if not isinstance(obj.data.get("control_plane_members"), list) or not obj.data.get("control_plane_members"):
-                    self.error(obj.relpath, f"RKE2 server intent `{obj.data.get('name')}` `control_plane_members` must be a non-empty list")
-                if not isinstance(obj.data.get("worker_members"), list) or not obj.data.get("worker_members"):
-                    self.error(obj.relpath, f"RKE2 server intent `{obj.data.get('name')}` `worker_members` must be a non-empty list")
+                service_name = service.get("name")
+                if not isinstance(service_name, str) or not allowed_rke2_service_name.match(service_name):
+                    self.error(obj.relpath, f"RKE2 server intent `{obj.data.get('name')}` service entry {index} `name` must match `[A-Za-z0-9_-]+`")
+                elif service_name in service_names_seen:
+                    self.error(obj.relpath, f"RKE2 server intent `{obj.data.get('name')}` has duplicate service name `{service_name}`")
+                else:
+                    service_names_seen.add(service_name)
+
+                virtual_server = service.get("virtual_server")
+                pool = service.get("pool")
+                if not isinstance(virtual_server, dict):
+                    self.error(obj.relpath, f"RKE2 server intent `{obj.data.get('name')}` service `{service_name}` must define mapping `virtual_server`")
+                else:
+                    self.require_fields(
+                        virtual_server,
+                        ["name"],
+                        obj.relpath,
+                        f"RKE2 service `{service_name}` virtual_server",
+                    )
+                    if obj.effective_state != "absent":
+                        self.require_fields(
+                            virtual_server,
+                            ["vip", "port"],
+                            obj.relpath,
+                            f"RKE2 service `{service_name}` virtual_server",
+                        )
+
+                if not isinstance(pool, dict):
+                    self.error(obj.relpath, f"RKE2 server intent `{obj.data.get('name')}` service `{service_name}` must define mapping `pool`")
+                else:
+                    self.require_fields(
+                        pool,
+                        ["name"],
+                        obj.relpath,
+                        f"RKE2 service `{service_name}` pool",
+                    )
+                    if obj.effective_state != "absent":
+                        self.require_fields(
+                            pool,
+                            ["members", "monitors"],
+                            obj.relpath,
+                            f"RKE2 service `{service_name}` pool",
+                        )
+                        if not isinstance(pool.get("members"), list) or not pool.get("members"):
+                            self.error(obj.relpath, f"RKE2 service `{service_name}` pool `members` must be a non-empty list")
+                        if not isinstance(pool.get("monitors"), list) or not pool.get("monitors"):
+                            self.error(obj.relpath, f"RKE2 service `{service_name}` pool `monitors` must be a non-empty list")
 
             settings_payload = self.load_settings_hierarchy_payload(obj.source_file, VARS_DIR / "ltm" / "intents")
             compiled_service = compile_ltm_rke2_server_intent(
@@ -2074,10 +2104,6 @@ class Validator:
             self.require_fields(obj, ["name"])
             if obj.effective_state != "absent":
                 active_datacenter_names.add(self.fq_name(obj.partition, str(obj.data["name"])))
-
-        for obj in servers:
-            if obj.effective_state != "absent" and obj.data.get("datacenter"):
-                active_datacenter_names.add(self.fq_name(obj.partition, str(obj.data["datacenter"])))
 
         self.check_duplicates(datacenters, lambda obj: ("gtm_datacenter", obj.partition, obj.data.get("name")), "GTM datacenter")
 

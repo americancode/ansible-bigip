@@ -14,6 +14,8 @@
     gtm_topology_regions_present: "{{ gtm_topology_region_ops.present }}"
     gtm_topology_records_delete: "{{ gtm_topology_record_ops.delete }}"
     gtm_topology_records_present: "{{ gtm_topology_record_ops.present }}"
+    gtm_canonical_datacenters_delete: "{{ gtm_datacenter_ops.delete }}"
+    gtm_canonical_datacenters_present: "{{ gtm_datacenter_ops.present }}"
   vars:
     gtm_datacenter_ops: "{{ (gtm_datacenters | default([])) | classify_operations(gtm_datacenter_deletions | default([])) }}"
     gtm_monitor_ops: "{{ (gtm_monitors | default([])) | classify_operations(gtm_monitor_deletions | default([])) }}"
@@ -22,9 +24,6 @@
     gtm_wide_ip_ops: "{{ (gtm_wide_ips | default([])) | classify_operations(gtm_wide_ip_deletions | default([])) }}"
     gtm_topology_region_ops: "{{ (gtm_topology_regions | default([])) | classify_operations(gtm_topology_region_deletions | default([])) }}"
     gtm_topology_record_ops: "{{ (gtm_topology_records | default([])) | classify_operations(gtm_topology_record_deletions | default([])) }}"
-
-- name: Build GTM server-derived datacenter intents
-  ansible.builtin.import_tasks: "{{ playbook_dir }}/gtm/prep/intents/inline/build-server-datacenter-intents.yml"
 
 - name: Build GTM Wide IP intent shortcuts
   ansible.builtin.import_tasks: "{{ playbook_dir }}/gtm/prep/intents/inline/build-wide-ip-intents.yml"

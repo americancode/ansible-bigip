@@ -8,10 +8,6 @@ ltm_rke2_server_intent_defaults:
   snat: "Automap"
   profiles:
     - "tcp"
-  kubeapi_monitors:
-    - "kubeapi_tcp"
-  registration_monitors:
-    - "registration_tcp"
 
 ltm_pool_defaults:
   lb_method: "round-robin"

@@ -1,41 +1,79 @@
 ---
 # Dedicated RKE2 cluster intent example.
-# This is more opinionated than the generic inline-pool virtual-server shortcut:
-# one intent emits four canonical virtual servers and four canonical pools.
-#
-# Generated objects for `name: rke2_east`:
-# - `vs_rke2_east_kubeapi_6443` -> `pool_rke2_east_kubeapi_6443`
-# - `vs_rke2_east_registration_9345` -> `pool_rke2_east_registration_9345`
-# - `vs_rke2_east_traefik_443` -> `pool_rke2_east_traefik_443`
-# - `vs_rke2_east_rancher_443` -> `pool_rke2_east_rancher_443`
-#
-# The first two virtual servers share `control_plane_vip` and always target the control-plane
-# members on ports `6443` and `9345`.
-# The last two virtual servers always listen on `443`, but the compiler rewrites pool-member ports
-# to the configured worker `node_port` values.
+# This service-first intent model embeds one virtual server and one pool per service.
+# The compiler emits canonical `ltm_virtual_servers` and `ltm_pools` objects directly from
+# these service entries.
 ltm_rke2_server_intents:
   - name: "rke2_east"
-    description_prefix: "East region RKE2"
-    control_plane_vip: "10.201.0.20"
-    control_plane_members:
-      - host: "10.201.10.11"
-      - host: "10.201.10.12"
-      - host: "10.201.10.13"
-    worker_members:
-      - host: "10.201.20.21"
-      - host: "10.201.20.22"
-      - host: "10.201.20.23"
-    worker_services:
-      # The mapping key becomes part of the deterministic object names.
-      traefik:
-        vip: "10.201.0.30"
-        node_port: 30443
-        monitors:
-          - "traefik_https"
-        description: "East region Traefik ingress VIP"
-      rancher:
-        vip: "10.201.0.31"
-        node_port: 30444
-        monitors:
-          - "/Common/https"
-        description: "East region Rancher management VIP"
+    services:
+      - name: "kubeapi"
+        virtual_server:
+          name: "vs_rke2_east_kubeapi_6443"
+          vip: "10.201.0.20"
+          port: 6443
+          description: "East region RKE2 Kubernetes API VIP"
+        pool:
+          name: "pool_rke2_east_kubeapi_6443"
+          monitors:
+            - "kubeapi_tcp"
+          members:
+            - host: "10.201.10.11"
+              port: 6443
+            - host: "10.201.10.12"
+              port: 6443
+            - host: "10.201.10.13"
+              port: 6443
+
+      - name: "registration"
+        virtual_server:
+          name: "vs_rke2_east_registration_9345"
+          vip: "10.201.0.20"
+          port: 9345
+          description: "East region RKE2 supervisor registration VIP"
+        pool:
+          name: "pool_rke2_east_registration_9345"
+          monitors:
+            - "registration_tcp"
+          members:
+            - host: "10.201.10.11"
+              port: 9345
+            - host: "10.201.10.12"
+              port: 9345
+            - host: "10.201.10.13"
+              port: 9345
+
+      - name: "traefik"
+        virtual_server:
+          name: "vs_rke2_east_traefik_443"
+          vip: "10.201.0.30"
+          port: 443
+          description: "East region Traefik ingress VIP"
+        pool:
+          name: "pool_rke2_east_traefik_443"
+          monitors:
+            - "traefik_https"
+          members:
+            - host: "10.201.20.21"
+              port: 30443
+            - host: "10.201.20.22"
+              port: 30443
+            - host: "10.201.20.23"
+              port: 30443
+
+      - name: "rancher"
+        virtual_server:
+          name: "vs_rke2_east_rancher_443"
+          vip: "10.201.0.31"
+          port: 443
+          description: "East region Rancher management VIP"
+        pool:
+          name: "pool_rke2_east_rancher_443"
+          monitors:
+            - "/Common/https"
+          members:
+            - host: "10.201.20.21"
+              port: 30444
+            - host: "10.201.20.22"
+              port: 30444
+            - host: "10.201.20.23"
+              port: 30444
