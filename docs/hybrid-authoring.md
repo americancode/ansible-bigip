@@ -16,7 +16,7 @@ This model is currently supported, but it should be treated as transitional for 
 Example walkthroughs live in [example-models.md](example-models.md):
 
 - Concise LTM: `vars/ltm/virtual_servers/vm-apps/concise-inline-demo.yml`
-- Concise GTM: `vars/gtm/wide_ips/global-platform/platform.yml`
+- Concise GTM: `vars/gtm/intents/applications/global-platform/platform.yml`
 
 These concise paths now compile into canonical pools and pool references during `prep.yml`, so runtime `apply.yml` and `delete.yml` operate on normalized first-class objects rather than mixed inline shortcut shapes.
 
@@ -33,7 +33,7 @@ Use when objects are reused, owned by another team, or need clearer separation:
 Example walkthroughs live in [example-models.md](example-models.md):
 
 - Verbose LTM: `vars/ltm/virtual_servers/vm-apps/business-apps.yml` + `vars/ltm/pools/vm-applications.yml`
-- Verbose GTM: `vars/gtm/wide_ips/vm-applications.yml` + `vars/gtm/pools/vm-applications.yml`
+- Verbose GTM: `vars/gtm/intents/applications/vm-applications.yml` + `vars/gtm/pools/vm-applications.yml`
 
 ## Linkage Patterns
 

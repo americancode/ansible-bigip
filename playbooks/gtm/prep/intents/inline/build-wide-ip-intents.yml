@@ -23,7 +23,7 @@
     gtm_wide_ip_settings_payload: >-
       {{
         item.__source_file
-        | load_settings_hierarchy(repo_root ~ '/vars/gtm/wide_ips')
+        | load_settings_hierarchy(repo_root ~ '/vars/gtm/intents')
       }}
     gtm_wide_ip_pool_defaults: "{{ gtm_wide_ip_settings_payload.gtm_pool_defaults | default({}) }}"
     gtm_wide_ip_member_defaults: "{{ gtm_wide_ip_settings_payload.gtm_member_defaults | default({}) }}"
@@ -54,7 +54,7 @@
     gtm_wide_ip_settings_payload: >-
       {{
         item.__source_file
-        | load_settings_hierarchy(repo_root ~ '/vars/gtm/wide_ips')
+        | load_settings_hierarchy(repo_root ~ '/vars/gtm/intents')
       }}
     gtm_wide_ip_pool_defaults: "{{ gtm_wide_ip_settings_payload.gtm_pool_defaults | default({}) }}"
     gtm_wide_ip_member_defaults: "{{ gtm_wide_ip_settings_payload.gtm_member_defaults | default({}) }}"

@@ -1,8 +1,0 @@
----
-gtm_wide_ips:
-  - name: "postgres.internal.example.com"
-    record_type: "a"
-    pool_lb_method: "global-availability"
-    pools:
-      - name: "pool_pg_vm_global"
-        ratio: 1

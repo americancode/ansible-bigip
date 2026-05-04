@@ -113,8 +113,8 @@
 
 - name: Discover GTM Wide IP fragments
   ansible.builtin.set_fact:
-    gtm_wide_ip_files: "{{ (repo_root ~ '/vars/gtm/wide_ips') | discover_yaml_fragments }}"
-    gtm_wide_ip_deletion_files: "{{ (repo_root ~ '/vars/gtm/deletions/wide_ips') | discover_yaml_fragments }}"
+    gtm_wide_ip_files: "{{ (repo_root ~ '/vars/gtm/intents/applications') | discover_yaml_fragments }}"
+    gtm_wide_ip_deletion_files: "{{ (repo_root ~ '/vars/gtm/deletions/intents/applications') | discover_yaml_fragments }}"
 
 - name: Load GTM Wide IP fragments
   ansible.builtin.include_vars:
@@ -148,7 +148,7 @@
     gtm_wide_ip_settings_payload: >-
       {{
         item.0.item
-        | load_settings_hierarchy(repo_root ~ '/vars/gtm/wide_ips')
+        | load_settings_hierarchy(repo_root ~ '/vars/gtm/intents')
       }}
 
 - name: Aggregate GTM Wide IP deletions with layered directory settings
@@ -172,7 +172,7 @@
     gtm_wide_ip_deletion_settings_payload: >-
       {{
         item.0.item
-        | load_settings_hierarchy(repo_root ~ '/vars/gtm/deletions/wide_ips')
+        | load_settings_hierarchy(repo_root ~ '/vars/gtm/deletions/intents')
       }}
 
 - name: Load GTM topology region fragments into gtm_topology_regions/gtm_topology_region_deletions

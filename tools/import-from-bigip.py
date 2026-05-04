@@ -302,7 +302,7 @@ IMPORT_SPECS: dict[str, ImportSpec] = {
     "gtm_wide_ips": ImportSpec(
         endpoint="gtm/wideip",
         top_key="gtm_wide_ips",
-        output_dir="gtm/wide_ips",
+        output_dir="gtm/intents/applications",
         extract={
             "name": "name",
             "description": "description",

@@ -1,6 +1,6 @@
 ---
 # Another verbose GTM example.
-# `pool_pg_vm_global` is referenced by `vars/gtm/wide_ips/postgres.yml`.
+# `pool_pg_vm_global` is referenced by `vars/gtm/intents/applications/postgres.yml`.
 # Here the member address and port are written explicitly instead of being resolved from LTM.
 # That is the more verbose model when you want the GTM file to carry the full endpoint data itself.
 gtm_pools:

@@ -494,8 +494,8 @@ class Validator:
             ),
             TreeSpec(
                 name="gtm_wide_ips",
-                active_dir=VARS_DIR / "gtm" / "wide_ips",
-                deletion_dir=VARS_DIR / "gtm" / "deletions" / "wide_ips",
+                active_dir=VARS_DIR / "gtm" / "intents" / "applications",
+                deletion_dir=VARS_DIR / "gtm" / "deletions" / "intents" / "applications",
                 top_key="gtm_wide_ips",
                 settings_key="gtm_wide_ip_defaults",
                 extra_settings_keys=("gtm_pool_defaults", "gtm_member_defaults", "gtm_monitor_sets"),
@@ -2174,7 +2174,7 @@ class Validator:
 
                 pool_partition = str(pool.get("partition", obj.partition))
                 if self.is_inline_gtm_pool(pool):
-                    settings_payload = self.load_settings_hierarchy_payload(obj.source_file, VARS_DIR / "gtm" / "wide_ips")
+                    settings_payload = self.load_settings_hierarchy_payload(obj.source_file, VARS_DIR / "gtm" / "intents")
                     compiled_service = compile_gtm_wide_ip_intent(
                         {"partition": obj.partition, "record_type": record_type, "pools": [pool]},
                         settings_payload.get("gtm_pool_defaults", {}),

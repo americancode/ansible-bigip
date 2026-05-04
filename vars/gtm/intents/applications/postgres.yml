@@ -1,0 +1,11 @@
+---
+# GTM Wide IP intent example for PostgreSQL service DNS.
+# This file references `pool_pg_vm_global` from `vars/gtm/pools/postgres-vm-clusters.yml`.
+# Supported fields: `name`, `record_type`, `pool_lb_method`, and `pools` (list of pool references with optional `ratio`).
+gtm_wide_ips:
+  - name: "postgres.internal.example.com"
+    record_type: "a"
+    pool_lb_method: "global-availability"
+    pools:
+      - name: "pool_pg_vm_global"
+        ratio: 1

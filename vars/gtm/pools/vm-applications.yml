@@ -1,6 +1,6 @@
 ---
 # Verbose/shared-object GTM example.
-# These GTM pools are referenced by `vars/gtm/wide_ips/vm-applications.yml`.
+# These GTM pools are referenced by `vars/gtm/intents/applications/vm-applications.yml`.
 # The `server` field links to `vars/gtm/servers/regional-bigips.yml`.
 # The `virtual_server` field links to repo-known LTM virtual servers in
 # `vars/ltm/virtual_servers/vm-apps/business-apps.yml`.

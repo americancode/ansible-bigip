@@ -273,7 +273,7 @@ class VarTreeLoader:
         self._load_simple_tree("gtm_datacenters", VARS_DIR / "gtm" / "datacenters", "gtm_datacenters")
         self._load_simple_tree("gtm_servers", VARS_DIR / "gtm" / "servers", "gtm_servers")
         self._load_simple_tree("gtm_pools", VARS_DIR / "gtm" / "pools", "gtm_pools")
-        self._load_simple_tree("gtm_wide_ips", VARS_DIR / "gtm" / "wide_ips", "gtm_wide_ips")
+        self._load_simple_tree("gtm_wide_ips", VARS_DIR / "gtm" / "intents" / "applications", "gtm_wide_ips")
         self._load_simple_tree("gtm_topology_regions", VARS_DIR / "gtm" / "regions", "gtm_topology_regions")
         self._load_simple_tree("gtm_topology_records", VARS_DIR / "gtm" / "topology", "gtm_topology_records")
         self._load_simple_tree("gtm_monitors", VARS_DIR / "gtm" / "monitors", "gtm_monitors")

@@ -1,6 +1,6 @@
 ---
 # This `settings.yml` demonstrates the concise/hybrid GTM model.
-# Files under `vars/gtm/wide_ips/global-platform/` can embed GTM pools inline while inheriting
+# Files under `vars/gtm/intents/applications/global-platform/` can embed GTM pools inline while inheriting
 # shared defaults and monitor aliases from this directory.
 gtm_wide_ip_defaults:
   partition: "Common"
