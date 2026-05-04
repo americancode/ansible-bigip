@@ -1,0 +1,3 @@
+system_partition_defaults:
+  target_groups:
+    - "all_bigip"

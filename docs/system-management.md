@@ -1,6 +1,6 @@
 # System Management
 
-The `playbooks/system.yml` playbook manages base BIG-IP device settings after the device is already reachable through a stable management endpoint: hostname, DNS, NTP, module provisioning, local users, management-plane admin authentication providers, login banner compliance messaging, and config persistence.
+The `playbooks/system.yml` playbook manages base BIG-IP device settings after the device is already reachable through a stable management endpoint: hostname, DNS, NTP, module provisioning, administrative partitions, local users, management-plane admin authentication providers, login banner compliance messaging, and config persistence.
 
 For day-0 licensing and the first management IP/default route, use [02-bootstrap-playbook.md](02-bootstrap-playbook.md) and `playbooks/bootstrap.yml` first. For normal AWX inventory and targeting guidance, see [03-awx-inventory-and-targeting.md](03-awx-inventory-and-targeting.md).
 
@@ -107,6 +107,23 @@ system_provisioning:
 
 Required: `module`. Common fields: `level` (none, minimum, nominal, dedicated), `target_hosts`, `target_groups`. Modules provisioned at `none` or with `state: absent` are deprovisioned.
 
+### Administrative Partitions
+
+Location: `vars/system/partitions/`
+
+This manages BIG-IP administrative partitions with the native `bigip_partition` module. These partitions can then be referenced by user `partition_access` assignments and by partition-scoped runtime objects elsewhere in the repo.
+
+```yaml
+system_partitions:
+  - name: "apps"
+    description: "Application tenant partition"
+    route_domain: 0
+    target_groups:
+      - "all_bigip"
+```
+
+Required: `name`. Common fields: `description`, `route_domain`, `target_hosts`, `target_groups`. The object must not define a separate `partition` field because the object itself is the partition.
+
 ### Users
 
 Location: `vars/system/users/`
@@ -124,7 +141,7 @@ system_users:
       - "all_bigip"
 ```
 
-Required: `name`. Common fields: `full_name`, `partition_access`, `shell`, `password_credential`, `update_password`, `target_hosts`, `target_groups`. The `update_password` field controls when passwords are changed: `on_create` sets it only on first creation, `always` updates on every run.
+Required: `name`. Common fields: `full_name`, `partition_access`, `shell`, `password_credential`, `update_password`, `target_hosts`, `target_groups`. The `update_password` field controls when passwords are changed: `on_create` sets it only on first creation, `always` updates on every run. When `partition_access` references custom partitions, declare those partitions in `vars/system/partitions/` so the same playbook run can create them before the user is applied.
 
 ### Management-Plane LDAP / Active Directory Auth
 
@@ -262,15 +279,17 @@ This runs `bigip_config` to save the running config. It is the last task in the 
 2. DNS
 3. NTP
 4. Provisioning
-5. Users
-6. Management-plane auth providers
-7. Login banner
-8. Config save
+5. Administrative partitions
+6. Users
+7. Management-plane auth providers
+8. Login banner
+9. Config save
 
 ## Partition and Naming Conventions
 
 System objects are device-scoped, not partition-scoped, with two practical exceptions:
 
+- administrative partitions are first-class system objects under `vars/system/partitions/`
 - users support `partition_access` for role assignment
 - RADIUS server objects can still live in a partition, usually `Common`
 
@@ -284,10 +303,11 @@ The `system` domain is intentionally `runtime+validation` for the current phase.
 
 - runtime playbook support is first-class
 - `tools/validate-vars.py` supports the tree and references
-- helper-tool drift/import support is intentionally not implemented yet for `system`
+- administrative partitions now have helper-tool support at `basic field drift` fidelity
+- broader helper-tool drift/import support is still intentionally incomplete for the rest of `system`
 
-Treat `system.yml` as the Git-authored runtime source of truth, but do not expect `tools/drift-check.py` or `tools/import-from-bigip.py` to round-trip these objects today.
+Treat `system.yml` as the Git-authored runtime source of truth. Today only administrative partitions have drift/import helper-tool coverage inside this domain.
 
 ## Deletion
 
-Users, management-plane auth objects, and login banners can be removed with `state: absent` or the matching `vars/system/deletions/...` tree. DNS and NTP objects use a present-state model where the last declaration wins. See [deletion-workflows.md](deletion-workflows.md).
+Administrative partitions, users, management-plane auth objects, and login banners can be removed with `state: absent` or the matching `vars/system/deletions/...` tree. DNS and NTP objects use a present-state model where the last declaration wins. See [deletion-workflows.md](deletion-workflows.md).

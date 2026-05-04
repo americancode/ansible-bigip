@@ -40,6 +40,17 @@
   loop_control:
     label: "{{ item.name }}"
 
+# Delete partitions only after users are gone so user permission bindings do
+# not point at a partition that is being removed in the same run.
+- name: Remove administrative partitions
+  f5networks.f5_modules.bigip_partition:
+    provider: "{{ provider }}"
+    name: "{{ item.name }}"
+    state: absent
+  loop: "{{ system_partitions_delete | default([]) }}"
+  loop_control:
+    label: "{{ item.name }}"
+
 - name: Remove RADIUS management-plane auth profile
   f5networks.f5_modules.bigip_device_auth_radius:
     provider: "{{ provider }}"

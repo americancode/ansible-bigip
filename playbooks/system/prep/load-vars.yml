@@ -49,6 +49,19 @@
     aggregate_var: system_provisioning
     deletion_aggregate_var: system_provisioning_deletions
 
+- name: Load system partition fragments into system_partitions/system_partition_deletions
+  ansible.builtin.import_tasks: "{{ playbook_dir }}/shared/prep/load-fragment-tree.yml"
+  vars:
+    fragment_label: system partition
+    source_root: "{{ repo_root }}/vars/system/partitions"
+    deletion_root: "{{ repo_root }}/vars/system/deletions/partitions"
+    fragment_var_name: system_partition_fragment
+    fragment_deletion_var_name: system_partition_deletion_fragment
+    collection_key: system_partitions
+    defaults_key: system_partition_defaults
+    aggregate_var: system_partitions
+    deletion_aggregate_var: system_partition_deletions
+
 - name: Load system user fragments into system_users/system_user_deletions
   ansible.builtin.import_tasks: "{{ playbook_dir }}/shared/prep/load-fragment-tree.yml"
   vars:

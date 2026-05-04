@@ -5,6 +5,7 @@
 # - `system_dns_present` / `system_dns_delete`
 # - `system_ntp_present` / `system_ntp_delete`
 # - `system_provisioning_present` / `system_provisioning_delete`
+# - `system_partitions_present` / `system_partitions_delete`
 # - `system_users_present` / `system_users_delete`
 # - `system_auth_ldap_present` / `system_auth_ldap_delete`
 # - `system_auth_tacacs_present` / `system_auth_tacacs_delete`

@@ -261,6 +261,7 @@ class VarTreeLoader:
 
     def load(self) -> None:
         """Load all var trees into memory."""
+        self._load_simple_tree("system_partitions", VARS_DIR / "system" / "partitions", "system_partitions")
         self._load_simple_tree("ltm_nodes", VARS_DIR / "ltm" / "nodes", "ltm_nodes")
         self._load_simple_tree("ltm_monitors", VARS_DIR / "ltm" / "monitors", "ltm_monitors")
         self._load_simple_tree("ltm_pools", VARS_DIR / "ltm" / "pools", "ltm_pools")
@@ -325,6 +326,7 @@ class VarTreeLoader:
 
 class DriftChecker:
     BIGIP_ENDPOINTS = {
+        "system_partitions": "auth/partition",
         "ltm_nodes": "ltm/node",
         "ltm_monitors": "ltm/monitor",
         "ltm_pools": "ltm/pool",
@@ -551,6 +553,7 @@ class DriftChecker:
             "address": ("address", ""),
             "vlan": ("vlan", ""),
             "gateway_address": ("gw", ""),
+            "route_domain": ("defaultRouteDomain", 0),
             "partition": ("partition", "Common"),
             "rule": ("rule", ""),
             "type": ("type", ""),

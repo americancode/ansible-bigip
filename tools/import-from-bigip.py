@@ -179,6 +179,16 @@ class ImportSpec:
 
 
 IMPORT_SPECS: dict[str, ImportSpec] = {
+    "system_partitions": ImportSpec(
+        endpoint="auth/partition",
+        top_key="system_partitions",
+        output_dir="system/partitions",
+        extract={
+            "name": "name",
+            "description": "description",
+            "route_domain": "defaultRouteDomain",
+        },
+    ),
     "ltm_nodes": ImportSpec(
         endpoint="ltm/node",
         top_key="ltm_nodes",

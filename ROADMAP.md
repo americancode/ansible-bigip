@@ -16,7 +16,7 @@ The repo already manages the main BIG-IP runtime domains through canonical playb
 
 - `bootstrap` for day-0 licensing and first management reachability
 - `network` for VLANs, trunks, route domains, self IPs, routes, SNAT translations, SNAT pools, and NATs
-- `system` for hostname, DNS, NTP/timezone, provisioning, users, management-plane admin authentication, login banners, and config save
+- `system` for hostname, DNS, NTP/timezone, provisioning, administrative partitions, users, management-plane admin authentication, login banners, and config save
 - `ha` for device connectivity, trust, sync groups, HA groups, traffic groups, and config sync actions
 - `ltm` for monitors, profiles, nodes, pools, virtual servers, persistence, iRules, data groups, and policies
   - this now includes dedicated intent/compiler authoring for RKE2 server cluster virtual-server bundles under `vars/ltm/intents/clusters/`
@@ -51,6 +51,7 @@ These boundaries must stay explicit.
   - drift/import coverage is intentionally not part of its current scope
 - `system` and `ha` are currently `runtime+validation`
   - they are operationally useful, but not yet helper-tool complete
+  - within `system`, administrative partitions now have object-family helper-tool coverage at `basic field drift` fidelity, but the domain as a whole is still not helper-tool complete
   - `ha_device_connectivity` is additionally an apply-oriented sub-surface whose deletion trees remain intentionally unsupported
 - the broader service/runtime domains are generally `runtime+validation+helper-tools`
   - helper-tool fidelity varies by object family
@@ -133,6 +134,12 @@ These are the highest-value open items.
 
 These are the concrete remaining backlog items.
 
+  - audit mode in playbooks
+  - Validation should probably check and ensure are never deleting and re-creating objects in the same pass? (maybe we already have this)
+  - What are the compatibility flags for?
+  - Ordering of servers in LTM/GTM pools
+  - printing on tmsh commands
+
 1. **Add top-level header comments across canonical playbook prep/task files**
    - **Shared prep snippets (`playbooks/shared/prep/`):**
      - [ ] `load-fragments.yml` — discovery and aggregation helper
@@ -149,7 +156,7 @@ These are the concrete remaining backlog items.
      - [ ] `tasks/apply.yml` — create/update network objects
      - [ ] `tasks/delete.yml` — delete network objects in reverse order
    - **System (`playbooks/system/`):**
-     - [ ] `prep.yml` — load hostname, DNS, NTP, provisioning, users, auth, banners
+     - [ ] `prep.yml` — load hostname, DNS, NTP, provisioning, partitions, users, auth, banners
      - [ ] `tasks/manage.yml` — apply/delete ordering for system objects
      - [ ] `tasks/apply.yml` — configure system settings
      - [ ] `tasks/delete.yml` — delete system objects

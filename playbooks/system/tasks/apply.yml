@@ -39,6 +39,19 @@
   loop_control:
     label: "{{ item.module }}"
 
+- name: Configure administrative partitions
+  f5networks.f5_modules.bigip_partition:
+    provider: "{{ provider }}"
+    name: "{{ item.name }}"
+    description: "{{ item.description | default(omit) }}"
+    route_domain: "{{ item.route_domain | default(omit) }}"
+    state: "{{ item.state | default('present') }}"
+  loop: "{{ system_partitions_present | default([]) }}"
+  loop_control:
+    label: "{{ item.name }}"
+
+# Partitions are applied before users so custom partition names referenced in
+# `partition_access` already exist when BIG-IP evaluates the user object.
 - name: Configure local users
   f5networks.f5_modules.bigip_user:
     provider: "{{ provider }}"

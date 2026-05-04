@@ -90,6 +90,7 @@ The tool reports drift in three categories:
 | `apm_per_session_policies` | `/mgmt/tm/access/per-session-policy` |
 | `apm_macros` | `/mgmt/tm/access/macro` |
 | `apm_policy_nodes` | `/mgmt/tm/apm/policy/access-policy` with `items` array traversal |
+| `system_partitions` | `/mgmt/tm/auth/partition` |
 | `tls_keys` | `/mgmt/tm/sys/crypto/key` |
 | `tls_certificates` | `/mgmt/tm/sys/crypto/cert` |
 | `tls_ca_bundles` | `/mgmt/tm/sys/crypto/ca-bundle` |
@@ -100,7 +101,8 @@ The tool reports drift in three categories:
 
 Runtime playbook coverage is broader than helper-tool coverage. The following object families are still runtime-managed only and are not yet handled accurately enough for drift/import:
 
-- `system` and `ha` domain objects
+- most `system` objects other than administrative partitions
+- `ha` domain objects
 
 For several newer supported families, drift/import is present but still not full-fidelity. Treat generated output as a starting point for review, not as an authoritative round-trip export of every field.
 
@@ -108,7 +110,8 @@ Current helper-tool fidelity notes:
 
 - `network_route_domains`, `network_trunks`, `network_snat_translations`, `network_snats`, and `network_nats` now have `basic field drift` coverage for the core fields the runtime playbooks manage directly.
 - `gtm_topology_regions`, `gtm_topology_records`, `tls_ca_bundles`, `tls_client_ssl_profiles`, `tls_server_ssl_profiles`, `apm_sso_configs`, `apm_access_profiles`, and `apm_policy_nodes` now have `basic field drift` coverage for their core runtime-managed fields.
-- `system` and `ha` remain runtime-managed only.
+- `system_partitions` now have `basic field drift` helper-tool fidelity for `name`, `description`, and `route_domain`.
+- the rest of `system` and all of `ha` remain runtime-managed only.
 - other newer families may still have helper coverage that is shallower than the runtime field model.
 
 This is especially true for:

@@ -1,0 +1,11 @@
+---
+# BIG-IP administrative partition examples for the system domain.
+# Partitions here can be referenced by `partition_access` entries in `vars/system/users/platform-admins.yml`
+# and by partition-scoped canonical objects in trees such as `vars/ltm/pools/` and `vars/ltm/virtual_servers/`.
+# Supported fields: `name`, `description`, `route_domain`, `state`, `target_hosts`, and `target_groups`.
+system_partitions:
+  - name: "apps"
+    description: "Application tenant partition"
+    route_domain: 0
+    target_groups:
+      - "all_bigip"

@@ -67,7 +67,7 @@ The HA var tree includes:
 
 The system var tree includes both basic device settings and management-plane administrator login configuration:
 
-- `vars/system/hostname/`, `vars/system/dns/`, `vars/system/ntp/`, `vars/system/provisioning/`, `vars/system/users/`, and `vars/system/config/`
+- `vars/system/hostname/`, `vars/system/dns/`, `vars/system/ntp/`, `vars/system/provisioning/`, `vars/system/partitions/`, `vars/system/users/`, and `vars/system/config/`
 - `vars/system/auth/ldap/` for LDAP or Active Directory admin auth
 - `vars/system/auth/tacacs/` for TACACS+ admin auth
 - `vars/system/auth/radius_servers/` for reusable RADIUS server objects

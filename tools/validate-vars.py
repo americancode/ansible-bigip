@@ -342,6 +342,13 @@ class Validator:
                 settings_key="system_provisioning_defaults",
             ),
             TreeSpec(
+                name="system_partitions",
+                active_dir=VARS_DIR / "system" / "partitions",
+                deletion_dir=VARS_DIR / "system" / "deletions" / "partitions",
+                top_key="system_partitions",
+                settings_key="system_partition_defaults",
+            ),
+            TreeSpec(
                 name="system_users",
                 active_dir=VARS_DIR / "system" / "users",
                 deletion_dir=VARS_DIR / "system" / "deletions" / "users",
@@ -1037,7 +1044,7 @@ class Validator:
         self.check_duplicates(nats, lambda obj: ("nat", obj.partition, obj.data.get("name")), "NAT")
 
     def validate_system(self) -> None:
-        """Validate system domain objects: hostname, DNS, NTP, provisioning, users, auth, banners, config.
+        """Validate system domain objects: hostname, DNS, NTP, provisioning, partitions, users, auth, banners, config.
 
         Purpose:
             Checks that system-level objects are correctly structured.
@@ -1045,6 +1052,7 @@ class Validator:
         Validates:
             - Hostname, DNS, NTP: required fields and format.
             - Provisioning: module names and levels.
+            - Partitions: name, description, and route-domain values.
             - Users: username, password, partition fields.
             - Auth (LDAP, TACACS, RADIUS): connection and auth settings.
             - Login banners: enabled flag and text.
@@ -1054,6 +1062,7 @@ class Validator:
         dns_settings = self.objects.get("system_dns", [])
         ntp_settings = self.objects.get("system_ntp", [])
         provisioning = self.objects.get("system_provisioning", [])
+        partitions = self.objects.get("system_partitions", [])
         users = self.objects.get("system_users", [])
         auth_ldap = self.objects.get("system_auth_ldap", [])
         auth_tacacs = self.objects.get("system_auth_tacacs", [])
@@ -1111,6 +1120,33 @@ class Validator:
             provisioning,
             identity_func=lambda obj: ("system_provisioning", obj.data.get("module")),
             label="system provisioning module",
+        )
+
+        for obj in partitions:
+            self.validate_target_selectors(obj, label=f"system partition `{obj.data.get('name')}`")
+            self.require_fields(obj, ["name"])
+
+            if obj.data.get("partition") is not None:
+                self.error(obj.relpath, f"system partition `{obj.data.get('name')}` must not define `partition`; the object itself is the partition")
+
+            if obj.data.get("name") == "Common" and obj.effective_state == "absent":
+                self.error(obj.relpath, "system partition `Common` cannot be declared absent")
+
+            description = obj.data.get("description")
+            if description is not None and not isinstance(description, str):
+                self.error(obj.relpath, f"system partition `{obj.data.get('name')}` `description` must be a string")
+
+            route_domain = obj.data.get("route_domain")
+            if route_domain is not None:
+                if not isinstance(route_domain, int):
+                    self.error(obj.relpath, f"system partition `{obj.data.get('name')}` `route_domain` must be an integer")
+                elif route_domain < 0:
+                    self.error(obj.relpath, f"system partition `{obj.data.get('name')}` `route_domain` must be zero or greater")
+
+        self.check_targeted_identity_collisions(
+            partitions,
+            identity_func=lambda obj: ("system_partition", obj.data.get("name")),
+            label="system partition",
         )
 
         for obj in users:

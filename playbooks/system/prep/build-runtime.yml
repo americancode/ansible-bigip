@@ -61,6 +61,24 @@
     skipped_var: system_provisioning_deletions_skipped
     summary_var: system_provisioning_deletions_targeting_summary
 
+- name: Filter system partition objects for the current inventory host
+  ansible.builtin.import_tasks: "{{ playbook_dir }}/shared/prep/filter-targeted-objects.yml"
+  vars:
+    object_label: system partition
+    source_objects: "{{ system_partitions | default([]) }}"
+    matched_var: system_partitions_targeted
+    skipped_var: system_partitions_skipped
+    summary_var: system_partitions_targeting_summary
+
+- name: Filter system partition deletions for the current inventory host
+  ansible.builtin.import_tasks: "{{ playbook_dir }}/shared/prep/filter-targeted-objects.yml"
+  vars:
+    object_label: system partition deletion
+    source_objects: "{{ system_partition_deletions | default([]) }}"
+    matched_var: system_partition_deletions_targeted
+    skipped_var: system_partition_deletions_skipped
+    summary_var: system_partition_deletions_targeting_summary
+
 - name: Filter system user objects for the current inventory host
   ansible.builtin.import_tasks: "{{ playbook_dir }}/shared/prep/filter-targeted-objects.yml"
   vars:
@@ -204,6 +222,15 @@
     deletion_objects: "{{ system_provisioning_deletions_targeted | default([]) }}"
     delete_var: system_provisioning_delete
     present_var: system_provisioning_present
+
+- name: Classify system partition operations into system_partitions_present/system_partitions_delete
+  ansible.builtin.import_tasks: "{{ playbook_dir }}/shared/prep/classify-operations.yml"
+  vars:
+    object_label: system partition
+    active_objects: "{{ system_partitions_targeted | default([]) }}"
+    deletion_objects: "{{ system_partition_deletions_targeted | default([]) }}"
+    delete_var: system_partitions_delete
+    present_var: system_partitions_present
 
 - name: Classify system user operations into system_users_present/system_users_delete
   ansible.builtin.import_tasks: "{{ playbook_dir }}/shared/prep/classify-operations.yml"

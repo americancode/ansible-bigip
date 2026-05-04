@@ -147,10 +147,12 @@ The system tree uses a mixed direct-and-referenced model for BIG-IP administrato
 - TACACS+ auth: `vars/system/auth/tacacs/foundation-tacacs.yml`
 - RADIUS server objects: `vars/system/auth/radius_servers/foundation-radius-servers.yml`
 - RADIUS auth profile: `vars/system/auth/radius/foundation-radius.yml`
+- Administrative partitions: `vars/system/partitions/platform-partitions.yml`
 
 Linkage works like this:
 
 - `system_auth_radius[*].servers: ["radius_dc1"]` points at `vars/system/auth/radius_servers/foundation-radius-servers.yml`
+- `system_users[*].partition_access: ["apps:manager"]` can reference a partition declared in `vars/system/partitions/platform-partitions.yml`
 - `system_auth_ldap[*].servers` is just the remote LDAP or AD server list; it does not point at another repo-managed BIG-IP object tree
 - only one of `system_auth_ldap[*].use_for_auth`, `system_auth_tacacs[*].use_for_auth`, or `system_auth_radius[*].use_for_auth` should be `true` for the current BIG-IP target
 - this system-auth layer controls how operators log in to BIG-IP itself; it is separate from APM end-user identity under `vars/security/apm/`
