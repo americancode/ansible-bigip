@@ -1,8 +1,4 @@
 
-- Port in big ip credential (the custom credential)
-
-
-
 - 'Compatibility' not a field of GTM tcp https monitor
 
 

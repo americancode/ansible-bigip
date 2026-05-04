@@ -2206,7 +2206,7 @@ class Validator:
                     )
                     continue
 
-                unsupported = sorted(set(pool) - {"name", "partition", "ratio"})
+                unsupported = sorted(set(pool) - {"name", "ratio"})
                 if unsupported:
                     self.error(obj.relpath, f"GTM Wide IP `{obj.data.get('name')}` pool reference `{pool.get('name')}` contains unsupported keys: {', '.join(unsupported)}")
                 pool_ref = self.fq_gtm_pool_name(pool_partition, record_type, str(pool["name"]))
