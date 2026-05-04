@@ -62,7 +62,9 @@ def compile_ltm_rke2_server_intent(intent, intent_defaults=None, pool_defaults=N
     Purpose:
         Turns one cluster intent (under vars/ltm/intents/clusters/) into canonical
         LTM virtual servers and pools using a service-first schema where each
-        service directly declares virtual-server fields and nests one `pool` mapping.
+        service directly declares virtual-server fields and explicitly chooses
+        whether its pool is owned inline by the intent or referenced from the
+        canonical `ltm_pools` trees.
 
     Inputs:
         intent (dict|None): Cluster intent dict with keys like name, partition,
@@ -75,13 +77,15 @@ def compile_ltm_rke2_server_intent(intent, intent_defaults=None, pool_defaults=N
     Outputs:
         dict: {"virtual_servers": list[dict], "pools": list[dict]}
             - virtual_servers: Generated canonical virtual server objects.
-            - pools: Generated canonical pool objects.
+            - pools: Generated canonical pool objects for `pool_mode: inline`.
 
     Constraints:
         - intent.name is required; returns empty lists if missing.
-        - Each service must define `name`, `vip`, `port`, and `pool.name`.
-        - `pool.members` are normalized via normalize_members(member_defaults).
-        - `pool.monitors` aliases are expanded via monitor_sets.
+        - Each service must define `name`, `vip`, `port`, and `pool_mode`.
+        - `pool_mode: inline` requires a nested `pool.name`.
+        - `pool_mode: reference` requires `pool_ref` and emits no pool object.
+        - Inline `pool.members` are normalized via normalize_members(member_defaults).
+        - Inline `pool.monitors` aliases are expanded via monitor_sets.
         - Delete support: if intent state is "absent", all generated objects also get
           state: absent for symmetric delete.
         - Intent-only keys (e.g., services, state) are consumed here
@@ -123,35 +127,53 @@ def compile_ltm_rke2_server_intent(intent, intent_defaults=None, pool_defaults=N
     compiled_pools = []
 
     def add_service(*, service_payload):
-        """Every generated service emits one canonical virtual server and one canonical pool.
+        """Every generated service emits one canonical virtual server.
 
         Delete support stays symmetric by emitting the same names with state: absent.
+        Pools are emitted only when the service owns them inline.
         """
-        pool_payload = service_payload.get("pool") if isinstance(service_payload, dict) else None
-        if not isinstance(pool_payload, dict):
+        if not isinstance(service_payload, dict):
+            return
+
+        pool_mode = service_payload.get("pool_mode", "inline")
+        pool_payload = service_payload.get("pool") if pool_mode == "inline" else None
+        if pool_mode == "inline" and not isinstance(pool_payload, dict):
+            return
+        if pool_mode == "reference" and service_payload.get("pool_ref") in (None, ""):
+            return
+        if pool_mode not in {"inline", "reference"}:
             return
 
         virtual_server = dict(base_virtual_server)
-        virtual_server.update({k: v for k, v in service_payload.items() if k != "pool"})
+        virtual_server.update(
+            {
+                k: v
+                for k, v in service_payload.items()
+                if k not in {"pool_mode", "pool_ref", "pool"}
+            }
+        )
         virtual_server["partition"] = partition
-        virtual_server["pool"] = pool_payload.get("name")
+        if pool_mode == "inline":
+            virtual_server["pool"] = pool_payload.get("name")
+        else:
+            virtual_server["pool"] = service_payload.get("pool_ref")
         if deleting:
             virtual_server["state"] = "absent"
         else:
             virtual_server["destination"] = service_payload.get("vip")
             virtual_server["destination_port"] = service_payload.get("port")
 
-        pool = dict(pool_defaults or {})
-        pool.update(pool_payload)
-        pool["partition"] = partition
-        if deleting:
-            pool["state"] = "absent"
-        else:
-            pool["monitors"] = expand_monitor_list(ensure_list(pool.get("monitors")), monitor_sets)
-            pool["members"] = normalize_members(pool.get("members"), member_defaults)
-
         compiled_virtual_servers.append(virtual_server)
-        compiled_pools.append(pool)
+        if pool_mode == "inline":
+            pool = dict(pool_defaults or {})
+            pool.update(pool_payload)
+            pool["partition"] = partition
+            if deleting:
+                pool["state"] = "absent"
+            else:
+                pool["monitors"] = expand_monitor_list(ensure_list(pool.get("monitors")), monitor_sets)
+                pool["members"] = normalize_members(pool.get("members"), member_defaults)
+            compiled_pools.append(pool)
 
     for service in services:
         if not isinstance(service, dict):

@@ -3,13 +3,20 @@
 # Each Wide IP embeds its GTM pools inline so one file tells the story for the service.
 # The embedded pools are authoring-time convenience data; `gtm/prep.yml` compiles them into
 # canonical GTM pool objects and rewrites the Wide IP to reference those pools before runtime apply.
-# The embedded `members` point to GTM servers in `vars/gtm/servers/regional-bigips.yml`.
+# The embedded `members` point to GTM servers in `vars/gtm/servers/regional-bigips.yml`
+# by explicit `server_mode: reference`. This same intent model can also own GTM servers
+# and datacenters inline with `server_mode: inline` and `server.datacenter_mode`.
 # The `virtual_server` strings point to repo-known LTM virtual servers in:
 # - `vars/ltm/intents/clusters/rke2-east/platform-cluster.yml`
 # - `vars/ltm/intents/clusters/rke2-west/platform-cluster.yml`
 # Here the member `address` and `port` are still shown explicitly for readability, but they could
 # be omitted when the repo-known LTM virtual server should be the source of truth.
 # Monitor aliases such as `platform_https` expand through the sibling `settings.yml`.
+# Supported fields:
+# - Wide IP: `name`, `record_type`, `pool_lb_method`, `pools`
+# - Inline pool: `name`, `preferred_lb_method`, `monitors`/`default_monitors`, `members`
+# - Member ownership: `server_mode: reference` + `server`, or `server_mode: inline` + `server: {name, address/devices, datacenter_mode, ...}`
+# - Inline datacenter ownership: `server.datacenter_mode: reference` + `datacenter_ref`, or `server.datacenter_mode: inline` + `datacenter: {name, ...}`
 gtm_wide_ips:
   - name: "platform.apps.example.com"
     record_type: "a"
@@ -20,7 +27,8 @@ gtm_wide_ips:
         monitors:
           - "platform_https"
         members:
-          - server: "bigip-east"
+          - server_mode: "reference"
+            server: "bigip-east"
             virtual_server: "vs_rke2_east_traefik_443"
             address: "10.201.0.30"
             port: 443
@@ -29,7 +37,8 @@ gtm_wide_ips:
         monitors:
           - "platform_https"
         members:
-          - server: "bigip-west"
+          - server_mode: "reference"
+            server: "bigip-west"
             virtual_server: "vs_rke2_west_traefik_443"
             address: "10.202.0.30"
             port: 443
@@ -43,7 +52,8 @@ gtm_wide_ips:
         default_monitors:
           - "kubeapi_tcp"
         members:
-          - server: "bigip-east"
+          - server_mode: "reference"
+            server: "bigip-east"
             virtual_server: "vs_rke2_east_kubeapi_6443"
             address: "10.201.0.20"
             port: 6443
@@ -52,7 +62,8 @@ gtm_wide_ips:
         default_monitors:
           - "kubeapi_tcp"
         members:
-          - server: "bigip-west"
+          - server_mode: "reference"
+            server: "bigip-west"
             virtual_server: "vs_rke2_west_kubeapi_6443"
             address: "10.202.0.20"
             port: 6443
@@ -66,7 +77,8 @@ gtm_wide_ips:
         monitors:
           - "registration_tcp"
         members:
-          - server: "bigip-east"
+          - server_mode: "reference"
+            server: "bigip-east"
             virtual_server: "vs_rke2_east_registration_9345"
             address: "10.201.0.20"
             port: 9345
@@ -75,7 +87,8 @@ gtm_wide_ips:
         monitors:
           - "registration_tcp"
         members:
-          - server: "bigip-west"
+          - server_mode: "reference"
+            server: "bigip-west"
             virtual_server: "vs_rke2_west_registration_9345"
             address: "10.202.0.20"
             port: 9345
@@ -89,7 +102,8 @@ gtm_wide_ips:
         monitors:
           - "argocd_https"
         members:
-          - server: "bigip-east"
+          - server_mode: "reference"
+            server: "bigip-east"
             virtual_server: "vs_rke2_east_traefik_443"
             address: "10.201.0.30"
             port: 443
@@ -98,7 +112,8 @@ gtm_wide_ips:
         monitors:
           - "argocd_https"
         members:
-          - server: "bigip-west"
+          - server_mode: "reference"
+            server: "bigip-west"
             virtual_server: "vs_rke2_west_traefik_443"
             address: "10.202.0.30"
             port: 443
@@ -112,7 +127,8 @@ gtm_wide_ips:
         monitors:
           - "grafana_https"
         members:
-          - server: "bigip-east"
+          - server_mode: "reference"
+            server: "bigip-east"
             virtual_server: "vs_rke2_east_traefik_443"
             address: "10.201.0.30"
             port: 443
@@ -121,7 +137,8 @@ gtm_wide_ips:
         monitors:
           - "grafana_https"
         members:
-          - server: "bigip-west"
+          - server_mode: "reference"
+            server: "bigip-west"
             virtual_server: "vs_rke2_west_traefik_443"
             address: "10.202.0.30"
             port: 443

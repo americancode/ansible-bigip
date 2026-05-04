@@ -1692,11 +1692,14 @@ class Validator:
         self.check_duplicates(profiles, lambda obj: ("ltm_profile", obj.partition, obj.data.get("name")), "LTM profile")
 
         active_pool_names = set()
+        canonical_pool_names = set()
         compiled_rke2_pools: list[tuple[LoadedObject, dict[str, Any]]] = []
         compiled_rke2_virtual_servers: list[tuple[LoadedObject, dict[str, Any]]] = []
 
         for obj in pools:
             self.require_fields(obj, ["name"])
+            if obj.data.get("name") not in (None, ""):
+                canonical_pool_names.add(self.fq_name(obj.partition, str(obj.data["name"])))
             if obj.effective_state == "absent":
                 continue
 
@@ -1747,7 +1750,7 @@ class Validator:
                 else:
                     service_names_seen.add(service_name)
 
-                pool = service.get("pool")
+                pool_mode = service.get("pool_mode")
                 self.require_fields(
                     service,
                     ["name"],
@@ -1762,9 +1765,18 @@ class Validator:
                         f"RKE2 service `{service_name}`",
                     )
 
-                if not isinstance(pool, dict):
-                    self.error(obj.relpath, f"RKE2 server intent `{obj.data.get('name')}` service `{service_name}` must define mapping `pool`")
-                else:
+                if pool_mode not in {"inline", "reference"}:
+                    self.error(
+                        obj.relpath,
+                        f"RKE2 server intent `{obj.data.get('name')}` service `{service_name}` must define `pool_mode: inline` or `pool_mode: reference`",
+                    )
+                    continue
+
+                if pool_mode == "inline":
+                    pool = service.get("pool")
+                    if not isinstance(pool, dict):
+                        self.error(obj.relpath, f"RKE2 server intent `{obj.data.get('name')}` service `{service_name}` must define mapping `pool` when `pool_mode` is `inline`")
+                        continue
                     self.require_fields(
                         pool,
                         ["name"],
@@ -1782,6 +1794,15 @@ class Validator:
                             self.error(obj.relpath, f"RKE2 service `{service_name}` pool `members` must be a non-empty list")
                         if not isinstance(pool.get("monitors"), list) or not pool.get("monitors"):
                             self.error(obj.relpath, f"RKE2 service `{service_name}` pool `monitors` must be a non-empty list")
+                    if service.get("pool_ref") not in (None, ""):
+                        self.error(obj.relpath, f"RKE2 service `{service_name}` cannot define `pool_ref` when `pool_mode` is `inline`")
+                    continue
+
+                pool_ref = service.get("pool_ref")
+                if pool_ref in (None, ""):
+                    self.error(obj.relpath, f"RKE2 service `{service_name}` must define `pool_ref` when `pool_mode` is `reference`")
+                if service.get("pool") is not None:
+                    self.error(obj.relpath, f"RKE2 service `{service_name}` cannot define inline `pool` when `pool_mode` is `reference`")
 
             settings_payload = self.load_settings_hierarchy_payload(obj.source_file, VARS_DIR / "ltm" / "intents")
             compiled_service = compile_ltm_rke2_server_intent(
@@ -1802,15 +1823,23 @@ class Validator:
             "LTM RKE2 server intent",
         )
 
+        compiled_pool_names = set()
         for source_obj, normalized_pool in compiled_rke2_pools:
-            if normalized_pool.get("state") == "absent":
-                continue
             pool_name = normalized_pool.get("name")
             if pool_name in (None, ""):
                 self.error(source_obj.relpath, f"RKE2 server intent `{source_obj.data.get('name')}` compiled an unnamed pool")
                 continue
             pool_partition = str(normalized_pool.get("partition", source_obj.partition))
             fq_pool_name = self.fq_name(pool_partition, str(pool_name))
+            if fq_pool_name in canonical_pool_names:
+                self.error(source_obj.relpath, f"RKE2 server intent `{source_obj.data.get('name')}` compiles pool `{fq_pool_name}` that already exists in canonical `ltm_pools` trees")
+                continue
+            if fq_pool_name in compiled_pool_names:
+                self.error(source_obj.relpath, f"RKE2 server intent `{source_obj.data.get('name')}` compiles duplicate pool `{fq_pool_name}`")
+                continue
+            compiled_pool_names.add(fq_pool_name)
+            if normalized_pool.get("state") == "absent":
+                continue
             if fq_pool_name in active_pool_names:
                 self.error(source_obj.relpath, f"RKE2 server intent `{source_obj.data.get('name')}` compiles duplicate pool `{fq_pool_name}`")
                 continue
@@ -1927,21 +1956,34 @@ class Validator:
             "LTM virtual server",
         )
 
+        canonical_virtual_server_names = {
+            self.fq_name(obj.partition, str(obj.data["name"]))
+            for obj in virtual_servers
+            if obj.data.get("name")
+        }
         active_virtual_server_names = {
             self.fq_name(obj.partition, str(obj.data["name"]))
             for obj in virtual_servers
             if obj.effective_state != "absent" and obj.data.get("name")
         }
 
+        compiled_virtual_server_names = set()
         for source_obj, virtual_server in compiled_rke2_virtual_servers:
-            if virtual_server.get("state") == "absent":
-                continue
             name = virtual_server.get("name")
             if name in (None, ""):
                 self.error(source_obj.relpath, f"RKE2 server intent `{source_obj.data.get('name')}` compiled an unnamed virtual server")
                 continue
             vs_partition = str(virtual_server.get("partition", source_obj.partition))
             fq_virtual_name = self.fq_name(vs_partition, str(name))
+            if fq_virtual_name in canonical_virtual_server_names:
+                self.error(source_obj.relpath, f"RKE2 server intent `{source_obj.data.get('name')}` compiles virtual server `{fq_virtual_name}` that already exists in canonical `ltm_virtual_servers` trees")
+                continue
+            if fq_virtual_name in compiled_virtual_server_names:
+                self.error(source_obj.relpath, f"RKE2 server intent `{source_obj.data.get('name')}` compiles duplicate virtual server `{fq_virtual_name}`")
+                continue
+            compiled_virtual_server_names.add(fq_virtual_name)
+            if virtual_server.get("state") == "absent":
+                continue
             if fq_virtual_name in active_virtual_server_names:
                 self.error(source_obj.relpath, f"RKE2 server intent `{source_obj.data.get('name')}` compiles duplicate virtual server `{fq_virtual_name}`")
                 continue
@@ -2102,6 +2144,11 @@ class Validator:
                 active_datacenter_names.add(self.fq_name(obj.partition, str(obj.data["name"])))
 
         self.check_duplicates(datacenters, lambda obj: ("gtm_datacenter", obj.partition, obj.data.get("name")), "GTM datacenter")
+        canonical_datacenter_names = {
+            self.fq_name(obj.partition, str(obj.data["name"]))
+            for obj in datacenters
+            if obj.data.get("name")
+        }
 
         active_monitor_names = set()
         for obj in monitors:
@@ -2124,12 +2171,26 @@ class Validator:
                 active_server_names.add(self.fq_name(obj.partition, str(obj.data["name"])))
 
         self.check_duplicates(servers, lambda obj: ("gtm_server", obj.partition, obj.data.get("name")), "GTM server")
+        canonical_server_names = {
+            self.fq_name(obj.partition, str(obj.data["name"]))
+            for obj in servers
+            if obj.data.get("name")
+        }
 
         active_pool_names = set()
+        canonical_pool_names = set()
         active_ltm_virtual_servers = self.build_ltm_virtual_server_lookup(ltm_virtual_servers)
 
         for obj in pools:
             self.require_fields(obj, ["name"])
+            if obj.data.get("name") not in (None, ""):
+                canonical_pool_names.add(
+                    self.fq_gtm_pool_name(
+                        obj.partition,
+                        str(obj.data.get("record_type", "a")),
+                        str(obj.data["name"]),
+                    )
+                )
             if obj.effective_state == "absent":
                 continue
 
@@ -2169,22 +2230,22 @@ class Validator:
             "GTM pool",
         )
 
+        compiled_gtm_datacenters: list[tuple[LoadedObject, dict[str, Any]]] = []
+        compiled_gtm_servers: list[tuple[LoadedObject, dict[str, Any]]] = []
+        compiled_gtm_pools: list[tuple[LoadedObject, dict[str, Any]]] = []
+        compiled_gtm_wide_ips: list[tuple[LoadedObject, dict[str, Any]]] = []
+
         for obj in wide_ips:
             self.require_fields(obj, ["name"])
             record_type = str(obj.data.get("record_type", "a"))
-            if obj.effective_state == "absent":
-                continue
 
-            pools = obj.data.get("pools")
-            if pools is None or not isinstance(pools, list) or not pools:
+            wide_ip_pools = obj.data.get("pools")
+            if wide_ip_pools is None or not isinstance(wide_ip_pools, list) or not wide_ip_pools:
                 self.error(obj.relpath, f"GTM Wide IP `{obj.data.get('name')}` must define a non-empty `pools` list")
                 continue
 
-            for pool_index, pool in enumerate(pools):
+            for pool_index, pool in enumerate(wide_ip_pools):
                 if isinstance(pool, str):
-                    pool_ref = self.normalize_gtm_pool_reference(pool, obj.partition, record_type)
-                    if pool_ref not in active_pool_names:
-                        self.error(obj.relpath, f"GTM Wide IP `{obj.data.get('name')}` references undefined pool `{pool_ref}`")
                     continue
 
                 if not isinstance(pool, dict):
@@ -2196,50 +2257,198 @@ class Validator:
 
                 pool_partition = str(pool.get("partition", obj.partition))
                 if self.is_inline_gtm_pool(pool):
-                    settings_payload = self.load_settings_hierarchy_payload(obj.source_file, VARS_DIR / "gtm" / "intents")
-                    compiled_service = compile_gtm_wide_ip_intent(
-                        {"partition": obj.partition, "record_type": record_type, "pools": [pool]},
-                        settings_payload.get("gtm_pool_defaults", {}),
-                        settings_payload.get("gtm_member_defaults", {}),
-                        settings_payload.get("gtm_monitor_sets", {}),
-                        active_ltm_virtual_servers,
-                    )
-                    normalized_pool = (compiled_service.get("pools") or [None])[0]
-                    if normalized_pool is None:
-                        self.error(obj.relpath, f"GTM Wide IP `{obj.data.get('name')}` pool {pool_index} could not be compiled")
+                    members = pool.get("members")
+                    if not isinstance(members, list) or not members:
+                        self.error(obj.relpath, f"GTM Wide IP `{obj.data.get('name')}` inline pool `{pool.get('name')}` must define a non-empty `members` list")
                         continue
-                    pool_partition = str(normalized_pool.get("partition", obj.partition))
-                    active_pool_names.add(self.fq_gtm_pool_name(pool_partition, record_type, str(normalized_pool["name"])))
-                    for monitor in normalized_pool.get("monitors", normalized_pool.get("default_monitors", [])) or []:
-                        self.validate_monitor_reference(
-                            source=obj.relpath,
-                            reference=monitor,
-                            known_monitors=active_monitor_names,
-                            kind="GTM pool monitor",
+                    for member_index, member in enumerate(members):
+                        if not isinstance(member, dict):
+                            self.error(obj.relpath, f"GTM Wide IP `{obj.data.get('name')}` inline pool `{pool.get('name')}` member {member_index} must be a mapping")
+                            continue
+                        server_mode = member.get("server_mode")
+                        if server_mode not in {"inline", "reference"}:
+                            self.error(
+                                obj.relpath,
+                                f"GTM Wide IP `{obj.data.get('name')}` inline pool `{pool.get('name')}` member {member_index} must define `server_mode: inline` or `server_mode: reference`",
+                            )
+                            continue
+                        if server_mode == "reference":
+                            server_reference = member.get("server")
+                            if not isinstance(server_reference, str) or not server_reference:
+                                self.error(
+                                    obj.relpath,
+                                    f"GTM Wide IP `{obj.data.get('name')}` inline pool `{pool.get('name')}` member {member_index} must define string `server` when `server_mode` is `reference`",
+                                )
+                            continue
+                        server_payload = member.get("server")
+                        if not isinstance(server_payload, dict):
+                            self.error(
+                                obj.relpath,
+                                f"GTM Wide IP `{obj.data.get('name')}` inline pool `{pool.get('name')}` member {member_index} must define mapping `server` when `server_mode` is `inline`",
+                            )
+                            continue
+                        self.require_fields(server_payload, ["name"], obj.relpath, f"GTM inline server for Wide IP `{obj.data.get('name')}` member {member_index}")
+                        datacenter_mode = server_payload.get("datacenter_mode")
+                        if datacenter_mode not in {"inline", "reference"}:
+                            self.error(
+                                obj.relpath,
+                                f"GTM Wide IP `{obj.data.get('name')}` inline server `{server_payload.get('name')}` must define `datacenter_mode: inline` or `datacenter_mode: reference`",
+                            )
+                            continue
+                        if datacenter_mode == "reference":
+                            if server_payload.get("datacenter_ref") in (None, ""):
+                                self.error(
+                                    obj.relpath,
+                                    f"GTM inline server `{server_payload.get('name')}` must define `datacenter_ref` when `datacenter_mode` is `reference`",
+                                )
+                            if server_payload.get("datacenter") is not None:
+                                self.error(
+                                    obj.relpath,
+                                    f"GTM inline server `{server_payload.get('name')}` cannot define inline `datacenter` when `datacenter_mode` is `reference`",
+                                )
+                            continue
+                        datacenter_payload = server_payload.get("datacenter")
+                        if not isinstance(datacenter_payload, dict):
+                            self.error(
+                                obj.relpath,
+                                f"GTM inline server `{server_payload.get('name')}` must define mapping `datacenter` when `datacenter_mode` is `inline`",
+                            )
+                            continue
+                        self.require_fields(
+                            datacenter_payload,
+                            ["name"],
+                            obj.relpath,
+                            f"GTM inline datacenter for server `{server_payload.get('name')}`",
                         )
-                    self.validate_gtm_pool_members(
-                        source=obj.relpath,
-                        pool_name=normalized_pool.get("name"),
-                        pool_partition=pool_partition,
-                        members=normalized_pool.get("members"),
-                        active_server_names=active_server_names,
-                        active_monitor_names=active_monitor_names,
-                        active_ltm_virtual_servers=active_ltm_virtual_servers,
-                    )
                     continue
 
                 unsupported = sorted(set(pool) - {"name", "ratio"})
                 if unsupported:
                     self.error(obj.relpath, f"GTM Wide IP `{obj.data.get('name')}` pool reference `{pool.get('name')}` contains unsupported keys: {', '.join(unsupported)}")
-                pool_ref = self.fq_gtm_pool_name(pool_partition, record_type, str(pool["name"]))
-                if pool_ref not in active_pool_names:
-                    self.error(obj.relpath, f"GTM Wide IP `{obj.data.get('name')}` references undefined pool `{pool_ref}`")
+
+            settings_payload = self.load_settings_hierarchy_payload(obj.source_file, VARS_DIR / "gtm" / "intents")
+            compiled_service = compile_gtm_wide_ip_intent(
+                obj.data,
+                settings_payload.get("gtm_pool_defaults", {}),
+                settings_payload.get("gtm_member_defaults", {}),
+                settings_payload.get("gtm_monitor_sets", {}),
+                active_ltm_virtual_servers,
+            )
+            compiled_gtm_wide_ips.append((obj, compiled_service.get("wide_ip", {})))
+            for datacenter in compiled_service.get("datacenters", []) or []:
+                compiled_gtm_datacenters.append((obj, datacenter))
+            for server in compiled_service.get("servers", []) or []:
+                compiled_gtm_servers.append((obj, server))
+            for normalized_pool in compiled_service.get("pools", []) or []:
+                compiled_gtm_pools.append((obj, normalized_pool))
 
         self.check_duplicates(
             wide_ips,
             lambda obj: ("gtm_wide_ip", obj.partition, obj.data.get("name"), obj.data.get("record_type", "a")),
             "GTM Wide IP",
         )
+
+        compiled_datacenter_names = set()
+        for source_obj, datacenter in compiled_gtm_datacenters:
+            datacenter_name = datacenter.get("name")
+            if datacenter_name in (None, ""):
+                self.error(source_obj.relpath, f"GTM Wide IP `{source_obj.data.get('name')}` compiled an unnamed datacenter")
+                continue
+            datacenter_partition = str(datacenter.get("partition", source_obj.partition))
+            fq_datacenter_name = self.fq_name(datacenter_partition, str(datacenter_name))
+            if fq_datacenter_name in canonical_datacenter_names:
+                self.error(source_obj.relpath, f"GTM Wide IP `{source_obj.data.get('name')}` compiles datacenter `{fq_datacenter_name}` that already exists in canonical `gtm_datacenters` trees")
+                continue
+            if fq_datacenter_name in compiled_datacenter_names:
+                self.error(source_obj.relpath, f"GTM Wide IP `{source_obj.data.get('name')}` compiles duplicate datacenter `{fq_datacenter_name}`")
+                continue
+            compiled_datacenter_names.add(fq_datacenter_name)
+            if datacenter.get("state") == "absent":
+                continue
+            if fq_datacenter_name in active_datacenter_names:
+                self.error(source_obj.relpath, f"GTM Wide IP `{source_obj.data.get('name')}` compiles duplicate datacenter `{fq_datacenter_name}`")
+                continue
+            active_datacenter_names.add(fq_datacenter_name)
+
+        compiled_server_names = set()
+        for source_obj, server in compiled_gtm_servers:
+            server_name = server.get("name")
+            if server_name in (None, ""):
+                self.error(source_obj.relpath, f"GTM Wide IP `{source_obj.data.get('name')}` compiled an unnamed server")
+                continue
+            server_partition = str(server.get("partition", source_obj.partition))
+            fq_server_name = self.fq_name(server_partition, str(server_name))
+            if fq_server_name in canonical_server_names:
+                self.error(source_obj.relpath, f"GTM Wide IP `{source_obj.data.get('name')}` compiles server `{fq_server_name}` that already exists in canonical `gtm_servers` trees")
+                continue
+            if fq_server_name in compiled_server_names:
+                self.error(source_obj.relpath, f"GTM Wide IP `{source_obj.data.get('name')}` compiles duplicate server `{fq_server_name}`")
+                continue
+            compiled_server_names.add(fq_server_name)
+            if server.get("state") != "absent":
+                self.require_fields(server, ["datacenter"], source_obj.relpath, f"GTM inline server `{server_name}`")
+                fq_datacenter = self.fq_name(server_partition, str(server.get("datacenter")))
+                if fq_datacenter not in active_datacenter_names:
+                    self.error(source_obj.relpath, f"GTM inline server `{server_name}` references undefined datacenter `{fq_datacenter}`")
+                if not server.get("address") and not server.get("devices"):
+                    self.error(source_obj.relpath, f"GTM inline server `{server_name}` must define `address` or `devices`")
+                if fq_server_name in active_server_names:
+                    self.error(source_obj.relpath, f"GTM Wide IP `{source_obj.data.get('name')}` compiles duplicate server `{fq_server_name}`")
+                    continue
+                active_server_names.add(fq_server_name)
+
+        compiled_pool_names = set()
+        for source_obj, normalized_pool in compiled_gtm_pools:
+            pool_name = normalized_pool.get("name")
+            if pool_name in (None, ""):
+                self.error(source_obj.relpath, f"GTM Wide IP `{source_obj.data.get('name')}` compiled an unnamed pool")
+                continue
+            pool_partition = str(normalized_pool.get("partition", source_obj.partition))
+            record_type = str(normalized_pool.get("record_type", "a"))
+            fq_pool_name = self.fq_gtm_pool_name(pool_partition, record_type, str(pool_name))
+            if fq_pool_name in canonical_pool_names:
+                self.error(source_obj.relpath, f"GTM Wide IP `{source_obj.data.get('name')}` compiles pool `{fq_pool_name}` that already exists in canonical `gtm_pools` trees")
+                continue
+            if fq_pool_name in compiled_pool_names:
+                self.error(source_obj.relpath, f"GTM Wide IP `{source_obj.data.get('name')}` compiles duplicate pool `{fq_pool_name}`")
+                continue
+            compiled_pool_names.add(fq_pool_name)
+            if normalized_pool.get("state") == "absent":
+                continue
+            if fq_pool_name in active_pool_names:
+                self.error(source_obj.relpath, f"GTM Wide IP `{source_obj.data.get('name')}` compiles duplicate pool `{fq_pool_name}`")
+                continue
+            active_pool_names.add(fq_pool_name)
+
+            for monitor in normalized_pool.get("monitors", normalized_pool.get("default_monitors", [])) or []:
+                self.validate_monitor_reference(
+                    source=source_obj.relpath,
+                    reference=monitor,
+                    known_monitors=active_monitor_names,
+                    kind="GTM pool monitor",
+                )
+
+            self.validate_gtm_pool_members(
+                source=source_obj.relpath,
+                pool_name=normalized_pool.get("name"),
+                pool_partition=pool_partition,
+                members=normalized_pool.get("members"),
+                active_server_names=active_server_names,
+                active_monitor_names=active_monitor_names,
+                active_ltm_virtual_servers=active_ltm_virtual_servers,
+            )
+
+        for source_obj, compiled_wide_ip in compiled_gtm_wide_ips:
+            if compiled_wide_ip.get("state") == "absent":
+                continue
+            record_type = str(compiled_wide_ip.get("record_type", "a"))
+            for pool in compiled_wide_ip.get("pools", []) or []:
+                if not isinstance(pool, dict) or pool.get("name") in (None, ""):
+                    continue
+                pool_partition = str(pool.get("partition", source_obj.partition))
+                pool_ref = self.fq_gtm_pool_name(pool_partition, record_type, str(pool["name"]))
+                if pool_ref not in active_pool_names:
+                    self.error(source_obj.relpath, f"GTM Wide IP `{compiled_wide_ip.get('name')}` references undefined pool `{pool_ref}`")
 
         active_region_names = set()
         for obj in topology_regions:

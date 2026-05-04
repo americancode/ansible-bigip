@@ -1,6 +1,7 @@
 - name: Initialize compiled LTM RKE2 server intent objects
   ansible.builtin.set_fact:
-    # The compiler emits canonical pools and virtual servers into separate present/delete buckets.
+    # The compiler always emits canonical virtual servers.
+    # It emits canonical pools only for services that choose `pool_mode: inline`.
     ltm_compiled_rke2_virtual_servers_delete: []
     ltm_compiled_rke2_pools_delete: []
     ltm_compiled_rke2_virtual_servers_present: []

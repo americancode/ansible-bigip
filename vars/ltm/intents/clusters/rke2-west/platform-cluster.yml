@@ -1,4 +1,12 @@
 ---
+# Dedicated RKE2 cluster intent example for the west region.
+# This file mirrors the east cluster intent and emits canonical `ltm_virtual_servers`
+# and `ltm_pools` objects that GTM app intents can reference by virtual server name.
+# Supported fields:
+# - intent: `name`, `partition`, service-level virtual server fields
+# - service: `name`, `vip`, `port`, `pool_mode`, optional VS fields such as `description`
+# - pool ownership: `pool_mode: inline` + `pool`, or `pool_mode: reference` + `pool_ref`
+# - inline pool fields: `name`, `monitors`, `members`
 ltm_rke2_server_intents:
   - name: "rke2_west"
     services:
@@ -6,6 +14,7 @@ ltm_rke2_server_intents:
         vip: "10.202.0.20"
         port: 6443
         description: "West region RKE2 Kubernetes API VIP"
+        pool_mode: "inline"
         pool:
           name: "pool_rke2_west_kubeapi_6443"
           monitors:
@@ -22,6 +31,7 @@ ltm_rke2_server_intents:
         vip: "10.202.0.20"
         port: 9345
         description: "West region RKE2 supervisor registration VIP"
+        pool_mode: "inline"
         pool:
           name: "pool_rke2_west_registration_9345"
           monitors:
@@ -38,6 +48,7 @@ ltm_rke2_server_intents:
         vip: "10.202.0.30"
         port: 443
         description: "West region Traefik ingress VIP"
+        pool_mode: "inline"
         pool:
           name: "pool_rke2_west_traefik_443"
           monitors:
@@ -54,6 +65,7 @@ ltm_rke2_server_intents:
         vip: "10.202.0.31"
         port: 443
         description: "West region Rancher management VIP"
+        pool_mode: "inline"
         pool:
           name: "pool_rke2_west_rancher_443"
           monitors:

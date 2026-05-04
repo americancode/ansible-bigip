@@ -20,6 +20,14 @@ Example walkthroughs live in [example-models.md](example-models.md):
 
 These concise paths now compile into canonical pools and pool references during `prep.yml`, so runtime `apply.yml` and `delete.yml` operate on normalized first-class objects rather than mixed inline shortcut shapes.
 
+Ownership is now explicit in the intent-like concise models:
+
+- LTM RKE2 services choose `pool_mode: inline` or `pool_mode: reference`
+- GTM inline pool members choose `server_mode: inline` or `server_mode: reference`
+- inline GTM servers choose `datacenter_mode: inline` or `datacenter_mode: reference`
+
+The repo does not dedupe compiled objects against canonical trees at runtime. If an inline-owned object name collides with a canonical object tree, validation fails before playbook execution.
+
 For known platform patterns that need more structure than a single inline pool, prefer a dedicated intent tree instead of stretching the embedded model further. The first implemented example is the RKE2 cluster intent under `vars/ltm/intents/clusters/`, with shared category defaults in `vars/ltm/intents/clusters/settings.yml`.
 
 ## First-Class Model (Verbose)

@@ -23,10 +23,14 @@ Use a dedicated intent tree when a known platform pattern should emit several re
   - `vars/ltm/intents/clusters/rke2-east/platform-cluster.yml`
   - `vars/ltm/intents/clusters/rke2-west/platform-cluster.yml`
 - Shared category defaults: `vars/ltm/intents/clusters/settings.yml`
-- Pattern: one `ltm_rke2_server_intents[*]` object compiles into four canonical virtual servers and four canonical pools
+- Pattern: one `ltm_rke2_server_intents[*]` object compiles into canonical virtual servers plus any inline-owned canonical pools
 - Compiler behavior: `ltm/prep.yml` compiles the intent into canonical `ltm_virtual_servers` and `ltm_pools` before runtime apply/delete
 - Category behavior: these files live under `intents/clusters/` because they represent an opinionated cluster bundle, not a generic app-local shortcut
 - Delete behavior: entries under `vars/ltm/deletions/intents/clusters/...` still compile into absent canonical pools and virtual servers
+- Ownership behavior:
+  - `services[*].pool_mode: inline` means the intent owns and emits the canonical pool from `services[*].pool`
+  - `services[*].pool_mode: reference` means the service points at an existing canonical pool via `services[*].pool_ref`
+  - validation fails if an inline-emitted pool or virtual server collides with canonical `ltm_pools` or `ltm_virtual_servers`
 - Linkage behavior:
   - each service under `services[*]` directly declares virtual-server fields (`name`, `vip`, `port`, etc.) and nests one `pool` object
   - `services[*].name` is the canonical virtual server object name GTM and other consumers reference
@@ -58,6 +62,11 @@ Use the app-local GTM model when a Wide IP and its pools should be reviewed toge
 - Pattern: `gtm_wide_ips[*].pools[*]` embeds full GTM pool definitions under a Wide IP
 - Compiler behavior: `gtm/prep.yml` compiles the embedded pools into canonical GTM pool objects and rewrites the Wide IP to carry only pool references before runtime apply/delete
 - Monitor linkage: aliases such as `platform_https` expand from `vars/gtm/intents/applications/global-platform/settings.yml`
+- Ownership behavior:
+  - `members[*].server_mode: reference` points at canonical `gtm_servers`
+  - `members[*].server_mode: inline` emits canonical `gtm_servers`
+  - inline-owned servers choose `datacenter_mode: reference` or `datacenter_mode: inline`
+  - validation fails if inline-emitted GTM pools, servers, or datacenters collide with canonical trees
 
 ## Verbose GTM Model
 

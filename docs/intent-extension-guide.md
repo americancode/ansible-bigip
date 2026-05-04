@@ -180,6 +180,7 @@ Good compiler responsibilities:
 - validate the minimum shape needed for compilation
 - generate deterministic canonical object names
 - rewrite shorthand references into canonical object references
+- make ownership mode explicit when the intent can either emit an object or reuse a canonical one
 - attach source-trace metadata like `__source_file` where useful
 - preserve deletion behavior by emitting canonical objects with `state: absent`
 
@@ -225,6 +226,8 @@ Typical pattern:
 3. build intent into canonical objects
 4. rebuild any lookup structures that need the compiled objects
 5. publish final `*_present` and `*_delete` runtime collections
+
+Do not solve intent-vs-canonical collisions by deduping those final collections. If the same canonical identity can come from two sources, add explicit ownership fields in the intent schema and fail the collision in `tools/validate-vars.py`.
 
 The repo filename convention is `build-*.yml` even when the step is conceptually “compiling” intent into canonical objects.
 

@@ -150,6 +150,13 @@ gtm_pools:
 
 The `server` field references a GTM server in `vars/gtm/servers/`. The `virtual_server` field references a repo-known LTM virtual server in `vars/ltm/virtual_servers/`.
 
+When the pool is authored inline under a Wide IP intent, member ownership is explicit:
+
+- `server_mode: reference` reuses a canonical GTM server object
+- `server_mode: inline` emits a canonical GTM server from the intent
+- inline-owned servers choose `datacenter_mode: reference` or `datacenter_mode: inline`
+- validation fails if inline-emitted servers or datacenters collide with canonical GTM trees
+
 ### LTM Virtual Resolution
 
 When `address` and `port` are omitted, `gtm.yml` resolves them from the referenced LTM virtual server:
@@ -206,6 +213,17 @@ gtm_servers:
   - name: "bigip-east"
     datacenter: "us-east"
     address: "10.201.0.1"
+```
+
+The same canonical server object can be emitted from a GTM Wide IP intent when an inline member uses:
+
+```yaml
+server_mode: "inline"
+server:
+  name: "bigip-east"
+  address: "10.201.0.1"
+  datacenter_mode: "reference"
+  datacenter_ref: "us-east"
 ```
 
 ### Static Servers

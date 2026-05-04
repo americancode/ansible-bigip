@@ -9,7 +9,8 @@
 # - `gtm_canonical_datacenters_present` / `gtm_canonical_datacenters_delete`
 # - `gtm_canonical_pools_present` / `gtm_canonical_pools_delete`
 # `repo_ltm_virtual_servers_present` can include first-class LTM virtual-server vars plus compiled output from dedicated LTM intents such as RKE2 clusters.
-# The canonical GTM pool sets include both first-class pool vars and compiler output from Wide IP shortcut intents.
+# The canonical GTM pool/datacenter/server sets can include both first-class vars and compiler output
+# from Wide IP shortcut intents when those intents choose inline ownership.
 # Intent compiler snippets live under `prep/intents/<category>/...`; current categories include
 # `inline/` for embedded shortcut models and `clusters/` for repo-known RKE2-derived LTM virtuals.
 

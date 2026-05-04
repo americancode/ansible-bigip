@@ -131,6 +131,8 @@ Required behaviors:
 - generated objects must still be traceable back to the source intent file
 - docs and examples must show which canonical objects are emitted
 - settings precedence must remain explicit
+- ownership must be explicit when an intent can either emit an object or reuse a canonical one
+- validation must reject inline-vs-canonical name collisions instead of silently deduping them
 
 If a team needs strict control of object names, monitors, profiles, or reuse boundaries, they should keep using the canonical object trees directly.
 
@@ -143,6 +145,11 @@ Validation should eventually cover both layers:
 - validate cross-object references after compilation
 
 The important rule is that a convenience model must compile into canonical objects that would also pass validation if authored directly.
+
+That also means object ownership must stay unambiguous:
+
+- if an intent emits a pool, server, or datacenter inline, that object identity cannot also be declared in a canonical var tree
+- if an intent wants to reuse a canonical object, the schema should expose a reference mode explicitly instead of relying on prep-time merge behavior
 
 ## Drift And Import Expectations
 
@@ -164,6 +171,12 @@ The current concise LTM and GTM patterns are transitional and should be treated 
 - GTM pool member address/port derivation from repo-known LTM virtual servers
 
 The roadmap direction is to refactor those patterns into the new intent/compiler design rather than extending them in-place inside runtime logic.
+
+Where those shortcut paths can either create support objects or reuse canonical ones, the ownership choice should be visible in the YAML itself:
+
+- LTM service intents use `pool_mode`
+- GTM inline pool members use `server_mode`
+- inline GTM servers use `datacenter_mode`
 
 ## First Refactor Targets
 
@@ -192,6 +205,12 @@ That intent exists because the cluster pattern is more opinionated than the gene
 - those worker-service pools always target worker nodes on configurable NodePorts in the `30xxx` range
 
 The runtime playbook still does not know anything special about RKE2. The compiler in `filter_plugins/bigip_var_filters.py` expands the intent into canonical `ltm_virtual_servers` and `ltm_pools` before `tasks/apply.yml` runs.
+
+That intent also demonstrates the current ownership contract:
+
+- every service always emits its canonical virtual server
+- each service explicitly chooses `pool_mode: inline` or `pool_mode: reference`
+- validation fails if an inline-emitted pool collides with canonical `ltm_pools`
 
 Delete support is still preserved. Deletion entries under `vars/ltm/deletions/intents/clusters/...` compile into absent canonical virtual servers and pools before `tasks/delete.yml` runs.
 
