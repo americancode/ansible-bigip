@@ -1,0 +1,48 @@
+---
+# HA audit mode.
+# Prints the final HA delete/apply runtime collections, including config-sync
+# action objects, without touching the device.
+
+- name: Announce HA audit mode
+  ansible.builtin.debug:
+    msg:
+      - "AUDIT MODE ha for {{ inventory_hostname }} -> {{ provider.server }}"
+      - "No BIG-IP changes will be made."
+
+- name: Print HA delete collections
+  ansible.builtin.include_tasks: "{{ playbook_dir }}/shared/tasks/audit-collection.yml"
+  vars:
+    audit_phase: "DELETE"
+    audit_collection_name: "{{ item.name }}"
+    audit_collection_items: "{{ item.items }}"
+  loop:
+    - { name: "ha_device_group_members_delete", items: "{{ ha_device_group_members_delete | default([]) }}" }
+    - { name: "ha_device_groups_delete", items: "{{ ha_device_groups_delete | default([]) }}" }
+    - { name: "ha_traffic_groups_delete", items: "{{ ha_traffic_groups_delete | default([]) }}" }
+    - { name: "ha_groups_delete", items: "{{ ha_groups_delete | default([]) }}" }
+    - { name: "ha_device_trusts_delete", items: "{{ ha_device_trusts_delete | default([]) }}" }
+  loop_control:
+    label: "{{ item.name }}"
+
+- name: Print HA apply collections
+  ansible.builtin.include_tasks: "{{ playbook_dir }}/shared/tasks/audit-collection.yml"
+  vars:
+    audit_phase: "APPLY"
+    audit_collection_name: "{{ item.name }}"
+    audit_collection_items: "{{ item.items }}"
+  loop:
+    - { name: "ha_device_connectivity_present", items: "{{ ha_device_connectivity_present | default([]) }}" }
+    - { name: "ha_device_trusts_present", items: "{{ ha_device_trusts_present | default([]) }}" }
+    - { name: "ha_device_groups_present", items: "{{ ha_device_groups_present | default([]) }}" }
+    - { name: "ha_device_group_members_present", items: "{{ ha_device_group_members_present | default([]) }}" }
+    - { name: "ha_groups_present", items: "{{ ha_groups_present | default([]) }}" }
+    - { name: "ha_traffic_groups_present", items: "{{ ha_traffic_groups_present | default([]) }}" }
+    - { name: "ha_configsync_actions", items: "{{ ha_configsync_actions | default([]) }}" }
+  loop_control:
+    label: "{{ item.name }}"
+
+- name: Explain HA audit config save behavior
+  ansible.builtin.debug:
+    msg:
+      - "HA audit lists config-sync actions but does not execute them."
+      - "Runtime would also save BIG-IP configuration after HA changes."

@@ -1,0 +1,51 @@
+---
+# System audit mode.
+# Prints the final delete/apply runtime collections after selector filtering.
+
+- name: Announce system audit mode
+  ansible.builtin.debug:
+    msg:
+      - "AUDIT MODE system for {{ inventory_hostname }} -> {{ provider.server }}"
+      - "No BIG-IP changes will be made."
+
+- name: Print system delete collections
+  ansible.builtin.include_tasks: "{{ playbook_dir }}/shared/tasks/audit-collection.yml"
+  vars:
+    audit_phase: "DELETE"
+    audit_collection_name: "{{ item.name }}"
+    audit_collection_items: "{{ item.items }}"
+  loop:
+    - { name: "system_dns_delete", items: "{{ system_dns_delete | default([]) }}" }
+    - { name: "system_ntp_delete", items: "{{ system_ntp_delete | default([]) }}" }
+    - { name: "system_provisioning_delete", items: "{{ system_provisioning_delete | default([]) }}" }
+    - { name: "system_users_delete", items: "{{ system_users_delete | default([]) }}" }
+    - { name: "system_partitions_delete", items: "{{ system_partitions_delete | default([]) }}" }
+    - { name: "system_auth_radius_delete", items: "{{ system_auth_radius_delete | default([]) }}" }
+    - { name: "system_auth_radius_servers_delete", items: "{{ system_auth_radius_servers_delete | default([]) }}" }
+    - { name: "system_auth_tacacs_delete", items: "{{ system_auth_tacacs_delete | default([]) }}" }
+    - { name: "system_auth_ldap_delete", items: "{{ system_auth_ldap_delete | default([]) }}" }
+    - { name: "system_login_banner_delete", items: "{{ system_login_banner_delete | default([]) }}" }
+  loop_control:
+    label: "{{ item.name }}"
+
+- name: Print system apply collections
+  ansible.builtin.include_tasks: "{{ playbook_dir }}/shared/tasks/audit-collection.yml"
+  vars:
+    audit_phase: "APPLY"
+    audit_collection_name: "{{ item.name }}"
+    audit_collection_items: "{{ item.items }}"
+  loop:
+    - { name: "system_hostnames_targeted", items: "{{ system_hostnames_targeted | default([]) }}" }
+    - { name: "system_dns_present", items: "{{ system_dns_present | default([]) }}" }
+    - { name: "system_ntp_present", items: "{{ system_ntp_present | default([]) }}" }
+    - { name: "system_provisioning_present", items: "{{ system_provisioning_present | default([]) }}" }
+    - { name: "system_partitions_present", items: "{{ system_partitions_present | default([]) }}" }
+    - { name: "system_users_present", items: "{{ system_users_present | default([]) }}" }
+    - { name: "system_auth_ldap_present", items: "{{ system_auth_ldap_present | default([]) }}" }
+    - { name: "system_auth_tacacs_present", items: "{{ system_auth_tacacs_present | default([]) }}" }
+    - { name: "system_auth_radius_servers_present", items: "{{ system_auth_radius_servers_present | default([]) }}" }
+    - { name: "system_auth_radius_present", items: "{{ system_auth_radius_present | default([]) }}" }
+    - { name: "system_login_banner_present", items: "{{ system_login_banner_present | default([]) }}" }
+    - { name: "system_config_targeted", items: "{{ system_config_targeted | default([]) }}" }
+  loop_control:
+    label: "{{ item.name }}"

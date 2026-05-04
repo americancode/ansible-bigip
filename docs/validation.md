@@ -11,6 +11,24 @@ This runs:
 - `python3 tools/validate-vars.py` — YAML/schema/reference validation and duplicate detection
 - `ansible-playbook --syntax-check` — syntax check for all canonical playbooks under `playbooks/`
 
+## Audit Mode
+
+For an execution preview without device changes, run a canonical playbook with `audit_mode=true`.
+
+Example:
+
+```sh
+ansible-playbook -i inventory/bootstrap.ini playbooks/system.yml --limit bigip-east-sync-owner -e audit_mode=true
+```
+
+Audit mode:
+
+- runs normal prep, intent building, selector filtering, and present/delete classification
+- prints the final runtime collections in delete/apply order
+- does not execute BIG-IP modules
+
+Audit mode is not a replacement for validation. Validation answers "is the repo model coherent?" while audit mode answers "what would this playbook try to touch for this target?"
+
 ## What the Validator Checks
 
 - YAML parse for all var files

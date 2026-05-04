@@ -25,6 +25,7 @@ Canonical playbooks use a consistent split so the entrypoint stays small and the
 - `playbooks/<domain>/tasks/manage.yml` orchestrates task execution order
 - `playbooks/<domain>/tasks/delete.yml` contains destructive tasks
 - `playbooks/<domain>/tasks/apply.yml` contains present-state create/update tasks
+- `playbooks/<domain>/tasks/audit.yml` may provide an execution preview that prints the final runtime collections without touching the device
 
 This pattern is the default for `bootstrap`, `network`, `system`, `ha`, `tls`, `ltm`, `gtm`, and `security`. `bootstrap` is the explicit exception where `tasks/delete.yml` is intentionally empty because the domain is apply-only. If a future playbook stays small enough that splitting it adds no value, document that choice in [ROADMAP.md](../ROADMAP.md) before keeping it monolithic.
 

@@ -1,0 +1,46 @@
+---
+# Network audit mode.
+# Prints the final delete/apply runtime collections in the same order used by
+# the canonical network tasks.
+
+- name: Announce network audit mode
+  ansible.builtin.debug:
+    msg:
+      - "AUDIT MODE network for {{ inventory_hostname }} -> {{ provider.server }}"
+      - "No BIG-IP changes will be made."
+
+- name: Print network delete collections
+  ansible.builtin.include_tasks: "{{ playbook_dir }}/shared/tasks/audit-collection.yml"
+  vars:
+    audit_phase: "DELETE"
+    audit_collection_name: "{{ item.name }}"
+    audit_collection_items: "{{ item.items }}"
+  loop:
+    - { name: "bigip_nats_delete", items: "{{ bigip_nats_delete | default([]) }}" }
+    - { name: "bigip_static_routes_delete", items: "{{ bigip_static_routes_delete | default([]) }}" }
+    - { name: "bigip_snat_pools_delete", items: "{{ bigip_snat_pools_delete | default([]) }}" }
+    - { name: "bigip_snat_translations_delete", items: "{{ bigip_snat_translations_delete | default([]) }}" }
+    - { name: "bigip_self_ips_delete", items: "{{ bigip_self_ips_delete | default([]) }}" }
+    - { name: "bigip_route_domains_delete", items: "{{ bigip_route_domains_delete | default([]) }}" }
+    - { name: "bigip_vlans_delete", items: "{{ bigip_vlans_delete | default([]) }}" }
+    - { name: "bigip_trunks_delete", items: "{{ bigip_trunks_delete | default([]) }}" }
+  loop_control:
+    label: "{{ item.name }}"
+
+- name: Print network apply collections
+  ansible.builtin.include_tasks: "{{ playbook_dir }}/shared/tasks/audit-collection.yml"
+  vars:
+    audit_phase: "APPLY"
+    audit_collection_name: "{{ item.name }}"
+    audit_collection_items: "{{ item.items }}"
+  loop:
+    - { name: "bigip_vlans_present", items: "{{ bigip_vlans_present | default([]) }}" }
+    - { name: "bigip_trunks_present", items: "{{ bigip_trunks_present | default([]) }}" }
+    - { name: "bigip_route_domains_present", items: "{{ bigip_route_domains_present | default([]) }}" }
+    - { name: "bigip_self_ips_present", items: "{{ bigip_self_ips_present | default([]) }}" }
+    - { name: "bigip_snat_translations_present", items: "{{ bigip_snat_translations_present | default([]) }}" }
+    - { name: "bigip_snat_pools_present", items: "{{ bigip_snat_pools_present | default([]) }}" }
+    - { name: "bigip_static_routes_present", items: "{{ bigip_static_routes_present | default([]) }}" }
+    - { name: "bigip_nats_present", items: "{{ bigip_nats_present | default([]) }}" }
+  loop_control:
+    label: "{{ item.name }}"

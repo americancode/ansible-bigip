@@ -1,0 +1,28 @@
+---
+# Bootstrap audit mode.
+# Prints the final bootstrap runtime collections that would be applied without
+# making device changes.
+
+- name: Announce bootstrap audit mode
+  ansible.builtin.debug:
+    msg:
+      - "AUDIT MODE bootstrap for {{ inventory_hostname }} -> {{ provider.server }}"
+      - "No BIG-IP changes will be made."
+
+- name: Print bootstrap apply collections
+  ansible.builtin.include_tasks: "{{ playbook_dir }}/shared/tasks/audit-collection.yml"
+  vars:
+    audit_phase: "APPLY"
+    audit_collection_name: "{{ item.name }}"
+    audit_collection_items: "{{ item.items }}"
+  loop:
+    - { name: "bootstrap_licenses_present", items: "{{ bootstrap_licenses_present | default([]) }}" }
+    - { name: "bootstrap_management_present", items: "{{ bootstrap_management_present | default([]) }}" }
+  loop_control:
+    label: "{{ item.name }}"
+
+- name: Explain bootstrap audit save behavior
+  ansible.builtin.debug:
+    msg:
+      - "Bootstrap audit does not probe live change state."
+      - "If license or management updates would change the device, bootstrap runtime would also persist config during execution."

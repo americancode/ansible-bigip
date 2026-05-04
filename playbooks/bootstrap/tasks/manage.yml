@@ -1,2 +1,7 @@
+- name: Audit planned bootstrap objects
+  ansible.builtin.import_tasks: audit.yml
+  when: audit_mode | default(false)
+
 - name: Apply desired bootstrap objects
   ansible.builtin.import_tasks: apply.yml
+  when: not (audit_mode | default(false))

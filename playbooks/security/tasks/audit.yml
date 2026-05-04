@@ -1,0 +1,65 @@
+---
+# Security audit mode.
+# Prints the final security-domain collections in delete/apply order without
+# executing AFM, WAF, or APM modules.
+
+- name: Announce security audit mode
+  ansible.builtin.debug:
+    msg:
+      - "AUDIT MODE security for {{ inventory_hostname }} -> {{ provider.server }}"
+      - "No BIG-IP changes will be made."
+
+- name: Print security delete collections
+  ansible.builtin.include_tasks: "{{ playbook_dir }}/shared/tasks/audit-collection.yml"
+  vars:
+    audit_phase: "DELETE"
+    audit_collection_name: "{{ item.name }}"
+    audit_collection_items: "{{ item.items }}"
+  loop:
+    - { name: "afm_policies_delete", items: "{{ afm_policies_delete | default([]) }}" }
+    - { name: "afm_rules_delete", items: "{{ afm_rules_delete | default([]) }}" }
+    - { name: "afm_port_lists_delete", items: "{{ afm_port_lists_delete | default([]) }}" }
+    - { name: "afm_address_lists_delete", items: "{{ afm_address_lists_delete | default([]) }}" }
+    - { name: "waf_server_technologies_delete", items: "{{ waf_server_technologies_delete | default([]) }}" }
+    - { name: "waf_policies_delete", items: "{{ waf_policies_delete | default([]) }}" }
+    - { name: "apm_acls_delete", items: "{{ apm_acls_delete | default([]) }}" }
+    - { name: "apm_access_profiles_delete", items: "{{ apm_access_profiles_delete | default([]) }}" }
+    - { name: "apm_policy_nodes_delete", items: "{{ apm_policy_nodes_delete | default([]) }}" }
+    - { name: "apm_per_session_policies_delete", items: "{{ apm_per_session_policies_delete | default([]) }}" }
+    - { name: "apm_macros_delete", items: "{{ apm_macros_delete | default([]) }}" }
+    - { name: "apm_resources_delete", items: "{{ apm_resources_delete | default([]) }}" }
+    - { name: "apm_sso_configs_delete", items: "{{ apm_sso_configs_delete | default([]) }}" }
+    - { name: "apm_auth_servers_delete", items: "{{ apm_auth_servers_delete | default([]) }}" }
+  loop_control:
+    label: "{{ item.name }}"
+
+- name: Print security apply collections
+  ansible.builtin.include_tasks: "{{ playbook_dir }}/shared/tasks/audit-collection.yml"
+  vars:
+    audit_phase: "APPLY"
+    audit_collection_name: "{{ item.name }}"
+    audit_collection_items: "{{ item.items }}"
+  loop:
+    - { name: "afm_address_lists_present", items: "{{ afm_address_lists_present | default([]) }}" }
+    - { name: "afm_port_lists_present", items: "{{ afm_port_lists_present | default([]) }}" }
+    - { name: "afm_rules_present", items: "{{ afm_rules_present | default([]) }}" }
+    - { name: "afm_policies_present", items: "{{ afm_policies_present | default([]) }}" }
+    - { name: "waf_policies_present", items: "{{ waf_policies_present | default([]) }}" }
+    - { name: "waf_server_technologies_present", items: "{{ waf_server_technologies_present | default([]) }}" }
+    - { name: "apm_acls_present", items: "{{ apm_acls_present | default([]) }}" }
+    - { name: "apm_auth_servers_present", items: "{{ apm_auth_servers_present | default([]) }}" }
+    - { name: "apm_sso_configs_present", items: "{{ apm_sso_configs_present | default([]) }}" }
+    - { name: "apm_resources_present", items: "{{ apm_resources_present | default([]) }}" }
+    - { name: "apm_access_profiles_present", items: "{{ apm_access_profiles_present | default([]) }}" }
+    - { name: "apm_per_session_policies_present", items: "{{ apm_per_session_policies_present | default([]) }}" }
+    - { name: "apm_per_session_nodes_present", items: "{{ apm_per_session_nodes_present | default([]) }}" }
+    - { name: "apm_macros_present", items: "{{ apm_macros_present | default([]) }}" }
+    - { name: "apm_macro_nodes_present", items: "{{ apm_macro_nodes_present | default([]) }}" }
+    - { name: "apm_policy_nodes_present", items: "{{ apm_policy_nodes_present | default([]) }}" }
+  loop_control:
+    label: "{{ item.name }}"
+
+- name: Explain security audit config save behavior
+  ansible.builtin.debug:
+    msg:
+      - "Runtime would also save BIG-IP configuration after security-domain changes."

@@ -1,0 +1,43 @@
+---
+# TLS audit mode.
+# Prints the TLS delete/apply collections and explains the config-save step.
+
+- name: Announce TLS audit mode
+  ansible.builtin.debug:
+    msg:
+      - "AUDIT MODE tls for {{ inventory_hostname }} -> {{ provider.server }}"
+      - "No BIG-IP changes will be made."
+
+- name: Print TLS delete collections
+  ansible.builtin.include_tasks: "{{ playbook_dir }}/shared/tasks/audit-collection.yml"
+  vars:
+    audit_phase: "DELETE"
+    audit_collection_name: "{{ item.name }}"
+    audit_collection_items: "{{ item.items }}"
+  loop:
+    - { name: "tls_client_ssl_profiles_delete", items: "{{ tls_client_ssl_profiles_delete | default([]) }}" }
+    - { name: "tls_server_ssl_profiles_delete", items: "{{ tls_server_ssl_profiles_delete | default([]) }}" }
+    - { name: "tls_certificates_and_ca_bundles_delete", items: "{{ (tls_certificates_delete | default([])) + (tls_ca_bundles_delete | default([])) }}" }
+    - { name: "tls_keys_delete", items: "{{ tls_keys_delete | default([]) }}" }
+  loop_control:
+    label: "{{ item.name }}"
+
+- name: Print TLS apply collections
+  ansible.builtin.include_tasks: "{{ playbook_dir }}/shared/tasks/audit-collection.yml"
+  vars:
+    audit_phase: "APPLY"
+    audit_collection_name: "{{ item.name }}"
+    audit_collection_items: "{{ item.items }}"
+  loop:
+    - { name: "tls_keys_present", items: "{{ tls_keys_present | default([]) }}" }
+    - { name: "tls_certificates_present", items: "{{ tls_certificates_present | default([]) }}" }
+    - { name: "tls_ca_bundles_present", items: "{{ tls_ca_bundles_present | default([]) }}" }
+    - { name: "tls_client_ssl_profiles_present", items: "{{ tls_client_ssl_profiles_present | default([]) }}" }
+    - { name: "tls_server_ssl_profiles_present", items: "{{ tls_server_ssl_profiles_present | default([]) }}" }
+  loop_control:
+    label: "{{ item.name }}"
+
+- name: Explain TLS audit config save behavior
+  ansible.builtin.debug:
+    msg:
+      - "Runtime would also save BIG-IP configuration after TLS changes."

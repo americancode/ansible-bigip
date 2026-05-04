@@ -1,0 +1,49 @@
+---
+# GTM audit mode.
+# Prints the final canonical GTM collections after intent/build steps.
+
+- name: Announce GTM audit mode
+  ansible.builtin.debug:
+    msg:
+      - "AUDIT MODE gtm for {{ inventory_hostname }} -> {{ provider.server }}"
+      - "No BIG-IP changes will be made."
+
+- name: Print GTM delete collections
+  ansible.builtin.include_tasks: "{{ playbook_dir }}/shared/tasks/audit-collection.yml"
+  vars:
+    audit_phase: "DELETE"
+    audit_collection_name: "{{ item.name }}"
+    audit_collection_items: "{{ item.items }}"
+  loop:
+    - { name: "gtm_topology_records_delete", items: "{{ gtm_topology_records_delete | default([]) }}" }
+    - { name: "gtm_wide_ips_delete", items: "{{ gtm_wide_ips_delete | default([]) }}" }
+    - { name: "gtm_canonical_pools_delete", items: "{{ gtm_canonical_pools_delete | default([]) }}" }
+    - { name: "gtm_servers_delete", items: "{{ gtm_servers_delete | default([]) }}" }
+    - { name: "gtm_canonical_datacenters_delete", items: "{{ gtm_canonical_datacenters_delete | default([]) }}" }
+    - { name: "gtm_topology_regions_delete", items: "{{ gtm_topology_regions_delete | default([]) }}" }
+    - { name: "gtm_monitors_delete", items: "{{ gtm_monitors_delete | default([]) }}" }
+  loop_control:
+    label: "{{ item.name }}"
+
+- name: Print GTM apply collections
+  ansible.builtin.include_tasks: "{{ playbook_dir }}/shared/tasks/audit-collection.yml"
+  vars:
+    audit_phase: "APPLY"
+    audit_collection_name: "{{ item.name }}"
+    audit_collection_items: "{{ item.items }}"
+  loop:
+    - { name: "gtm_monitors_present", items: "{{ gtm_monitors_present | default([]) }}" }
+    - { name: "gtm_canonical_datacenters_present", items: "{{ gtm_canonical_datacenters_present | default([]) }}" }
+    - { name: "gtm_servers_present", items: "{{ gtm_servers_present | default([]) }}" }
+    - { name: "gtm_canonical_pools_present", items: "{{ gtm_canonical_pools_present | default([]) }}" }
+    - { name: "gtm_wide_ips_present", items: "{{ gtm_wide_ips_present | default([]) }}" }
+    - { name: "gtm_topology_regions_present", items: "{{ gtm_topology_regions_present | default([]) }}" }
+    - { name: "gtm_topology_records_present", items: "{{ gtm_topology_records_present | default([]) }}" }
+  loop_control:
+    label: "{{ item.name }}"
+
+- name: Explain GTM derived member behavior
+  ansible.builtin.debug:
+    msg:
+      - "GTM audit prints canonical pools and Wide IPs after intent/build steps."
+      - "Derived manual GTM virtual-server member operations are represented by those canonical pool objects."

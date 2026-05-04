@@ -38,6 +38,7 @@ The repo also has first-class helper tooling:
 - `tools/validate-vars.py` for offline validation
 - `tools/drift-check.py` for live-vs-Git comparison
 - `tools/import-from-bigip.py` for brownfield import
+- audit mode in canonical playbooks for delete/apply execution preview without device changes
 - Python-backed prep/compiler helpers under `filter_plugins/bigip_filters/`, with `filter_plugins/bigip_var_filters.py` kept as the Ansible filter entrypoint
 - shared prep snippets under `playbooks/shared/prep/` for fragment discovery, settings-aware aggregation, and present/delete classification across the standard domains
 - recursive nested var-tree discovery and hierarchical multi-level `settings.yml` inheritance across canonical playbooks, including the older specialized LTM/GTM loaders
@@ -134,7 +135,6 @@ These are the highest-value open items.
 
 These are the concrete remaining backlog items.
 
-  - audit mode in playbooks
   - Validation should probably check and ensure are never deleting and re-creating objects in the same pass? (maybe we already have this)
   - What are the compatibility flags for?
   - Ordering of servers in LTM/GTM pools

@@ -1,39 +1,47 @@
+- name: Audit planned objects
+  ansible.builtin.import_tasks: audit.yml
+  when: audit_mode | default(false)
+
 - name: Delete security objects
   ansible.builtin.import_tasks: delete.yml
+  when: not (audit_mode | default(false))
 
 - name: Apply security objects
   ansible.builtin.import_tasks: apply.yml
+  when: not (audit_mode | default(false))
 
 - name: Save BIG-IP configuration
   bigip_config:
     provider: "{{ provider }}"
     save: true
-  when: >-
-    (afm_address_lists_present | default([]) | length > 0) or
-    (afm_port_lists_present | default([]) | length > 0) or
-    (afm_rules_present | default([]) | length > 0) or
-    (afm_policies_present | default([]) | length > 0) or
-    (waf_policies_present | default([]) | length > 0) or
-    (waf_server_technologies_present | default([]) | length > 0) or
-    (apm_acls_present | default([]) | length > 0) or
-    (apm_auth_servers_present | default([]) | length > 0) or
-    (apm_sso_configs_present | default([]) | length > 0) or
-    (apm_resources_present | default([]) | length > 0) or
-    (apm_policy_nodes_present | default([]) | length > 0) or
-    (apm_access_profiles_present | default([]) | length > 0) or
-    (apm_per_session_policies_present | default([]) | length > 0) or
-    (apm_macros_present | default([]) | length > 0) or
-    (afm_address_lists_delete | default([]) | length > 0) or
-    (afm_port_lists_delete | default([]) | length > 0) or
-    (afm_rules_delete | default([]) | length > 0) or
-    (afm_policies_delete | default([]) | length > 0) or
-    (waf_policies_delete | default([]) | length > 0) or
-    (waf_server_technologies_delete | default([]) | length > 0) or
-    (apm_acls_delete | default([]) | length > 0) or
-    (apm_auth_servers_delete | default([]) | length > 0) or
-    (apm_sso_configs_delete | default([]) | length > 0) or
-    (apm_resources_delete | default([]) | length > 0) or
-    (apm_policy_nodes_delete | default([]) | length > 0) or
-    (apm_access_profiles_delete | default([]) | length > 0) or
-    (apm_per_session_policies_delete | default([]) | length > 0) or
-    (apm_macros_delete | default([]) | length > 0)
+  when:
+    - not (audit_mode | default(false))
+    - >-
+      (afm_address_lists_present | default([]) | length > 0) or
+      (afm_port_lists_present | default([]) | length > 0) or
+      (afm_rules_present | default([]) | length > 0) or
+      (afm_policies_present | default([]) | length > 0) or
+      (waf_policies_present | default([]) | length > 0) or
+      (waf_server_technologies_present | default([]) | length > 0) or
+      (apm_acls_present | default([]) | length > 0) or
+      (apm_auth_servers_present | default([]) | length > 0) or
+      (apm_sso_configs_present | default([]) | length > 0) or
+      (apm_resources_present | default([]) | length > 0) or
+      (apm_policy_nodes_present | default([]) | length > 0) or
+      (apm_access_profiles_present | default([]) | length > 0) or
+      (apm_per_session_policies_present | default([]) | length > 0) or
+      (apm_macros_present | default([]) | length > 0) or
+      (afm_address_lists_delete | default([]) | length > 0) or
+      (afm_port_lists_delete | default([]) | length > 0) or
+      (afm_rules_delete | default([]) | length > 0) or
+      (afm_policies_delete | default([]) | length > 0) or
+      (waf_policies_delete | default([]) | length > 0) or
+      (waf_server_technologies_delete | default([]) | length > 0) or
+      (apm_acls_delete | default([]) | length > 0) or
+      (apm_auth_servers_delete | default([]) | length > 0) or
+      (apm_sso_configs_delete | default([]) | length > 0) or
+      (apm_resources_delete | default([]) | length > 0) or
+      (apm_policy_nodes_delete | default([]) | length > 0) or
+      (apm_access_profiles_delete | default([]) | length > 0) or
+      (apm_per_session_policies_delete | default([]) | length > 0) or
+      (apm_macros_delete | default([]) | length > 0)

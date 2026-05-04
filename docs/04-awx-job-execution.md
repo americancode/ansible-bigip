@@ -75,3 +75,13 @@ prod-bigip
 - do not rely on selectors as a substitute for bad inventory design
 
 Selectors are a safety valve for mixed-scope playbooks. AWX inventory and template boundaries are still the first line of control.
+
+## Recommended Preflight
+
+Before running a high-impact job template against production inventory, the safest preflight is:
+
+1. run `make validate`
+2. run the same playbook once with `audit_mode=true`
+3. confirm the printed delete/apply collections match the intended execution target
+
+Audit mode uses the same prep and classification flow as normal execution, but stops before any BIG-IP module runs.

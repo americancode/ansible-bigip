@@ -36,14 +36,43 @@ def _target_label(item):
     """
     if not isinstance(item, dict):
         return str(item)
-    for key in ("name", "hostname", "module"):
+    if isinstance(item.get("source"), str) and item.get("source") and isinstance(item.get("destination"), str) and item.get("destination"):
+        return f"{item['source']} -> {item['destination']}"
+    if isinstance(item.get("device_group"), str) and item.get("device_group") and isinstance(item.get("name"), str) and item.get("name"):
+        return f"{item['device_group']}/{item['name']}"
+    if isinstance(item.get("server"), str) and item.get("server") and isinstance(item.get("virtual_server"), str) and item.get("virtual_server"):
+        return f"{item['server']}/{item['virtual_server']}"
+    if isinstance(item.get("partition"), str) and item.get("partition") and isinstance(item.get("name"), str) and item.get("name"):
+        return f"{item['partition']}/{item['name']}"
+    for key in ("name", "hostname", "module", "address", "destination"):
         value = item.get(key)
-        if isinstance(value, str) and value:
-            return value
+        if value not in (None, ""):
+            return str(value)
+    if "save" in item:
+        return f"save={item.get('save', True)}"
     source_file = item.get("__source_file")
     if isinstance(source_file, str) and source_file:
         return source_file
     return "unnamed-object"
+
+
+def audit_object_label(item):
+    """Build a stable, operator-facing label for audit-mode output.
+
+    Purpose:
+        Reuses the same identity heuristics as prep-time targeting summaries so
+        audit mode can print concise object identities without leaking full raw
+        object payloads or secrets.
+
+    Inputs:
+        item (Any): A runtime object, scalar, or derived loop item.
+
+    Outputs:
+        str: A readable identity string for audit/debug output.
+    """
+    if isinstance(item, (list, tuple)):
+        return " | ".join(audit_object_label(part) for part in item)
+    return _target_label(item)
 
 
 def split_targeted_objects(objects, inventory_hostname, group_names=None, match_without_selectors=True):

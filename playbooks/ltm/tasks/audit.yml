@@ -1,0 +1,47 @@
+---
+# LTM audit mode.
+# Prints the canonical LTM runtime collections in delete/apply order.
+
+- name: Announce LTM audit mode
+  ansible.builtin.debug:
+    msg:
+      - "AUDIT MODE ltm for {{ inventory_hostname }} -> {{ provider.server }}"
+      - "No BIG-IP changes will be made."
+
+- name: Print LTM delete collections
+  ansible.builtin.include_tasks: "{{ playbook_dir }}/shared/tasks/audit-collection.yml"
+  vars:
+    audit_phase: "DELETE"
+    audit_collection_name: "{{ item.name }}"
+    audit_collection_items: "{{ item.items }}"
+  loop:
+    - { name: "ltm_virtual_servers_delete", items: "{{ ltm_virtual_servers_delete | default([]) }}" }
+    - { name: "ltm_profiles_delete", items: "{{ ltm_profiles_delete | default([]) }}" }
+    - { name: "ltm_canonical_pools_delete", items: "{{ ltm_canonical_pools_delete | default([]) }}" }
+    - { name: "ltm_nodes_delete", items: "{{ ltm_nodes_delete | default([]) }}" }
+    - { name: "ltm_monitors_delete", items: "{{ ltm_monitors_delete | default([]) }}" }
+    - { name: "ltm_policies_delete", items: "{{ ltm_policies_delete | default([]) }}" }
+    - { name: "ltm_irules_delete", items: "{{ ltm_irules_delete | default([]) }}" }
+    - { name: "ltm_persistence_profiles_delete", items: "{{ ltm_persistence_profiles_delete | default([]) }}" }
+    - { name: "ltm_data_groups_delete", items: "{{ ltm_data_groups_delete | default([]) }}" }
+  loop_control:
+    label: "{{ item.name }}"
+
+- name: Print LTM apply collections
+  ansible.builtin.include_tasks: "{{ playbook_dir }}/shared/tasks/audit-collection.yml"
+  vars:
+    audit_phase: "APPLY"
+    audit_collection_name: "{{ item.name }}"
+    audit_collection_items: "{{ item.items }}"
+  loop:
+    - { name: "ltm_monitors_present", items: "{{ ltm_monitors_present | default([]) }}" }
+    - { name: "ltm_nodes_present", items: "{{ ltm_nodes_present | default([]) }}" }
+    - { name: "ltm_profiles_present", items: "{{ ltm_profiles_present | default([]) }}" }
+    - { name: "ltm_canonical_pools_present", items: "{{ ltm_canonical_pools_present | default([]) }}" }
+    - { name: "ltm_virtual_servers_present", items: "{{ ltm_virtual_servers_present | default([]) }}" }
+    - { name: "ltm_data_groups_present", items: "{{ ltm_data_groups_present | default([]) }}" }
+    - { name: "ltm_irules_present", items: "{{ ltm_irules_present | default([]) }}" }
+    - { name: "ltm_persistence_profiles_present", items: "{{ ltm_persistence_profiles_present | default([]) }}" }
+    - { name: "ltm_policies_present", items: "{{ ltm_policies_present | default([]) }}" }
+  loop_control:
+    label: "{{ item.name }}"

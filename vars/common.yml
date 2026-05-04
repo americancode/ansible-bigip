@@ -10,3 +10,8 @@ provider:
   password: "{{ lookup('env', 'F5_PASSWORD') }}"
   server_port: "{{ lookup('env', 'F5_SERVER_PORT') | default(443, true) }}"
   validate_certs: "{{ lookup('env', 'F5_VALIDATE_CERTS') | default(false, true) }}"
+
+# Set `audit_mode: true` at launch time to print the final delete/apply runtime
+# collections after prep without executing BIG-IP modules.
+audit_mode: false
+audit_show_empty: false

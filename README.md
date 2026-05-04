@@ -93,3 +93,5 @@ make validate
 ```
 
 See [docs/validation.md](docs/validation.md) for details.
+
+For a no-change execution preview, run a canonical playbook with `-e audit_mode=true`.

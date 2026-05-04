@@ -61,6 +61,7 @@ These are also binding. A feature is not complete just because syntax-check pass
 - Preserve repo-wide contracts when adding a new domain or refactoring an existing one:
   - use the repo-wide `provider` variable from `vars/common.yml`
   - keep `tasks/manage.yml` as delete-first then apply-second unless ROADMAP explicitly documents an exception
+  - preserve audit-mode behavior in `tasks/manage.yml`; any new feature or object family added to a canonical playbook must remain visible through `audit_mode` using the same prep-built runtime collections and execution order as normal apply/delete flow
   - keep example var files, docs, and helper tools aligned with the canonical playbook behavior
   - keep top-level `prep.yml` files as documented orchestrators when prep logic grows; split heavy discovery/loading/classification/compiler flows into focused `prep/*.yml` snippets
   - when prep logic is the same across domains, prefer shared prep snippets under `playbooks/shared/prep/` plus shared Python-backed helpers under `filter_plugins/bigip_filters/` instead of re-implementing the pattern in every domain
@@ -219,6 +220,7 @@ These updates are **required after every feature change** (new object types, new
 - [ ] `playbooks/<domain>/tasks/apply.yml` — `state: present` tasks for new object types
 - [ ] `playbooks/<domain>/tasks/delete.yml` — `state: absent` tasks for new object types (reverse dependency order)
 - [ ] `playbooks/<domain>/tasks/manage.yml` — update `bigip_config` save conditions to include new present/delete variables
+- [ ] `playbooks/<domain>/tasks/audit.yml` — ensure new object types are visible in `audit_mode` using the same final runtime collections and ordering as normal execution
 - [ ] confirm any nested example data structures are flattened or transformed in `prep.yml` if runtime tasks require flattened loops
 - [ ] confirm example field names match the fields actually consumed by runtime tasks
 
@@ -276,6 +278,7 @@ These updates are **required after every feature change** (new object types, new
   - `playbooks/<domain>/prep.yml` — discovery/load/build orchestration
   - `playbooks/shared/prep/*.yml` — shared fragment discovery, settings-aware aggregation, and present/delete classification where the pattern is common
   - `playbooks/<domain>/tasks/manage.yml` — task ordering
+  - `playbooks/<domain>/tasks/audit.yml` — execution preview of the same final runtime collections without touching the device
   - `playbooks/<domain>/tasks/delete.yml` — destructive tasks
   - `playbooks/<domain>/tasks/apply.yml` — present-state tasks
 - if a future playbook stays small enough that splitting adds no value, document the reason in ROADMAP.md

@@ -1,5 +1,11 @@
+- name: Audit planned objects
+  ansible.builtin.import_tasks: audit.yml
+  when: audit_mode | default(false)
+
 - name: Remove managed objects
   ansible.builtin.import_tasks: delete.yml
+  when: not (audit_mode | default(false))
 
 - name: Apply desired objects
   ansible.builtin.import_tasks: apply.yml
+  when: not (audit_mode | default(false))
