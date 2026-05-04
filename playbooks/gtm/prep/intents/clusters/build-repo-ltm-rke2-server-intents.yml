@@ -7,7 +7,6 @@
   ansible.builtin.set_fact:
     repo_ltm_compiled_rke2_virtual_servers_present: >-
       {{
-        # One cluster intent emits several virtual servers (6443, 9345, and worker 443 VIPs).
         (repo_ltm_compiled_rke2_virtual_servers_present | default([])) + (repo_ltm_compiled_service.virtual_servers | default([]))
       }}
   loop: "{{ repo_ltm_rke2_server_intents_present | default([]) }}"

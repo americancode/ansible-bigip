@@ -25,12 +25,9 @@
       {{
         ltm_rke2_server_intents | default([]) + [
           (
-            # Apply intent defaults from the whole tree (`intents/` -> `clusters/` -> leaf dir)
-            # before the object-level fields in the YAML file itself.
             ltm_rke2_server_intent_settings_payload.ltm_rke2_server_intent_defaults
             | default({})
             | combine(item.1, recursive=True)
-            # Keep the source path so the compile step can re-load the same layered defaults later.
             | combine({'__source_file': item.0.item}, recursive=True)
           )
         ]
@@ -50,8 +47,6 @@
         ltm_rke2_server_intent_deletions | default([]) + [
           (
             (
-              # Deletion intents use the same layered defaults as active intents so generated names
-              # and emitted canonical objects stay symmetric.
               ltm_rke2_server_intent_deletion_settings_payload.ltm_rke2_server_intent_defaults
               | default({})
               | combine(item.1, recursive=True)
