@@ -68,9 +68,8 @@ The `ha_peers_reference` group is optional for documentation and operator clarit
 
 This repository reads connection details from `vars/common.yml`:
 
-- `f5_host` comes from inventory or template vars
+- `f5_host` must come from AWX inventory host vars for normal AWX operation
 - `F5_USERNAME`, `F5_PASSWORD` come from AWX credentials or environment
-- optional `F5_SERVER_PORT`
 - optional `F5_VALIDATE_CERTS`
 
 Recommended pattern:
@@ -84,8 +83,9 @@ The sample credential type in `bigip-credential-config.yaml` is auth-only and in
 
 - `F5_USERNAME`
 - `F5_PASSWORD`
-- optional `F5_SERVER_PORT`
 - optional `F5_VALIDATE_CERTS`
+
+Do not put BIG-IP host or port in the AWX credential. Target selection must come from the inventory host var `f5_host`.
 
 ## AWX Job Templates
 

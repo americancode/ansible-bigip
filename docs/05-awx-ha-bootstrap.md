@@ -47,6 +47,7 @@ Only `f5_host` is required. The rest are for operator clarity.
 ## Step 2: Set Up AWX Credential
 
 Create a custom credential type using `bigip-credential-config.yaml` and attach a credential instance to your job template. See [04-awx-operation.md](04-awx-operation.md) for credential design details.
+The credential is auth-only (username/password plus optional cert validation). Host targeting must come from inventory host var `f5_host`.
 
 ## Step 3: Create the HA Bootstrap Template
 

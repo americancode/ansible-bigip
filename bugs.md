@@ -1,8 +1,6 @@
 
 - Port in big ip credential (the custom credential)
 
-- Bad inline jinja comments (no inline stuff)
-
 
 
 - 'Compatibility' not a field of GTM tcp https monitor
