@@ -16,7 +16,7 @@ This model is currently supported, but it should be treated as transitional for 
 Example walkthroughs live in [example-models.md](example-models.md):
 
 - Concise LTM: `vars/ltm/virtual_servers/vm-apps/concise-inline-demo.yml`
-- Concise GTM: `vars/gtm/intents/applications/global-platform/platform.yml`
+- Concise GTM: `vars/gtm/intents/applications/k8s-applications/platform.yml`
 
 These concise paths now compile into canonical pools and pool references during `prep.yml`, so runtime `apply.yml` and `delete.yml` operate on normalized first-class objects rather than mixed inline shortcut shapes.
 

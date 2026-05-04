@@ -58,10 +58,10 @@ Linkage works like this:
 
 Use the app-local GTM model when a Wide IP and its pools should be reviewed together.
 
-- Example file: `vars/gtm/intents/applications/global-platform/platform.yml`
+- Example file: `vars/gtm/intents/applications/k8s-applications/platform.yml`
 - Pattern: `gtm_wide_ips[*].pools[*]` embeds full GTM pool definitions under a Wide IP
 - Compiler behavior: `gtm/prep.yml` compiles the embedded pools into canonical GTM pool objects and rewrites the Wide IP to carry only pool references before runtime apply/delete
-- Monitor linkage: aliases such as `platform_https` expand from `vars/gtm/intents/applications/global-platform/settings.yml`
+- Monitor linkage: aliases such as `platform_https` expand from `vars/gtm/intents/applications/k8s-applications/settings.yml`
 - Ownership behavior:
   - `members[*].server_mode: reference` points at canonical `gtm_servers`
   - `members[*].server_mode: inline` emits canonical `gtm_servers`
@@ -91,7 +91,7 @@ Alias-based custom or convenience references work like this:
 
 - `standard_https` in `vars/ltm/pools/settings.yml` expands to `/Common/https`
 - `inventory_https` in `vars/gtm/pools/settings.yml` expands to `/Common/mon_gtm_inventory_https`
-- `platform_https` in `vars/gtm/intents/applications/global-platform/settings.yml` expands to `/Common/mon_gtm_platform_https`
+- `platform_https` in `vars/gtm/intents/applications/k8s-applications/settings.yml` expands to `/Common/mon_gtm_platform_https`
 
 Use the inline comments in the example var files when you want the shortest path from a reference string to the related object file.
 

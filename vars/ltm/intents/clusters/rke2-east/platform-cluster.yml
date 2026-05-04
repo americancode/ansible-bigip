@@ -3,7 +3,7 @@
 # This service-first intent model embeds one virtual server and one pool per service.
 # The compiler emits canonical `ltm_virtual_servers` and `ltm_pools` objects directly from
 # these service entries.
-# GTM Wide IP intents in `vars/gtm/intents/applications/global-platform/platform.yml` reference
+# GTM Wide IP intents in `vars/gtm/intents/applications/k8s-applications/platform.yml` reference
 # the emitted virtual server names directly.
 # Supported fields:
 # - intent: `name`, `partition`, service-level virtual server fields
