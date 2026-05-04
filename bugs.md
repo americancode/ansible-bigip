@@ -12,7 +12,9 @@
   ok: [xxx] => (item=Common/lab-dc1)
 - Autolookup from the wideip gtm "virtual-server" works but how to get the fully hydrated virtual server name
   if coming from the ltm cluster intent (which doesnt spell out the virtual server name)
+- align gtm playbook with build vs compile language
 
 Improvements:
   - Validation should probably check and ensure are never deleting and re-creating objects in the same pass
   - What are the compatibility flags for?
+
