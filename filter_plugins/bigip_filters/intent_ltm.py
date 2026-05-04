@@ -62,7 +62,7 @@ def compile_ltm_rke2_server_intent(intent, intent_defaults=None, pool_defaults=N
     Purpose:
         Turns one cluster intent (under vars/ltm/intents/clusters/) into canonical
         LTM virtual servers and pools using a service-first schema where each
-        service embeds one `virtual_server` and one `pool` mapping.
+        service directly declares virtual-server fields and nests one `pool` mapping.
 
     Inputs:
         intent (dict|None): Cluster intent dict with keys like name, partition,
@@ -79,7 +79,7 @@ def compile_ltm_rke2_server_intent(intent, intent_defaults=None, pool_defaults=N
 
     Constraints:
         - intent.name is required; returns empty lists if missing.
-        - Each service must define `virtual_server.name` and `pool.name`.
+        - Each service must define `name`, `vip`, `port`, and `pool.name`.
         - `pool.members` are normalized via normalize_members(member_defaults).
         - `pool.monitors` aliases are expanded via monitor_sets.
         - Delete support: if intent state is "absent", all generated objects also get
@@ -122,20 +122,24 @@ def compile_ltm_rke2_server_intent(intent, intent_defaults=None, pool_defaults=N
     compiled_virtual_servers = []
     compiled_pools = []
 
-    def add_service(*, virtual_server_payload, pool_payload):
+    def add_service(*, service_payload):
         """Every generated service emits one canonical virtual server and one canonical pool.
 
         Delete support stays symmetric by emitting the same names with state: absent.
         """
+        pool_payload = service_payload.get("pool") if isinstance(service_payload, dict) else None
+        if not isinstance(pool_payload, dict):
+            return
+
         virtual_server = dict(base_virtual_server)
-        virtual_server.update(virtual_server_payload)
+        virtual_server.update({k: v for k, v in service_payload.items() if k != "pool"})
         virtual_server["partition"] = partition
         virtual_server["pool"] = pool_payload.get("name")
         if deleting:
             virtual_server["state"] = "absent"
         else:
-            virtual_server["destination"] = virtual_server_payload.get("vip")
-            virtual_server["destination_port"] = virtual_server_payload.get("port")
+            virtual_server["destination"] = service_payload.get("vip")
+            virtual_server["destination_port"] = service_payload.get("port")
 
         pool = dict(pool_defaults or {})
         pool.update(pool_payload)
@@ -152,14 +156,7 @@ def compile_ltm_rke2_server_intent(intent, intent_defaults=None, pool_defaults=N
     for service in services:
         if not isinstance(service, dict):
             continue
-        service_virtual_server = service.get("virtual_server")
-        service_pool = service.get("pool")
-        if not isinstance(service_virtual_server, dict) or not isinstance(service_pool, dict):
-            continue
-        add_service(
-            virtual_server_payload=service_virtual_server,
-            pool_payload=service_pool,
-        )
+        add_service(service_payload=service)
 
     return {
         "virtual_servers": compiled_virtual_servers,

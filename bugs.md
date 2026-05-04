@@ -1,13 +1,4 @@
-
-- Port in big ip credential (the custom credential)
-
-
-
-- 'Compatibility' not a field of GTM tcp https monitor
-
-
 ## gtm wide ip intent issues
-- GTM doesn't follow the "intents" pattern of LTM for wide ips (for the vars,  playbooks seems to follow fine)
 
 - If datacenter is defined as canonical object AND we are using the wide ip it has two objects in the data center objects       finalized array (likely should force usage of linked cannonical objects for datacenter and server OR make it clear and not cause duplicates)
   ok: [xxx] => (item=Common/lab-dc1)

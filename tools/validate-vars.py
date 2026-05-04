@@ -1747,24 +1747,20 @@ class Validator:
                 else:
                     service_names_seen.add(service_name)
 
-                virtual_server = service.get("virtual_server")
                 pool = service.get("pool")
-                if not isinstance(virtual_server, dict):
-                    self.error(obj.relpath, f"RKE2 server intent `{obj.data.get('name')}` service `{service_name}` must define mapping `virtual_server`")
-                else:
+                self.require_fields(
+                    service,
+                    ["name"],
+                    obj.relpath,
+                    f"RKE2 service entry {index}",
+                )
+                if obj.effective_state != "absent":
                     self.require_fields(
-                        virtual_server,
-                        ["name"],
+                        service,
+                        ["vip", "port"],
                         obj.relpath,
-                        f"RKE2 service `{service_name}` virtual_server",
+                        f"RKE2 service `{service_name}`",
                     )
-                    if obj.effective_state != "absent":
-                        self.require_fields(
-                            virtual_server,
-                            ["vip", "port"],
-                            obj.relpath,
-                            f"RKE2 service `{service_name}` virtual_server",
-                        )
 
                 if not isinstance(pool, dict):
                     self.error(obj.relpath, f"RKE2 server intent `{obj.data.get('name')}` service `{service_name}` must define mapping `pool`")

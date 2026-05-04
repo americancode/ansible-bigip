@@ -2,12 +2,10 @@
 ltm_rke2_server_intents:
   - name: "rke2_west"
     services:
-      - name: "kubeapi"
-        virtual_server:
-          name: "vs_rke2_west_kubeapi_6443"
-          vip: "10.202.0.20"
-          port: 6443
-          description: "West region RKE2 Kubernetes API VIP"
+      - name: "vs_rke2_west_kubeapi_6443"
+        vip: "10.202.0.20"
+        port: 6443
+        description: "West region RKE2 Kubernetes API VIP"
         pool:
           name: "pool_rke2_west_kubeapi_6443"
           monitors:
@@ -20,12 +18,10 @@ ltm_rke2_server_intents:
             - host: "10.202.10.13"
               port: 6443
 
-      - name: "registration"
-        virtual_server:
-          name: "vs_rke2_west_registration_9345"
-          vip: "10.202.0.20"
-          port: 9345
-          description: "West region RKE2 supervisor registration VIP"
+      - name: "vs_rke2_west_registration_9345"
+        vip: "10.202.0.20"
+        port: 9345
+        description: "West region RKE2 supervisor registration VIP"
         pool:
           name: "pool_rke2_west_registration_9345"
           monitors:
@@ -38,12 +34,10 @@ ltm_rke2_server_intents:
             - host: "10.202.10.13"
               port: 9345
 
-      - name: "traefik"
-        virtual_server:
-          name: "vs_rke2_west_traefik_443"
-          vip: "10.202.0.30"
-          port: 443
-          description: "West region Traefik ingress VIP"
+      - name: "vs_rke2_west_traefik_443"
+        vip: "10.202.0.30"
+        port: 443
+        description: "West region Traefik ingress VIP"
         pool:
           name: "pool_rke2_west_traefik_443"
           monitors:
@@ -56,12 +50,10 @@ ltm_rke2_server_intents:
             - host: "10.202.20.23"
               port: 30443
 
-      - name: "rancher"
-        virtual_server:
-          name: "vs_rke2_west_rancher_443"
-          vip: "10.202.0.31"
-          port: 443
-          description: "West region Rancher management VIP"
+      - name: "vs_rke2_west_rancher_443"
+        vip: "10.202.0.31"
+        port: 443
+        description: "West region Rancher management VIP"
         pool:
           name: "pool_rke2_west_rancher_443"
           monitors:
