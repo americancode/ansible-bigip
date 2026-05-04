@@ -7,7 +7,6 @@ gtm_monitors:
     interval: 15
     timeout: 46
     probe_timeout: 5
-    compatibility: true
 
   - name: "mon_gtm_rke2_kubeapi_tcp"
     type: "tcp"
@@ -31,7 +30,6 @@ gtm_monitors:
     interval: 15
     timeout: 46
     probe_timeout: 5
-    compatibility: true
 
   - name: "mon_gtm_grafana_https"
     type: "https"
@@ -40,7 +38,6 @@ gtm_monitors:
     interval: 15
     timeout: 46
     probe_timeout: 5
-    compatibility: true
 
   - name: "mon_gtm_inventory_https"
     type: "https"
@@ -49,7 +46,6 @@ gtm_monitors:
     interval: 15
     timeout: 46
     probe_timeout: 5
-    compatibility: true
 
   - name: "mon_gtm_reporting_https"
     type: "https"
@@ -58,4 +54,3 @@ gtm_monitors:
     interval: 15
     timeout: 46
     probe_timeout: 5
-    compatibility: true

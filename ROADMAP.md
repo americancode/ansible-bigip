@@ -135,9 +135,6 @@ These are the highest-value open items.
 
 These are the concrete remaining backlog items.
 
-  - Validation should probably check and ensure are never deleting and re-creating objects in the same pass? (maybe we already have this)
-  - What are the compatibility flags for?
-  - Ordering of servers in LTM/GTM pools
   - printing on tmsh commands
 
 1. **Add top-level header comments across canonical playbook prep/task files**

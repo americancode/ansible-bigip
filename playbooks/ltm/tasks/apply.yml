@@ -51,7 +51,6 @@
     ip: "{{ item.ip | default(omit) }}"
     port: "{{ item.port | default(omit) }}"
     cipher_list: "{{ item.cipher_list | default(omit) }}"
-    compatibility: "{{ item.compatibility | default(omit) }}"
     client_cert: "{{ item.client_cert | default(omit) }}"
     client_key: "{{ item.client_key | default(omit) }}"
     state: "{{ item.state | default('present') }}"

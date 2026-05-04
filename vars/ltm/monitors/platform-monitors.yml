@@ -18,4 +18,3 @@ ltm_monitors:
     receive: "200 OK"
     interval: 15
     timeout: 46
-    compatibility: true
