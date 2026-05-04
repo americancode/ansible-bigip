@@ -1,6 +1,6 @@
 ---
-# This `settings.yml` demonstrates the concise/hybrid GTM model.
-# Files under `vars/gtm/intents/applications/global-platform/` can embed GTM pools inline while inheriting
+# Shared settings for the Kubernetes application GTM intent category.
+# Files under `vars/gtm/intents/applications/k8s-applications/` can embed GTM pools inline while inheriting
 # shared defaults and monitor aliases from this directory.
 gtm_wide_ip_defaults:
   partition: "Common"
@@ -16,8 +16,6 @@ gtm_member_defaults:
 
 # These aliases expand to repo-created GTM monitors in `vars/gtm/monitors/platform-monitors.yml`.
 gtm_monitor_sets:
-  platform_https:
-    - "/Common/mon_gtm_platform_https"
   kubeapi_tcp:
     - "/Common/mon_gtm_rke2_kubeapi_tcp"
   registration_tcp:

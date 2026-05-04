@@ -58,7 +58,12 @@ Linkage works like this:
 
 Use the app-local GTM model when a Wide IP and its pools should be reviewed together.
 
-- Example file: `vars/gtm/intents/applications/k8s-applications/platform.yml`
+- Example files:
+  - `vars/gtm/intents/applications/k8s-applications/platform-apps.yml`
+  - `vars/gtm/intents/applications/k8s-applications/rke2-api.yml`
+  - `vars/gtm/intents/applications/k8s-applications/rke2-registration.yml`
+  - `vars/gtm/intents/applications/k8s-applications/argocd.yml`
+  - `vars/gtm/intents/applications/k8s-applications/grafana.yml`
 - Pattern: `gtm_wide_ips[*].pools[*]` embeds full GTM pool definitions under a Wide IP
 - Compiler behavior: `gtm/prep.yml` compiles the embedded pools into canonical GTM pool objects and rewrites the Wide IP to carry only pool references before runtime apply/delete
 - Monitor linkage: aliases such as `platform_https` expand from `vars/gtm/intents/applications/k8s-applications/settings.yml`
