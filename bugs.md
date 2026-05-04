@@ -17,4 +17,5 @@
 Improvements:
   - Validation should probably check and ensure are never deleting and re-creating objects in the same pass
   - What are the compatibility flags for?
+  - Ordering of servers in LTM/GTM pools
 
