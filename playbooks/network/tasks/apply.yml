@@ -115,6 +115,16 @@
     label: "{{ item.partition | default('Common') }}/{{ item.name }}"
 
 - name: Create or modify NATs
+  ansible.builtin.include_tasks: "{{ playbook_dir }}/shared/tasks/debug-tmsh-commands.yml"
+  vars:
+    tmsh_debug_context: "network NAT apply"
+    tmsh_debug_commands:
+      - "{{ item | build_nat_tmsh_command(((bigip_nat_exists_by_name | default({})).get((item.partition | default('Common')) ~ '/' ~ item.name, false)) | ternary('modify', 'create')) }}"
+  loop: "{{ bigip_nats_present | default([]) }}"
+  loop_control:
+    label: "{{ item.partition | default('Common') }}/{{ item.name }}"
+
+- name: Create or modify NATs
   f5networks.f5_modules.bigip_command:
     provider: "{{ provider }}"
     commands:

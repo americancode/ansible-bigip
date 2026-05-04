@@ -85,3 +85,5 @@ Before running a high-impact job template against production inventory, the safe
 3. confirm the printed delete/apply collections match the intended execution target
 
 Audit mode uses the same prep and classification flow as normal execution, but stops before any BIG-IP module runs.
+
+For command-driven paths that use `bigip_command`, you can also launch with `show_tmsh_commands=true` to print the generated `tmsh` command list before execution. This is useful when debugging bootstrap management changes, NAT command builders, or the system login banner flow without switching away from the normal playbook path.

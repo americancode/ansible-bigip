@@ -17,6 +17,16 @@
     present_var: bootstrap_management_present
 
 - name: Probe management route presence on BIG-IP
+  ansible.builtin.include_tasks: "{{ playbook_dir }}/shared/tasks/debug-tmsh-commands.yml"
+  vars:
+    tmsh_debug_context: "bootstrap management route probe"
+    tmsh_debug_commands:
+      - "{{ item | build_management_route_tmsh_command('show') }}"
+  loop: "{{ bootstrap_management_present | default([]) }}"
+  loop_control:
+    label: "{{ item.route_name | default('default') }}"
+
+- name: Probe management route presence on BIG-IP
   f5networks.f5_modules.bigip_command:
     provider: "{{ provider }}"
     commands:

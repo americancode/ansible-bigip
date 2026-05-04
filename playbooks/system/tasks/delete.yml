@@ -88,6 +88,16 @@
     label: "{{ item.name }}"
 
 - name: Disable system login banner
+  ansible.builtin.include_tasks: "{{ playbook_dir }}/shared/tasks/debug-tmsh-commands.yml"
+  vars:
+    tmsh_debug_context: "system login banner delete"
+    tmsh_debug_commands:
+      - "{{ item | build_login_banner_tmsh_command('delete') }}"
+  loop: "{{ system_login_banner_delete | default([]) }}"
+  loop_control:
+    label: "{{ item.name | default('login-banner') }}"
+
+- name: Disable system login banner
   f5networks.f5_modules.bigip_command:
     provider: "{{ provider }}"
     commands:

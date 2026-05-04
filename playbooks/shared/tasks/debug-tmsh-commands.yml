@@ -1,0 +1,13 @@
+---
+# Shared generated TMSH command printer.
+# This keeps operator-facing command previews aligned with the exact command
+# lists that command-driven playbook tasks send to BIG-IP.
+
+- name: Print generated TMSH commands for {{ tmsh_debug_context }}
+  ansible.builtin.debug:
+    msg:
+      context: "{{ tmsh_debug_context }}"
+      target: "{{ inventory_hostname }}"
+      f5_host: "{{ provider.server }}"
+      commands: "{{ tmsh_debug_commands | default([]) }}"
+  when: show_tmsh_commands | default(false)

@@ -19,6 +19,8 @@ Safety rules enforced by validation:
 - if multiple declarations exist for the same device-scoped identity, they must use disjoint `target_hosts`
 - if more than one declaration exists for the same identity, `target_groups` are rejected because overlap cannot be proven offline
 
+For the command-driven login banner path, launch with `show_tmsh_commands=true` to print the generated `tmsh` command before execution. This is useful when a banner update is skipped unexpectedly or when the emitted command needs to be compared with a manual `tmsh` test.
+
 Example:
 
 ```yaml

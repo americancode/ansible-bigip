@@ -143,6 +143,16 @@
     label: "{{ item.name | default('radius-auth') }}"
 
 - name: Configure system login banner
+  ansible.builtin.include_tasks: "{{ playbook_dir }}/shared/tasks/debug-tmsh-commands.yml"
+  vars:
+    tmsh_debug_context: "system login banner apply"
+    tmsh_debug_commands:
+      - "{{ item | build_login_banner_tmsh_command('modify') }}"
+  loop: "{{ system_login_banner_present | default([]) }}"
+  loop_control:
+    label: "{{ item.name | default('login-banner') }}"
+
+- name: Configure system login banner
   f5networks.f5_modules.bigip_command:
     provider: "{{ provider }}"
     commands:

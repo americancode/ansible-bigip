@@ -102,6 +102,8 @@ The apply order is:
 
 The management step intentionally saves within the same `bigip_command` task. If the device’s management IP changes during the run, subsequent API calls to the old address may fail; saving in the same task avoids leaving the device half-changed.
 
+If you need to debug the generated `tmsh` calls for management reachability, launch with `show_tmsh_commands=true`. The playbook will print the exact route probe and management apply command lists before sending them to BIG-IP.
+
 ## Operational Boundary
 
 After `bootstrap.yml` succeeds:

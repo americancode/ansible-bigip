@@ -15,3 +15,7 @@ provider:
 # collections after prep without executing BIG-IP modules.
 audit_mode: false
 audit_show_empty: false
+
+# Set `show_tmsh_commands: true` at launch time to print generated TMSH command
+# lists for command-driven playbook tasks before they execute.
+show_tmsh_commands: false

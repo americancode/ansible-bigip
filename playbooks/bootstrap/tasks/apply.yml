@@ -21,6 +21,18 @@
     - (bootstrap_license_apply_results.results | default([]) | selectattr('changed') | list | length) > 0
 
 - name: Apply management reachability changes and save config
+  ansible.builtin.include_tasks: "{{ playbook_dir }}/shared/tasks/debug-tmsh-commands.yml"
+  vars:
+    tmsh_debug_context: "bootstrap management apply"
+    tmsh_debug_commands:
+      - "{{ item | build_management_ip_tmsh_command }}"
+      - "{{ item | build_management_route_tmsh_command(((bootstrap_management_route_exists_by_name | default({})).get(item.route_name | default('default'), false)) | ternary('modify', 'create')) }}"
+      - "save sys config"
+  loop: "{{ bootstrap_management_present | default([]) }}"
+  loop_control:
+    label: "{{ item.address }}"
+
+- name: Apply management reachability changes and save config
   f5networks.f5_modules.bigip_command:
     provider: "{{ provider }}"
     commands:

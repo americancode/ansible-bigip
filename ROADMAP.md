@@ -135,8 +135,6 @@ These are the highest-value open items.
 
 These are the concrete remaining backlog items.
 
-  - printing on tmsh commands
-
 1. **Add top-level header comments across canonical playbook prep/task files**
    - **Shared prep snippets (`playbooks/shared/prep/`):**
      - [ ] `load-fragments.yml` — discovery and aggregation helper
