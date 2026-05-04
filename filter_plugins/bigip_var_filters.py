@@ -1,7 +1,13 @@
 from __future__ import annotations
+import os
+import sys
+
+_FILTER_PLUGIN_DIR = os.path.dirname(os.path.abspath(__file__))
+if _FILTER_PLUGIN_DIR not in sys.path:
+    sys.path.insert(0, _FILTER_PLUGIN_DIR)
 
 try:
-    from .bigip_filters import (
+    from bigip_filters import (
         build_login_banner_tmsh_command,
         build_management_ip_tmsh_command,
         build_management_route_tmsh_command,
