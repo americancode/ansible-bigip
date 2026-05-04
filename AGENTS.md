@@ -174,7 +174,7 @@ When working on convenience patterns, common service templates, or “simple mod
   - only create a new playbook when introducing a genuinely new runtime domain
 - `docs/security.md` — update when AFM, WAF, or APM object types are added or changed
 - `docs/02-bootstrap-playbook.md` — update when day-0 licensing, first management reachability, or handoff behavior changes
-- `docs/01-initial-setup-and-handoff.md` — update when first-boot prerequisites, bootstrap sequencing, or AWX handoff behavior changes
+- `docs/01-awx-operating-model-and-handoff.md` — update when first-boot prerequisites, bootstrap sequencing, or AWX handoff behavior changes
 
 ### README.md Updates
 
@@ -189,9 +189,10 @@ When a new playbook is added or an existing playbook gains new object coverage:
 When changing the bootstrap story, onboarding flow, or target-selection model:
 
 - update the relevant setup docs under `docs/` such as:
-  - `docs/03-cli-bootstrap.md`
-  - `docs/05-awx-ha-bootstrap.md`
-  - `docs/04-awx-operation.md`
+  - `docs/cli-bootstrap-and-recovery.md`
+  - `docs/03-awx-inventory-and-targeting.md`
+  - `docs/04-awx-job-execution.md`
+  - `docs/05-ha-execution-model.md`
   - `docs/system-management.md`
 - if the change affects first-run or brand-new appliance setup, record any remaining documentation gaps in `ROADMAP.md` instead of assuming existing bootstrap docs are sufficient
 

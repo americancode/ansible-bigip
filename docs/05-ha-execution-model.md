@@ -1,27 +1,24 @@
-# AWX HA Bootstrap
+# HA Execution Model
 
-This guide walks through bringing up HA for two brand-new BIG-IP devices using AWX.
+This guide explains how HA should be executed once AWX can safely reach the devices.
 
-This is not the first document to read for a brand-new device. The intended path is:
+This is not a separate control-plane story. It is the HA-specific part of the normal AWX operating model:
 
-1. follow [01-initial-setup-and-handoff.md](01-initial-setup-and-handoff.md)
-2. use [03-cli-bootstrap.md](03-cli-bootstrap.md) first if the device still needs bootstrap
-3. use this guide after the management endpoint is stable and AWX can reach it
-
-For the general AWX targeting model, inventory patterns, credential design, and template list, see [04-awx-operation.md](04-awx-operation.md).
-
-If you need to initialize BIG-IP before AWX can safely reach it, use the CLI path in [03-cli-bootstrap.md](03-cli-bootstrap.md) and the day-0 runtime in [02-bootstrap-playbook.md](02-bootstrap-playbook.md) first, then adopt this AWX model afterward.
+1. start with [01-awx-operating-model-and-handoff.md](01-awx-operating-model-and-handoff.md)
+2. if the device still needs day-0 reachability work, use [cli-bootstrap-and-recovery.md](cli-bootstrap-and-recovery.md) and [02-bootstrap-playbook.md](02-bootstrap-playbook.md) first
+3. use [03-awx-inventory-and-targeting.md](03-awx-inventory-and-targeting.md) and [04-awx-job-execution.md](04-awx-job-execution.md) to set up safe AWX execution boundaries
+4. then use this guide for the HA sequence itself
 
 ## Example Topology
 
 - east device: `bigip-east.example.com` / `192.0.2.10`
 - west device: `bigip-west.example.com` / `192.0.2.20`
 - HA pair name: `east-west-prod`
-- bootstrap target: east
+- designated sync-owner target: east
 
 ## Step 1: Set Up AWX Inventory
 
-See [04-awx-operation.md](04-awx-operation.md) for the full inventory pattern. Minimum working shape:
+See [03-awx-inventory-and-targeting.md](03-awx-inventory-and-targeting.md) for the full inventory pattern. Minimum working shape:
 
 ```text
 Inventory: prod-bigip
@@ -46,24 +43,24 @@ Only `f5_host` is required. The rest are for operator clarity.
 
 ## Step 2: Set Up AWX Credential
 
-Create a custom credential type using `bigip-credential-config.yaml` and attach a credential instance to your job template. See [04-awx-operation.md](04-awx-operation.md) for credential design details.
+Create a custom credential type using `bigip-credential-config.yaml` and attach a credential instance to your job template. See [03-awx-inventory-and-targeting.md](03-awx-inventory-and-targeting.md) for credential design details.
 The credential is auth-only (username/password plus optional cert validation). Host targeting must come from inventory host var `f5_host`.
 
-## Step 3: Create the HA Bootstrap Template
+## Step 3: Create the HA Template
 
 In AWX:
 
-1. Create a job template named `BIG-IP HA Bootstrap`
+1. Create a job template named `BIG-IP HA Apply`
 2. Playbook: `playbooks/ha.yml`
 3. Inventory: `prod-bigip`
-4. Host: `bigip-east-sync-owner` (the bootstrap device)
+4. Host: `bigip-east-sync-owner` (the designated sync-owner target)
 5. Credential: attach your BIG-IP auth credential
 
-See [04-awx-operation.md](04-awx-operation.md) for the full template list.
+See [04-awx-job-execution.md](04-awx-job-execution.md) for the broader template model.
 
 ## Step 4: Write the Repo HA Vars
 
-The repo-side HA vars should be written from the bootstrap device perspective (east → west).
+The repo-side HA vars should be written from the current execution target perspective (east → west in this example).
 
 ### Device Connectivity
 
@@ -174,9 +171,9 @@ ha_configsync_actions:
     overwrite_config: false
 ```
 
-## Step 5: Run the Bootstrap
+## Step 5: Run the HA Apply
 
-Launch the `BIG-IP HA Bootstrap` template from AWX.
+Launch the `BIG-IP HA Apply` or equivalent HA-specific template from AWX.
 
 This will:
 

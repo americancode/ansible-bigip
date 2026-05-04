@@ -1,8 +1,14 @@
-# CLI Bootstrap
+# CLI Bootstrap and Recovery
 
-This guide covers the chicken-and-egg case where AWX is not the right first control plane because AWX itself depends on BIG-IP being available first.
+This guide covers the fallback path when AWX is not the right first control plane or is temporarily unavailable.
 
-For the broader first-boot sequence and the GitOps handoff point, see [01-initial-setup-and-handoff.md](01-initial-setup-and-handoff.md). For the narrow explanation of why `bootstrap` is a separate playbook, see [02-bootstrap-playbook.md](02-bootstrap-playbook.md).
+This is not part of the normal numbered operator story. Use it when:
+
+- AWX cannot safely reach the device yet
+- AWX itself depends on the BIG-IP estate you are standing up
+- you need a break-glass recovery path from a terminal
+
+For the normal AWX-first operating story, see [01-awx-operating-model-and-handoff.md](01-awx-operating-model-and-handoff.md). For the narrow explanation of why `bootstrap` is a separate playbook, see [02-bootstrap-playbook.md](02-bootstrap-playbook.md).
 
 Use this path when:
 
@@ -299,7 +305,7 @@ Once BIG-IP is initialized and AWX is safely reachable behind it:
 2. Create the auth-only BIG-IP credential from `bigip-credential-config.yaml`
 3. Point AWX templates at the same sync-owner execution host model
 
-See [04-awx-operation.md](04-awx-operation.md) for the full AWX pattern.
+See [03-awx-inventory-and-targeting.md](03-awx-inventory-and-targeting.md) and [04-awx-job-execution.md](04-awx-job-execution.md) for the normal AWX pattern after recovery or bootstrap is complete.
 
 At that point the CLI bootstrap path and the AWX path use the same repo model:
 

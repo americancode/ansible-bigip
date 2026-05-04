@@ -31,7 +31,7 @@ The operator path is:
 5. if needed, run `playbooks/ha.yml`
 6. hand routine operation off to AWX
 
-For the full narrative, see [01-initial-setup-and-handoff.md](01-initial-setup-and-handoff.md). For terminal execution details, see [03-cli-bootstrap.md](03-cli-bootstrap.md).
+For the full narrative, see [01-awx-operating-model-and-handoff.md](01-awx-operating-model-and-handoff.md). For fallback terminal execution details, see [cli-bootstrap-and-recovery.md](cli-bootstrap-and-recovery.md).
 
 ## Playbook Structure
 

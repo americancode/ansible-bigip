@@ -1,6 +1,14 @@
-# AWX and HA Operation
+# AWX Inventory and Targeting
 
-## Targeting Model
+This document covers the normal AWX-side targeting contract for this repository.
+
+Use it with:
+
+- [01-awx-operating-model-and-handoff.md](01-awx-operating-model-and-handoff.md) for the overall operator story
+- [04-awx-job-execution.md](04-awx-job-execution.md) for job-template execution boundaries
+- [05-ha-execution-model.md](05-ha-execution-model.md) for HA-specific sync-owner behavior
+
+## Core Targeting Model
 
 This repository talks to one BIG-IP management endpoint per inventory host execution.
 
@@ -11,27 +19,13 @@ This repository talks to one BIG-IP management endpoint per inventory host execu
 - each selected inventory host resolves its own BIG-IP target through `f5_host`
 - if an AWX job targets more than one inventory host, the playbook runs once per selected host
 
-## HA Operating Rule
-
-For a normal BIG-IP sync-failover pair, most shared configuration should be applied to one designated device in the HA domain and then replicated through config sync.
-
-Safe defaults:
-
-- for `playbooks/network.yml`, `playbooks/ltm.yml`, and `playbooks/tls.yml`, target one sync-owner device per HA pair
-- use `playbooks/ha.yml` to establish or change device connectivity, trust, device groups, members, HA groups, traffic groups, and config sync actions
-- do not target both peers in the same HA pair for routine shared-config jobs unless you explicitly mean to
-
-## HA Vars Perspective
-
-The HA example vars under `vars/ha/...` are written from the target device perspective:
-
-- `device_trust` examples are authored from the current target device toward its peer
-- `device_connectivity` examples are authored from the current target device's local management and failover-network perspective
-- `device_groups`, `device_group_members`, and `traffic_groups` describe shared HA state, but are meant to be applied from one designated device in the sync domain
-- `ha_groups` are shared HA score objects that traffic groups may reference through `ha_group`
-- `configsync_actions.sync_device_to_group: true` means "push from the device currently selected as the execution target"
-
 ## AWX Inventory Pattern
+
+Treat AWX inventory names as part of the repo contract.
+
+- `inventory_hostname` is what `target_hosts` matches
+- Ansible `group_names` are what `target_groups` matches
+- `f5_host` is the actual BIG-IP management endpoint
 
 Use one execution target host per HA domain for routine shared configuration.
 
@@ -58,7 +52,7 @@ f5_role: sync_owner
 f5_dc: east
 ```
 
-Recommended reserved group names when using targeted `system_*` objects:
+Recommended reserved group names when using targeted objects:
 
 ```text
 all_bigip
@@ -79,6 +73,26 @@ prod-bigip
 ```
 
 The `ha_peers_reference` group is optional for documentation and operator clarity. It should not be the default execution target for shared-config templates.
+
+## Selector-Aware Objects
+
+Object-level selectors are now part of the authoring model when you need one playbook run to target some inventory hosts but not others.
+
+- `target_hosts` matches AWX `inventory_hostname`
+- `target_groups` matches AWX inventory group names
+- prep logs how many objects matched and how many were skipped for the current host
+- validation rejects ambiguous selector patterns before runtime
+
+Example:
+
+```yaml
+system_dns:
+  - name_servers:
+      - "192.0.2.53"
+      - "192.0.2.54"
+    target_groups:
+      - "all_bigip"
+```
 
 ## Credential Design
 
@@ -103,23 +117,6 @@ The sample credential type in `bigip-credential-config.yaml` is auth-only and in
 
 Do not put BIG-IP host or port in the AWX credential. Target selection must come from the inventory host var `f5_host`.
 
-## AWX Job Templates
-
-| Template | Playbook | Target |
-|---|---|---|
-| `BIG-IP HA Bootstrap` | `playbooks/ha.yml` | one sync-owner host per pair |
-| `BIG-IP Network Apply` | `playbooks/network.yml` | one sync-owner host per pair |
-| `BIG-IP LTM Apply` | `playbooks/ltm.yml` | one sync-owner host per pair |
-| `BIG-IP TLS Apply` | `playbooks/tls.yml` | one sync-owner host per pair |
-| `BIG-IP System Apply` | `playbooks/system.yml` | one sync-owner host per pair |
-| `BIG-IP GTM Apply` | `playbooks/gtm.yml` | one sync-owner host per pair |
-
-Safe default: do not target both peers in the pair for normal shared configuration. If you later create a secondary sync-owner host for disaster recovery, do not make it the default target for routine jobs.
-
-## Multi-Datacenter
-
-Treat each datacenter HA pair as its own execution boundary. Run one job per pair, not one job per appliance.
-
 ## What This Repo Does Not Do Automatically
 
 - discover the active device automatically
@@ -130,7 +127,8 @@ That control belongs in AWX inventory and template design. The safe pattern is t
 
 ## Bootstrap Guides
 
-- primary first-boot path: [01-initial-setup-and-handoff.md](01-initial-setup-and-handoff.md)
+- primary first-boot path: [01-awx-operating-model-and-handoff.md](01-awx-operating-model-and-handoff.md)
 - day-0 bootstrap domain reference: [02-bootstrap-playbook.md](02-bootstrap-playbook.md)
-- CLI-first execution path: [03-cli-bootstrap.md](03-cli-bootstrap.md)
-- AWX HA step-by-step after bootstrap: [05-awx-ha-bootstrap.md](05-awx-ha-bootstrap.md)
+- CLI fallback path: [cli-bootstrap-and-recovery.md](cli-bootstrap-and-recovery.md)
+- AWX job execution: [04-awx-job-execution.md](04-awx-job-execution.md)
+- HA execution model: [05-ha-execution-model.md](05-ha-execution-model.md)

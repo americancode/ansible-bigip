@@ -2,12 +2,14 @@
 
 Declarative BIG-IP playbooks organized for GitOps-style management.
 
-For first boot through AWX handoff, follow the numbered operator path:
-[docs/01-initial-setup-and-handoff.md](docs/01-initial-setup-and-handoff.md),
+For the normal AWX-first operator path, follow:
+[docs/01-awx-operating-model-and-handoff.md](docs/01-awx-operating-model-and-handoff.md),
 [docs/02-bootstrap-playbook.md](docs/02-bootstrap-playbook.md),
-[docs/03-cli-bootstrap.md](docs/03-cli-bootstrap.md),
-[docs/04-awx-operation.md](docs/04-awx-operation.md), and
-[docs/05-awx-ha-bootstrap.md](docs/05-awx-ha-bootstrap.md).
+[docs/03-awx-inventory-and-targeting.md](docs/03-awx-inventory-and-targeting.md),
+[docs/04-awx-job-execution.md](docs/04-awx-job-execution.md), and
+[docs/05-ha-execution-model.md](docs/05-ha-execution-model.md).
+
+Use [docs/cli-bootstrap-and-recovery.md](docs/cli-bootstrap-and-recovery.md) only for bootstrap fallback or break-glass recovery when AWX cannot be the first control plane.
 
 ## Current Coverage
 
@@ -38,9 +40,10 @@ Current lifecycle boundaries:
 | Intent authoring | [docs/intent-authoring.md](docs/intent-authoring.md) |
 | Intent extension guide | [docs/intent-extension-guide.md](docs/intent-extension-guide.md) |
 | Deletion workflows | [docs/deletion-workflows.md](docs/deletion-workflows.md) |
-| AWX and HA operation | [docs/04-awx-operation.md](docs/04-awx-operation.md) |
+| AWX inventory and targeting | [docs/03-awx-inventory-and-targeting.md](docs/03-awx-inventory-and-targeting.md) |
+| AWX job execution | [docs/04-awx-job-execution.md](docs/04-awx-job-execution.md) |
 | Validation | [docs/validation.md](docs/validation.md) |
-| 01 Initial setup | [docs/01-initial-setup-and-handoff.md](docs/01-initial-setup-and-handoff.md) |
+| 01 AWX operating model | [docs/01-awx-operating-model-and-handoff.md](docs/01-awx-operating-model-and-handoff.md) |
 | 02 Bootstrap playbook | [docs/02-bootstrap-playbook.md](docs/02-bootstrap-playbook.md) |
 | TLS secrets | [docs/tls-secrets.md](docs/tls-secrets.md) |
 | Network objects | [docs/network-objects.md](docs/network-objects.md) |
@@ -53,11 +56,11 @@ Current lifecycle boundaries:
 | APM access | [docs/apm.md](docs/apm.md) |
 | Authentication | [docs/authentication.md](docs/authentication.md) |
 | Kerberos SSO | [docs/kerberos-sso.md](docs/kerberos-sso.md) |
-| 05 AWX HA bootstrap | [docs/05-awx-ha-bootstrap.md](docs/05-awx-ha-bootstrap.md) |
+| 05 HA execution model | [docs/05-ha-execution-model.md](docs/05-ha-execution-model.md) |
 | Drift and import | [docs/drift-import.md](docs/drift-import.md) |
 | Promotion workflows | [docs/promotion-workflows.md](docs/promotion-workflows.md) |
 | Rollback patterns | [docs/rollback-patterns.md](docs/rollback-patterns.md) |
-| 03 CLI bootstrap | [docs/03-cli-bootstrap.md](docs/03-cli-bootstrap.md) |
+| CLI bootstrap and recovery | [docs/cli-bootstrap-and-recovery.md](docs/cli-bootstrap-and-recovery.md) |
 | Example models | [docs/example-models.md](docs/example-models.md) |
 | Roadmap | [ROADMAP.md](ROADMAP.md) |
 

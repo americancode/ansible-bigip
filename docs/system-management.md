@@ -2,7 +2,7 @@
 
 The `playbooks/system.yml` playbook manages base BIG-IP device settings after the device is already reachable through a stable management endpoint: hostname, DNS, NTP, module provisioning, local users, management-plane admin authentication providers, login banner compliance messaging, and config persistence.
 
-For day-0 licensing and the first management IP/default route, use [02-bootstrap-playbook.md](02-bootstrap-playbook.md) and `playbooks/bootstrap.yml` first.
+For day-0 licensing and the first management IP/default route, use [02-bootstrap-playbook.md](02-bootstrap-playbook.md) and `playbooks/bootstrap.yml` first. For normal AWX inventory and targeting guidance, see [03-awx-inventory-and-targeting.md](03-awx-inventory-and-targeting.md).
 
 ## Targeting Model
 

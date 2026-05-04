@@ -51,4 +51,4 @@ Path handling inside canonical playbooks is anchored from `playbook_dir`, so mov
 
 The canonical playbooks target AWX inventory hosts with `connection: local`, so inventory host vars such as `f5_host` are available even though the BIG-IP API calls are made from the controller.
 
-For details on targeting and HA operation, see [04-awx-operation.md](04-awx-operation.md).
+For details on targeting and HA operation, see [03-awx-inventory-and-targeting.md](03-awx-inventory-and-targeting.md), [04-awx-job-execution.md](04-awx-job-execution.md), and [05-ha-execution-model.md](05-ha-execution-model.md).

@@ -1,37 +1,45 @@
-# Initial Setup and Handoff
+# AWX Operating Model and Handoff
 
 This is the primary operator path for bringing a BIG-IP under Git management with this repository.
 
-Use this document first. The other bootstrap docs are narrower execution guides:
+The broad operating assumption is:
 
-- [02-bootstrap-playbook.md](02-bootstrap-playbook.md) explains only why `playbooks/bootstrap.yml` exists and what it manages
-- [03-cli-bootstrap.md](03-cli-bootstrap.md) explains how to execute the early phases from a terminal
-- [05-awx-ha-bootstrap.md](05-awx-ha-bootstrap.md) explains the AWX-side HA setup pattern after the management endpoint is stable
+- AWX is the normal control plane
+- Git is the source of truth
+- the CLI exists for bootstrap, break-glass recovery, or AWX-unavailable situations
+
+Use this document first. The rest of the numbered docs explain the normal AWX operating path in smaller pieces:
+
+- [02-bootstrap-playbook.md](02-bootstrap-playbook.md) explains why `playbooks/bootstrap.yml` exists and what it manages
+- [03-awx-inventory-and-targeting.md](03-awx-inventory-and-targeting.md) explains AWX inventory, credentials, and target selectors
+- [04-awx-job-execution.md](04-awx-job-execution.md) explains how to structure AWX job templates and execution boundaries
+- [05-ha-execution-model.md](05-ha-execution-model.md) explains how HA setup and shared-config execution should work
+
+The CLI fallback path lives outside the numbered operator story in [cli-bootstrap-and-recovery.md](cli-bootstrap-and-recovery.md).
 
 ## Intended Outcome
 
 At the end of this process:
 
-- the BIG-IP is licensed
-- the management interface is reachable on its long-lived IP
-- inventory or AWX host vars point at that stable management endpoint
+- the BIG-IP is licensed and reachable on its stable management IP
+- AWX inventory host vars point at that stable management endpoint through `f5_host`
 - base system settings are managed through Git
 - HA is established if the device belongs to a pair
-- routine `network`, `system`, `tls`, `ltm`, `gtm`, and `security` changes are made through GitOps workflows instead of ad hoc device edits
+- routine `network`, `system`, `tls`, `ltm`, `gtm`, and `security` changes are made through AWX-backed GitOps workflows instead of ad hoc device edits
 
 ## Short Version
 
-The intended path is:
+The normal path is:
 
 1. get the factory or temporary management endpoint reachable
-2. run `playbooks/bootstrap.yml` from the CLI
-3. if bootstrap changed the management IP, update `f5_host`
-4. run `playbooks/system.yml` to establish the device baseline
-5. if this is an HA pair, run `playbooks/ha.yml` from one designated device
+2. use `playbooks/bootstrap.yml` only if the device still needs licensing or a stable management IP
+3. set or update AWX inventory host var `f5_host` to the stable management endpoint
+4. use AWX to apply `playbooks/system.yml` for the device baseline
+5. if this is an HA pair, use AWX to apply `playbooks/ha.yml` from one designated sync-owner target
 6. verify reachability, trust, and sync health
-7. hand routine operations off to AWX
+7. use AWX for ongoing `system`, `network`, `tls`, `ltm`, `gtm`, and `security` changes
 
-That sequence is the reason `bootstrap` is a separate playbook: it handles the one-time cutover into a stable management endpoint before the normal `system` and service-domain lifecycle begins.
+That sequence is the reason `bootstrap` is a separate playbook: it handles the one-time cutover into a stable management endpoint before the normal AWX-driven lifecycle begins.
 
 ## Phase 0: First-Boot Prerequisites
 
@@ -50,31 +58,22 @@ For this repo, the practical minimum is:
 - admin credentials you can use for the first run
 - a jump host or terminal environment with Ansible and the F5 collection installed
 
-## Phase 1: Choose the First Control Plane
+## Phase 1: Decide Whether Bootstrap Is Needed
 
-Decide whether the first run should be:
+AWX is the preferred control plane, but it cannot be the first hop if the device is still unreachable, unlicensed, or using a temporary management endpoint.
 
-- CLI-first
-- AWX-first
+Use bootstrap first when:
 
-Use CLI-first when:
+- the BIG-IP still needs licensing
+- the current management IP is temporary or factory-assigned
+- AWX cannot safely route to the device yet
+- AWX itself depends on the BIG-IP estate you are standing up
 
-- AWX is not reachable yet
-- AWX itself depends on BIG-IP being configured first
-- you are bringing up a new lab, VE, or isolated pair
+Skip bootstrap and start in AWX only when:
 
-Use AWX-first only when:
-
-- BIG-IP is already reachable on a stable management endpoint
-- AWX can safely connect to it now
-- the chicken-and-egg problem does not apply
-
-In most brand-new environments, CLI-first is the correct choice.
-
-Practical rule:
-
-- if BIG-IP still needs licensing or a permanent management IP, start with CLI and `playbooks/bootstrap.yml`
-- if BIG-IP is already stably reachable and AWX can connect to it, you can start in AWX after bootstrap is no longer needed
+- the BIG-IP is already reachable on its long-lived management endpoint
+- AWX can connect to it now
+- the day-0 cutover problem does not apply
 
 ## Phase 2: Day-0 Bootstrap
 
@@ -89,7 +88,7 @@ Author the day-0 vars in:
 - `vars/bootstrap/license/`
 - `vars/bootstrap/management/`
 
-Run the bootstrap from the CLI path in [03-cli-bootstrap.md](03-cli-bootstrap.md).
+If AWX cannot safely be the first control plane, run bootstrap from the fallback path in [cli-bootstrap-and-recovery.md](cli-bootstrap-and-recovery.md).
 
 Important cutover rule:
 
@@ -181,8 +180,8 @@ Move to AWX after all of the following are true:
 Recommended handoff model:
 
 1. CLI runs `playbooks/bootstrap.yml`
-2. CLI optionally runs `playbooks/system.yml` and `playbooks/ha.yml` for first stabilization
-3. AWX takes over for routine operations after reachability and ownership are clear
+2. inventory host var `f5_host` is updated to the stable management endpoint if bootstrap changed it
+3. AWX takes over for `system.yml`, `ha.yml`, and routine service-domain operations after reachability and ownership are clear
 
 Recommended AWX ownership after handoff:
 
@@ -192,8 +191,9 @@ Recommended AWX ownership after handoff:
 
 See:
 
-- [04-awx-operation.md](04-awx-operation.md)
-- [05-awx-ha-bootstrap.md](05-awx-ha-bootstrap.md)
+- [03-awx-inventory-and-targeting.md](03-awx-inventory-and-targeting.md)
+- [04-awx-job-execution.md](04-awx-job-execution.md)
+- [05-ha-execution-model.md](05-ha-execution-model.md)
 
 ## What Is Still Manual
 
@@ -213,15 +213,15 @@ That boundary is intentional. The repo begins at the point where Ansible can tal
 For a brand-new pair, the practical sequence is:
 
 1. perform the platform-specific first-boot steps until the management API is reachable
-2. use the CLI path to run `playbooks/bootstrap.yml`
+2. use the CLI fallback path to run `playbooks/bootstrap.yml`
 3. update `f5_host` if the management IP changed
-4. run `playbooks/system.yml`
-5. run `playbooks/ha.yml` from the designated bootstrap/sync-owner device
-6. verify trust, sync health, and management reachability
-7. hand off routine operations to AWX
-8. manage ongoing changes through Git-backed playbook runs
+4. move to AWX inventory and templates
+5. run `playbooks/system.yml`
+6. run `playbooks/ha.yml` from the designated bootstrap/sync-owner device
+7. verify trust, sync health, and management reachability
+8. manage ongoing changes through AWX
 
-For a standalone device, the same path applies without step 5.
+For a standalone device, the same path applies without step 6.
 
 ## Source of Truth Boundary
 
