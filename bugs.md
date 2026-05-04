@@ -11,7 +11,8 @@
 - If datacenter is defined as canonical object AND we are using the wide ip it has two objects in the data center objects       finalized array
   ok: [xxx] => (item=Common/lab-dc1)
   ok: [xxx] => (item=Common/lab-dc1)
-- 
+- Autolookup from the wideip gtm "virtual-server" works but how to get the fully hydrated virtual server name
+  if coming from the ltm cluster intent (which doesnt spell out the virtual server name)
 
 
 Improvements:
