@@ -1,7 +1,3 @@
-
-- 'Compatibility' not a field of GTM tcp https monitor
-
-
 ## gtm wide ip intent issues
 - GTM doesn't follow the "intents" pattern of LTM for wide ips (for the vars,  playbooks seems to follow fine)
 
