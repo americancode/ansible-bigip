@@ -45,8 +45,6 @@ drift-check:
     - python3 tools/drift-check.py --json > drift-report.json || true
   artifacts:
     when: always
-    reports:
-      drift: drift-report.json
     paths:
       - drift-report.json
     expire_in: 30 days
