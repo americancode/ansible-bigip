@@ -1,6 +1,7 @@
 ---
 # System prep orchestrator.
-# Produces the classified system runtime sets, including:
+# Produces targeted and classified system runtime sets, including:
+# - `system_hostnames_targeted`
 # - `system_dns_present` / `system_dns_delete`
 # - `system_ntp_present` / `system_ntp_delete`
 # - `system_provisioning_present` / `system_provisioning_delete`
@@ -10,6 +11,7 @@
 # - `system_auth_radius_servers_present` / `system_auth_radius_servers_delete`
 # - `system_auth_radius_present` / `system_auth_radius_delete`
 # - `system_login_banner_present` / `system_login_banner_delete`
+# - `system_config_targeted`
 
 - name: Load system var fragments
   ansible.builtin.import_tasks: "{{ playbook_dir }}/system/prep/load-vars.yml"

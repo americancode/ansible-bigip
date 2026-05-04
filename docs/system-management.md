@@ -4,6 +4,32 @@ The `playbooks/system.yml` playbook manages base BIG-IP device settings after th
 
 For day-0 licensing and the first management IP/default route, use [02-bootstrap-playbook.md](02-bootstrap-playbook.md) and `playbooks/bootstrap.yml` first.
 
+## Targeting Model
+
+System objects are filtered per inventory host before runtime tasks execute.
+
+- every `system_*` object must define at least one of `target_hosts` or `target_groups`
+- `target_hosts` matches AWX or CLI `inventory_hostname`
+- `target_groups` matches Ansible `group_names`
+- prep logs how many objects matched or were skipped for the current host
+
+Safety rules enforced by validation:
+
+- `system_hostnames` must target exactly one explicit host
+- if multiple declarations exist for the same device-scoped identity, they must use disjoint `target_hosts`
+- if more than one declaration exists for the same identity, `target_groups` are rejected because overlap cannot be proven offline
+
+Example:
+
+```yaml
+system_dns:
+  - name_servers:
+      - "192.0.2.53"
+      - "192.0.2.54"
+    target_groups:
+      - "all_bigip"
+```
+
 ## Object Types
 
 ### Hostname
@@ -13,9 +39,11 @@ Location: `vars/system/hostname/`
 ```yaml
 system_hostnames:
   - hostname: "bigip-east.example.com"
+    target_hosts:
+      - "bigip-east-device"
 ```
 
-Only one hostname entry is needed. This sets the device hostname via `bigip_hostname`.
+Only one active hostname declaration may match a given target BIG-IP. This sets the device hostname via `bigip_hostname`.
 
 ### DNS
 
@@ -31,9 +59,11 @@ system_dns:
       - "corp.my.domain.com"
     cache: "enabled"
     ip_version: 4
+    target_groups:
+      - "all_bigip"
 ```
 
-Common fields: `name_servers`, `search`, `cache` (enabled/disabled), `ip_version`.
+Common fields: `name_servers`, `search`, `cache` (enabled/disabled), `ip_version`, `target_hosts`, `target_groups`.
 
 ### NTP
 
@@ -45,9 +75,11 @@ system_ntp:
       - "0.pool.ntp.org"
       - "1.pool.ntp.org"
     timezone: "America/New_York"
+    target_groups:
+      - "all_bigip"
 ```
 
-Common fields: `ntp_servers`, `timezone`.
+Common fields: `ntp_servers`, `timezone`, `target_hosts`, `target_groups`.
 
 ### Provisioning
 
@@ -59,15 +91,21 @@ Controls which BIG-IP modules are provisioned and at what level:
 system_provisioning:
   - module: "ltm"
     level: "dedicated"
+    target_groups:
+      - "all_bigip"
 
   - module: "gtm"
     level: "nominal"
+    target_groups:
+      - "all_bigip"
 
   - module: "asm"
     level: "nominal"
+    target_groups:
+      - "all_bigip"
 ```
 
-Required: `module`. Common fields: `level` (none, minimum, nominal, dedicated). Modules provisioned at `none` or with `state: absent` are deprovisioned.
+Required: `module`. Common fields: `level` (none, minimum, nominal, dedicated), `target_hosts`, `target_groups`. Modules provisioned at `none` or with `state: absent` are deprovisioned.
 
 ### Users
 
@@ -82,9 +120,11 @@ system_users:
     shell: "tmsh"
     update_password: "on_create"
     password_credential: "ChangeMe-Immediately-123!"
+    target_groups:
+      - "all_bigip"
 ```
 
-Required: `name`. Common fields: `full_name`, `partition_access`, `shell`, `password_credential`, `update_password`. The `update_password` field controls when passwords are changed: `on_create` sets it only on first creation, `always` updates on every run.
+Required: `name`. Common fields: `full_name`, `partition_access`, `shell`, `password_credential`, `update_password`, `target_hosts`, `target_groups`. The `update_password` field controls when passwords are changed: `on_create` sets it only on first creation, `always` updates on every run.
 
 ### Management-Plane LDAP / Active Directory Auth
 
@@ -109,9 +149,11 @@ system_auth_ldap:
     ssl: "start-tls"
     use_for_auth: true
     fallback_to_local: true
+    target_groups:
+      - "all_bigip"
 ```
 
-Required: `name`, `servers`. Common fields: `source_type`, `bind_dn`, `bind_password`, `remote_directory_tree`, `user_template`, `login_ldap_attr`, `ssl`, `scope`, `use_for_auth`, `fallback_to_local`.
+Required: `name`, `servers`. Common fields: `source_type`, `bind_dn`, `bind_password`, `remote_directory_tree`, `user_template`, `login_ldap_attr`, `ssl`, `scope`, `use_for_auth`, `fallback_to_local`, `target_hosts`, `target_groups`.
 
 ### Management-Plane TACACS+
 
@@ -132,9 +174,11 @@ system_auth_tacacs:
     protocol_name: "ip"
     service_name: "system"
     use_for_auth: false
+    target_groups:
+      - "all_bigip"
 ```
 
-Common fields: `servers`, `secret`, `authentication`, `accounting`, `protocol_name`, `service_name`, `update_secret`, `use_for_auth`.
+Common fields: `servers`, `secret`, `authentication`, `accounting`, `protocol_name`, `service_name`, `update_secret`, `use_for_auth`, `target_hosts`, `target_groups`.
 
 ### Management-Plane RADIUS Servers
 
@@ -150,9 +194,11 @@ system_auth_radius_servers:
       $ANSIBLE_VAULT;1.1;AES256
       65663563323663353562656434383762613631353939656435623336353330383232626539653864
     timeout: 5
+    target_groups:
+      - "all_bigip"
 ```
 
-Required: `name`, `ip`. Common fields: `partition`, `description`, `port`, `secret`, `timeout`, `update_secret`.
+Required: `name`, `ip`. Common fields: `partition`, `description`, `port`, `secret`, `timeout`, `update_secret`, `target_hosts`, `target_groups`.
 
 ### Management-Plane RADIUS Auth Profile
 
@@ -168,11 +214,13 @@ system_auth_radius:
     service_type: "administrative"
     fallback_to_local: true
     use_for_auth: false
+    target_groups:
+      - "all_bigip"
 ```
 
 The `servers` list points at objects defined in `vars/system/auth/radius_servers/`. Use `/Partition/name` when a referenced server is not in `Common`.
 
-Common fields: `servers`, `retries`, `service_type`, `accounting_bug`, `fallback_to_local`, `use_for_auth`.
+Common fields: `servers`, `retries`, `service_type`, `accounting_bug`, `fallback_to_local`, `use_for_auth`, `target_hosts`, `target_groups`.
 
 ### Login Banner
 
@@ -184,12 +232,14 @@ This manages the BIG-IP GUI security banner shown before administrator login. It
 system_login_banners:
   - name: "authorized-use-banner"
     enabled: true
+    target_groups:
+      - "all_bigip"
     text: |
       WARNING: This system is for authorized use only.
       Activity may be monitored, recorded, and subject to audit.
 ```
 
-Supported fields: `enabled`, `text`, and optional `name` for repo-side labeling. A deletion entry or `state: absent` disables the banner.
+Supported fields: `enabled`, `text`, optional `name`, `target_hosts`, and `target_groups`. A deletion entry or `state: absent` disables the banner.
 
 ### Config Save
 
@@ -200,6 +250,8 @@ Persists the running configuration to disk after other system changes:
 ```yaml
 system_config:
   - save: true
+    target_groups:
+      - "all_bigip"
 ```
 
 This runs `bigip_config` to save the running config. It is the last task in the system playbook.
@@ -224,7 +276,7 @@ System objects are device-scoped, not partition-scoped, with two practical excep
 
 For environments with multiple auth methods defined in Git, only one of LDAP, TACACS, or RADIUS should set `use_for_auth: true` for a given target BIG-IP.
 
-For environments with multiple HA pairs, system settings are typically applied per device rather than synced. Run `system.yml` against each device individually when settings differ between peers.
+For environments with multiple HA pairs, system settings are typically applied per device rather than synced. Use `target_hosts` for device-specific settings such as hostname, and use `target_groups` only when one declaration is intentionally meant to apply to every host in that inventory group.
 
 ## Current Lifecycle Boundary
 

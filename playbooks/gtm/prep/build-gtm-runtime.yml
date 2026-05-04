@@ -1,29 +1,70 @@
-- name: Classify GTM object operations
-  ansible.builtin.set_fact:
-    gtm_datacenters_delete: "{{ gtm_datacenter_ops.delete }}"
-    gtm_datacenters_present: "{{ gtm_datacenter_ops.present }}"
-    gtm_monitors_delete: "{{ gtm_monitor_ops.delete }}"
-    gtm_monitors_present: "{{ gtm_monitor_ops.present }}"
-    gtm_servers_delete: "{{ gtm_server_ops.delete }}"
-    gtm_servers_present: "{{ gtm_server_ops.present }}"
-    gtm_pools_delete: "{{ gtm_pool_ops.delete }}"
-    gtm_pools_present: "{{ gtm_pool_ops.present }}"
-    gtm_wide_ips_delete: "{{ gtm_wide_ip_ops.delete }}"
-    gtm_wide_ips_present: "{{ gtm_wide_ip_ops.present }}"
-    gtm_topology_regions_delete: "{{ gtm_topology_region_ops.delete }}"
-    gtm_topology_regions_present: "{{ gtm_topology_region_ops.present }}"
-    gtm_topology_records_delete: "{{ gtm_topology_record_ops.delete }}"
-    gtm_topology_records_present: "{{ gtm_topology_record_ops.present }}"
-    gtm_canonical_datacenters_delete: "{{ gtm_datacenter_ops.delete }}"
-    gtm_canonical_datacenters_present: "{{ gtm_datacenter_ops.present }}"
+- name: Classify GTM datacenter operations
+  ansible.builtin.import_tasks: "{{ playbook_dir }}/shared/prep/classify-operations.yml"
   vars:
-    gtm_datacenter_ops: "{{ (gtm_datacenters | default([])) | classify_operations(gtm_datacenter_deletions | default([])) }}"
-    gtm_monitor_ops: "{{ (gtm_monitors | default([])) | classify_operations(gtm_monitor_deletions | default([])) }}"
-    gtm_server_ops: "{{ (gtm_servers | default([])) | classify_operations(gtm_server_deletions | default([])) }}"
-    gtm_pool_ops: "{{ (gtm_pools | default([])) | classify_operations(gtm_pool_deletions | default([])) }}"
-    gtm_wide_ip_ops: "{{ (gtm_wide_ips | default([])) | classify_operations(gtm_wide_ip_deletions | default([])) }}"
-    gtm_topology_region_ops: "{{ (gtm_topology_regions | default([])) | classify_operations(gtm_topology_region_deletions | default([])) }}"
-    gtm_topology_record_ops: "{{ (gtm_topology_records | default([])) | classify_operations(gtm_topology_record_deletions | default([])) }}"
+    object_label: GTM datacenter
+    active_objects: "{{ gtm_datacenters | default([]) }}"
+    deletion_objects: "{{ gtm_datacenter_deletions | default([]) }}"
+    delete_var: gtm_datacenters_delete
+    present_var: gtm_datacenters_present
+
+- name: Classify GTM monitor operations
+  ansible.builtin.import_tasks: "{{ playbook_dir }}/shared/prep/classify-operations.yml"
+  vars:
+    object_label: GTM monitor
+    active_objects: "{{ gtm_monitors | default([]) }}"
+    deletion_objects: "{{ gtm_monitor_deletions | default([]) }}"
+    delete_var: gtm_monitors_delete
+    present_var: gtm_monitors_present
+
+- name: Classify GTM server operations
+  ansible.builtin.import_tasks: "{{ playbook_dir }}/shared/prep/classify-operations.yml"
+  vars:
+    object_label: GTM server
+    active_objects: "{{ gtm_servers | default([]) }}"
+    deletion_objects: "{{ gtm_server_deletions | default([]) }}"
+    delete_var: gtm_servers_delete
+    present_var: gtm_servers_present
+
+- name: Classify GTM pool operations
+  ansible.builtin.import_tasks: "{{ playbook_dir }}/shared/prep/classify-operations.yml"
+  vars:
+    object_label: GTM pool
+    active_objects: "{{ gtm_pools | default([]) }}"
+    deletion_objects: "{{ gtm_pool_deletions | default([]) }}"
+    delete_var: gtm_pools_delete
+    present_var: gtm_pools_present
+
+- name: Classify GTM Wide IP operations
+  ansible.builtin.import_tasks: "{{ playbook_dir }}/shared/prep/classify-operations.yml"
+  vars:
+    object_label: GTM Wide IP
+    active_objects: "{{ gtm_wide_ips | default([]) }}"
+    deletion_objects: "{{ gtm_wide_ip_deletions | default([]) }}"
+    delete_var: gtm_wide_ips_delete
+    present_var: gtm_wide_ips_present
+
+- name: Classify GTM topology region operations
+  ansible.builtin.import_tasks: "{{ playbook_dir }}/shared/prep/classify-operations.yml"
+  vars:
+    object_label: GTM topology region
+    active_objects: "{{ gtm_topology_regions | default([]) }}"
+    deletion_objects: "{{ gtm_topology_region_deletions | default([]) }}"
+    delete_var: gtm_topology_regions_delete
+    present_var: gtm_topology_regions_present
+
+- name: Classify GTM topology record operations
+  ansible.builtin.import_tasks: "{{ playbook_dir }}/shared/prep/classify-operations.yml"
+  vars:
+    object_label: GTM topology record
+    active_objects: "{{ gtm_topology_records | default([]) }}"
+    deletion_objects: "{{ gtm_topology_record_deletions | default([]) }}"
+    delete_var: gtm_topology_records_delete
+    present_var: gtm_topology_records_present
+
+- name: Publish canonical GTM datacenter operations
+  ansible.builtin.set_fact:
+    gtm_canonical_datacenters_delete: "{{ gtm_datacenters_delete | default([]) }}"
+    gtm_canonical_datacenters_present: "{{ gtm_datacenters_present | default([]) }}"
 
 - name: Build GTM Wide IP intent shortcuts
   ansible.builtin.import_tasks: "{{ playbook_dir }}/gtm/prep/intents/inline/build-wide-ip-intents.yml"

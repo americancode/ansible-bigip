@@ -1,6 +1,12 @@
 ---
+# BIG-IP management NTP example for the system domain.
+# This file is consumed by `playbooks/system.yml` and applies to every inventory host selected
+# by the declared target selectors.
+# Supported fields: `ntp_servers`, `timezone`, `target_hosts`, and `target_groups`.
 system_ntp:
   - ntp_servers:
       - "time1.my.domain.com"
       - "time2.my.domain.com"
     timezone: "America/New_York"
+    target_groups:
+      - "all_bigip"

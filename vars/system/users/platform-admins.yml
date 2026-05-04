@@ -1,4 +1,9 @@
 ---
+# BIG-IP local user example for the system domain.
+# This file is consumed by `playbooks/system.yml`; user names are device-local BIG-IP users but
+# the same declaration can be targeted to many inventory hosts when appropriate.
+# Supported fields: `name`, `full_name`, `partition_access`, `shell`, `password_credential`,
+# `update_password`, `target_hosts`, and `target_groups`.
 system_users:
   - name: "automation-admin"
     full_name: "Automation Admin"
@@ -7,3 +12,5 @@ system_users:
     shell: "tmsh"
     update_password: "on_create"
     password_credential: "ChangeMe-Immediately-123!"
+    target_groups:
+      - "all_bigip"

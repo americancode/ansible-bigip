@@ -1,3 +1,8 @@
 ---
+# BIG-IP config-save example for the system domain.
+# This file is consumed by `playbooks/system.yml` after other system objects are applied.
+# Supported fields: `save`, `target_hosts`, and `target_groups`.
 system_config:
   - save: true
+    target_groups:
+      - "all_bigip"

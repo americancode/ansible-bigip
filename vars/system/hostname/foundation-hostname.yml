@@ -1,3 +1,9 @@
 ---
+# BIG-IP hostname example for the system domain.
+# Hostname is device-local and should normally target one explicit inventory host.
+# This file is consumed by `playbooks/system.yml` and does not reference other repo-managed objects.
+# Supported fields: `hostname`, `target_hosts`, and optional `state`.
 system_hostnames:
-  - hostname: "bigip01.my.domain.com"
+  - hostname: "bigip-east.example.com"
+    target_hosts:
+      - "bigip-east-device"

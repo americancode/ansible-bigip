@@ -1,14 +1,20 @@
 - name: Classify repo-known LTM virtual server operations
-  ansible.builtin.set_fact:
-    repo_ltm_virtual_servers_present: "{{ repo_ltm_virtual_server_ops.present }}"
+  ansible.builtin.import_tasks: "{{ playbook_dir }}/shared/prep/classify-operations.yml"
   vars:
-    repo_ltm_virtual_server_ops: "{{ (repo_ltm_virtual_servers | default([])) | classify_operations([]) }}"
+    object_label: repo-known LTM virtual server
+    active_objects: "{{ repo_ltm_virtual_servers | default([]) }}"
+    deletion_objects: []
+    delete_var: repo_ltm_virtual_servers_delete
+    present_var: repo_ltm_virtual_servers_present
 
 - name: Classify repo-known LTM RKE2 server intent operations
-  ansible.builtin.set_fact:
-    repo_ltm_rke2_server_intents_present: "{{ repo_ltm_rke2_server_intent_ops.present }}"
+  ansible.builtin.import_tasks: "{{ playbook_dir }}/shared/prep/classify-operations.yml"
   vars:
-    repo_ltm_rke2_server_intent_ops: "{{ (repo_ltm_rke2_server_intents | default([])) | classify_operations([]) }}"
+    object_label: repo-known LTM RKE2 server intent
+    active_objects: "{{ repo_ltm_rke2_server_intents | default([]) }}"
+    deletion_objects: []
+    delete_var: repo_ltm_rke2_server_intents_delete
+    present_var: repo_ltm_rke2_server_intents_present
 
 - name: Build repo-known LTM RKE2 intent virtual servers
   ansible.builtin.import_tasks: "{{ playbook_dir }}/gtm/prep/intents/clusters/build-repo-ltm-rke2-server-intents.yml"

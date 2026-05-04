@@ -1,0 +1,27 @@
+- name: Evaluate {{ object_label }} targeting for the current inventory host
+  ansible.builtin.set_fact:
+    _prep_targeted_objects: >-
+      {{
+        source_objects | default([])
+        | split_targeted_objects(
+            inventory_hostname,
+            group_names | default([]),
+            match_without_selectors | default(true)
+          )
+      }}
+
+- name: Publish targeted {{ object_label }} collections
+  ansible.builtin.set_fact:
+    "{{ matched_var }}": "{{ _prep_targeted_objects.matched }}"
+    "{{ skipped_var }}": "{{ _prep_targeted_objects.skipped }}"
+    "{{ summary_var }}": "{{ _prep_targeted_objects }}"
+
+- name: Log {{ object_label }} targeting summary
+  ansible.builtin.debug:
+    msg:
+      - "{{ object_label }} targeting for {{ inventory_hostname }}: matched={{ (_prep_targeted_objects.matched | default([])) | length }}, skipped={{ (_prep_targeted_objects.skipped | default([])) | length }}"
+      - "Matched: {{ (_prep_targeted_objects.matched_labels | default([])) | join('; ') if (_prep_targeted_objects.matched_labels | default([])) else 'none' }}"
+      - "Skipped: {{ (_prep_targeted_objects.skipped_labels | default([])) | join('; ') if (_prep_targeted_objects.skipped_labels | default([])) else 'none' }}"
+  when:
+    - ((_prep_targeted_objects.matched | default([])) | length) > 0
+      or ((_prep_targeted_objects.skipped | default([])) | length) > 0

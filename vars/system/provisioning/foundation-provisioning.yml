@@ -1,10 +1,20 @@
 ---
+# BIG-IP module provisioning examples for the system domain.
+# Provisioning is applied by `playbooks/system.yml` and can target one host or an inventory group
+# when the same module levels should be enforced everywhere.
+# Supported fields: `module`, `level`, `memory`, `target_hosts`, and `target_groups`.
 system_provisioning:
   - module: "ltm"
     level: "nominal"
+    target_groups:
+      - "all_bigip"
 
   - module: "gtm"
     level: "minimum"
+    target_groups:
+      - "all_bigip"
 
   - module: "mgmt"
     memory: "medium"
+    target_groups:
+      - "all_bigip"

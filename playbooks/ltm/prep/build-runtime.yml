@@ -1,72 +1,92 @@
 - name: Classify LTM monitor operations
-  ansible.builtin.set_fact:
-    ltm_monitors_delete: "{{ ltm_monitor_ops.delete }}"
-    ltm_monitors_present: "{{ ltm_monitor_ops.present }}"
+  ansible.builtin.import_tasks: "{{ playbook_dir }}/shared/prep/classify-operations.yml"
   vars:
-    ltm_monitor_ops: "{{ (ltm_monitors | default([])) | classify_operations(ltm_monitor_deletions | default([])) }}"
+    object_label: LTM monitor
+    active_objects: "{{ ltm_monitors | default([]) }}"
+    deletion_objects: "{{ ltm_monitor_deletions | default([]) }}"
+    delete_var: ltm_monitors_delete
+    present_var: ltm_monitors_present
 
 - name: Classify LTM node operations
-  ansible.builtin.set_fact:
-    ltm_nodes_delete: "{{ ltm_node_ops.delete }}"
-    ltm_nodes_present: "{{ ltm_node_ops.present }}"
+  ansible.builtin.import_tasks: "{{ playbook_dir }}/shared/prep/classify-operations.yml"
   vars:
-    ltm_node_ops: "{{ (ltm_nodes | default([])) | classify_operations(ltm_node_deletions | default([])) }}"
+    object_label: LTM node
+    active_objects: "{{ ltm_nodes | default([]) }}"
+    deletion_objects: "{{ ltm_node_deletions | default([]) }}"
+    delete_var: ltm_nodes_delete
+    present_var: ltm_nodes_present
 
 - name: Classify explicit LTM pool operations
-  ansible.builtin.set_fact:
-    ltm_pools_delete: "{{ ltm_pool_ops.delete }}"
-    ltm_pools_present: "{{ ltm_pool_ops.present }}"
+  ansible.builtin.import_tasks: "{{ playbook_dir }}/shared/prep/classify-operations.yml"
   vars:
-    ltm_pool_ops: "{{ (ltm_pools | default([])) | classify_operations(ltm_pool_deletions | default([])) }}"
+    object_label: LTM pool
+    active_objects: "{{ ltm_pools | default([]) }}"
+    deletion_objects: "{{ ltm_pool_deletions | default([]) }}"
+    delete_var: ltm_pools_delete
+    present_var: ltm_pools_present
 
 - name: Classify LTM profile operations
-  ansible.builtin.set_fact:
-    ltm_profiles_delete: "{{ ltm_profile_ops.delete }}"
-    ltm_profiles_present: "{{ ltm_profile_ops.present }}"
+  ansible.builtin.import_tasks: "{{ playbook_dir }}/shared/prep/classify-operations.yml"
   vars:
-    ltm_profile_ops: "{{ (ltm_profiles | default([])) | classify_operations(ltm_profile_deletions | default([])) }}"
+    object_label: LTM profile
+    active_objects: "{{ ltm_profiles | default([]) }}"
+    deletion_objects: "{{ ltm_profile_deletions | default([]) }}"
+    delete_var: ltm_profiles_delete
+    present_var: ltm_profiles_present
 
 - name: Classify LTM virtual server operations
-  ansible.builtin.set_fact:
-    ltm_virtual_servers_delete: "{{ ltm_virtual_server_ops.delete }}"
-    ltm_virtual_servers_present: "{{ ltm_virtual_server_ops.present }}"
+  ansible.builtin.import_tasks: "{{ playbook_dir }}/shared/prep/classify-operations.yml"
   vars:
-    ltm_virtual_server_ops: "{{ (ltm_virtual_servers | default([])) | classify_operations(ltm_virtual_server_deletions | default([])) }}"
+    object_label: LTM virtual server
+    active_objects: "{{ ltm_virtual_servers | default([]) }}"
+    deletion_objects: "{{ ltm_virtual_server_deletions | default([]) }}"
+    delete_var: ltm_virtual_servers_delete
+    present_var: ltm_virtual_servers_present
 
 - name: Classify LTM RKE2 server intent operations
-  ansible.builtin.set_fact:
-    ltm_rke2_server_intents_delete: "{{ ltm_rke2_server_intent_ops.delete }}"
-    ltm_rke2_server_intents_present: "{{ ltm_rke2_server_intent_ops.present }}"
+  ansible.builtin.import_tasks: "{{ playbook_dir }}/shared/prep/classify-operations.yml"
   vars:
-    ltm_rke2_server_intent_ops: "{{ (ltm_rke2_server_intents | default([])) | classify_operations(ltm_rke2_server_intent_deletions | default([])) }}"
+    object_label: LTM RKE2 server intent
+    active_objects: "{{ ltm_rke2_server_intents | default([]) }}"
+    deletion_objects: "{{ ltm_rke2_server_intent_deletions | default([]) }}"
+    delete_var: ltm_rke2_server_intents_delete
+    present_var: ltm_rke2_server_intents_present
 
 - name: Classify LTM persistence profile operations
-  ansible.builtin.set_fact:
-    ltm_persistence_profiles_delete: "{{ ltm_persistence_ops.delete }}"
-    ltm_persistence_profiles_present: "{{ ltm_persistence_ops.present }}"
+  ansible.builtin.import_tasks: "{{ playbook_dir }}/shared/prep/classify-operations.yml"
   vars:
-    ltm_persistence_ops: "{{ (ltm_persistence_profiles | default([])) | classify_operations(ltm_persistence_profile_deletions | default([])) }}"
+    object_label: LTM persistence profile
+    active_objects: "{{ ltm_persistence_profiles | default([]) }}"
+    deletion_objects: "{{ ltm_persistence_profile_deletions | default([]) }}"
+    delete_var: ltm_persistence_profiles_delete
+    present_var: ltm_persistence_profiles_present
 
 - name: Classify LTM iRule operations
-  ansible.builtin.set_fact:
-    ltm_irules_delete: "{{ ltm_irule_ops.delete }}"
-    ltm_irules_present: "{{ ltm_irule_ops.present }}"
+  ansible.builtin.import_tasks: "{{ playbook_dir }}/shared/prep/classify-operations.yml"
   vars:
-    ltm_irule_ops: "{{ (ltm_irules | default([])) | classify_operations(ltm_irule_deletions | default([])) }}"
+    object_label: LTM iRule
+    active_objects: "{{ ltm_irules | default([]) }}"
+    deletion_objects: "{{ ltm_irule_deletions | default([]) }}"
+    delete_var: ltm_irules_delete
+    present_var: ltm_irules_present
 
 - name: Classify LTM data group operations
-  ansible.builtin.set_fact:
-    ltm_data_groups_delete: "{{ ltm_data_group_ops.delete }}"
-    ltm_data_groups_present: "{{ ltm_data_group_ops.present }}"
+  ansible.builtin.import_tasks: "{{ playbook_dir }}/shared/prep/classify-operations.yml"
   vars:
-    ltm_data_group_ops: "{{ (ltm_data_groups | default([])) | classify_operations(ltm_data_group_deletions | default([])) }}"
+    object_label: LTM data group
+    active_objects: "{{ ltm_data_groups | default([]) }}"
+    deletion_objects: "{{ ltm_data_group_deletions | default([]) }}"
+    delete_var: ltm_data_groups_delete
+    present_var: ltm_data_groups_present
 
 - name: Classify LTM policy operations
-  ansible.builtin.set_fact:
-    ltm_policies_delete: "{{ ltm_policy_ops.delete }}"
-    ltm_policies_present: "{{ ltm_policy_ops.present }}"
+  ansible.builtin.import_tasks: "{{ playbook_dir }}/shared/prep/classify-operations.yml"
   vars:
-    ltm_policy_ops: "{{ (ltm_policies | default([])) | classify_operations(ltm_policy_deletions | default([])) }}"
+    object_label: LTM policy
+    active_objects: "{{ ltm_policies | default([]) }}"
+    deletion_objects: "{{ ltm_policy_deletions | default([]) }}"
+    delete_var: ltm_policies_delete
+    present_var: ltm_policies_present
 
 - name: Build LTM virtual-server intent shortcuts
   # Inline virtual-server shortcuts are not executed directly by runtime tasks.

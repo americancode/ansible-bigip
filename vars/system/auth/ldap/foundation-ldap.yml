@@ -3,7 +3,8 @@
 # This file configures how administrators log in to BIG-IP itself through `playbooks/system.yml`.
 # It is separate from APM end-user identity under `vars/security/apm/`.
 # Supported fields: `name`, `servers`, `bind_dn`, `bind_password`, `remote_directory_tree`,
-# `user_template`, `login_ldap_attr`, `ssl`, `scope`, `port`, `use_for_auth`, and `fallback_to_local`.
+# `user_template`, `login_ldap_attr`, `ssl`, `scope`, `port`, `use_for_auth`, `fallback_to_local`,
+# `target_hosts`, and `target_groups`.
 system_auth_ldap:
   - name: "corp-ad-admins"
     servers:
@@ -17,3 +18,5 @@ system_auth_ldap:
     user_template: "%s@example.com"
     login_ldap_attr: "sAMAccountName"
     use_for_auth: true
+    target_groups:
+      - "all_bigip"

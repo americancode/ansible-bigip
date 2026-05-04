@@ -1,4 +1,8 @@
 ---
+# BIG-IP management DNS example for the system domain.
+# This file is consumed by `playbooks/system.yml` and applies to every inventory host selected
+# by the declared target selectors.
+# Supported fields: `name_servers`, `search`, `cache`, `ip_version`, `target_hosts`, and `target_groups`.
 system_dns:
   - name_servers:
       - "192.0.2.53"
@@ -8,3 +12,5 @@ system_dns:
       - "corp.my.domain.com"
     cache: "enabled"
     ip_version: 4
+    target_groups:
+      - "all_bigip"

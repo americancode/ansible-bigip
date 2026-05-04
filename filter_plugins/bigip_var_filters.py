@@ -23,6 +23,7 @@ try:
         normalize_gtm_pool,
         normalize_ltm_pool,
         resolve_gtm_members,
+        split_targeted_objects,
     )
 except ImportError:
     from bigip_filters import (
@@ -41,6 +42,7 @@ except ImportError:
         normalize_gtm_pool,
         normalize_ltm_pool,
         resolve_gtm_members,
+        split_targeted_objects,
     )
 
 
@@ -64,4 +66,5 @@ class FilterModule(object):
             "compile_ltm_virtual_server_intent": compile_ltm_virtual_server_intent,
             "compile_ltm_rke2_server_intent": compile_ltm_rke2_server_intent,
             "compile_gtm_wide_ip_intent": compile_gtm_wide_ip_intent,
+            "split_targeted_objects": split_targeted_objects,
         }

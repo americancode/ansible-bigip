@@ -671,6 +671,15 @@ class Validator:
         elif not isinstance(payload["provider"], dict):
             self.error(path, "`provider` must be a mapping")
 
+        for tree_name, objects in self.objects.items():
+            for obj in objects:
+                if "target_hosts" in obj.data or "target_groups" in obj.data:
+                    self.validate_target_selectors(
+                        obj,
+                        label=f"{tree_name} object",
+                        allow_absent=True,
+                    )
+
     def validate_bootstrap(self) -> None:
         """Validate bootstrap domain objects (licenses and management).
 
@@ -1054,31 +1063,58 @@ class Validator:
         config = self.objects.get("system_config", [])
 
         for obj in hostnames:
+            self.validate_target_selectors(
+                obj,
+                label="system hostname object",
+                require_single_host=True,
+            )
             if obj.effective_state != "absent":
                 self.require_fields(obj, ["hostname"])
 
+        self.check_targeted_identity_collisions(
+            hostnames,
+            identity_func=lambda obj: ("system_hostname",),
+            label="system hostname object",
+        )
+
         for obj in dns_settings:
+            self.validate_target_selectors(obj, label="system DNS object")
             if obj.effective_state != "absent":
                 if not obj.data.get("name_servers") and not obj.data.get("search") and obj.data.get("cache") is None and obj.data.get("ip_version") is None:
                     self.error(obj.relpath, "system DNS object must define at least one of `name_servers`, `search`, `cache`, or `ip_version`")
 
+        self.check_targeted_identity_collisions(
+            dns_settings,
+            identity_func=lambda obj: ("system_dns",),
+            label="system DNS object",
+        )
+
         for obj in ntp_settings:
+            self.validate_target_selectors(obj, label="system NTP object")
             if obj.effective_state != "absent":
                 if not obj.data.get("ntp_servers") and not obj.data.get("timezone"):
                     self.error(obj.relpath, "system NTP object must define `ntp_servers` or `timezone`")
 
+        self.check_targeted_identity_collisions(
+            ntp_settings,
+            identity_func=lambda obj: ("system_ntp",),
+            label="system NTP object",
+        )
+
         for obj in provisioning:
+            self.validate_target_selectors(obj, label=f"system provisioning module `{obj.data.get('module')}`")
             self.require_fields(obj, ["module"])
             if obj.effective_state != "absent" and obj.data.get("module") != "mgmt" and not obj.data.get("level"):
                 self.error(obj.relpath, f"system provisioning module `{obj.data.get('module')}` should define `level`")
 
-        self.check_duplicates(
+        self.check_targeted_identity_collisions(
             provisioning,
-            lambda obj: ("system_provisioning", obj.data.get("module")),
-            "system provisioning module",
+            identity_func=lambda obj: ("system_provisioning", obj.data.get("module")),
+            label="system provisioning module",
         )
 
         for obj in users:
+            self.validate_target_selectors(obj, label=f"system user `{obj.data.get('name')}`")
             self.require_fields(obj, ["name"])
             if obj.effective_state != "absent":
                 if obj.data.get("name") != "root" and not obj.data.get("partition_access"):
@@ -1086,10 +1122,15 @@ class Validator:
                 if obj.data.get("state", "present") == "present" and obj.data.get("password_credential") is None and obj.data.get("update_password") == "on_create":
                     self.error(obj.relpath, f"system user `{obj.data.get('name')}` uses `update_password: on_create` without `password_credential`")
 
-        self.check_duplicates(users, lambda obj: ("system_user", obj.data.get("name")), "system user")
+        self.check_targeted_identity_collisions(
+            users,
+            identity_func=lambda obj: ("system_user", obj.data.get("name")),
+            label="system user",
+        )
 
         active_radius_server_names = set()
         for obj in auth_radius_servers:
+            self.validate_target_selectors(obj, label=f"system RADIUS server `{obj.data.get('name')}`")
             self.require_fields(obj, ["name"])
             if obj.effective_state == "absent":
                 continue
@@ -1120,14 +1161,15 @@ class Validator:
 
             active_radius_server_names.add(self.fq_name(str(obj.data.get("partition", "Common")), str(obj.data["name"])))
 
-        self.check_duplicates(
+        self.check_targeted_identity_collisions(
             auth_radius_servers,
-            lambda obj: ("system_radius_server", obj.data.get("partition", "Common"), obj.data.get("name")),
-            "system RADIUS server",
+            identity_func=lambda obj: ("system_radius_server", obj.data.get("partition", "Common"), obj.data.get("name")),
+            label="system RADIUS server",
         )
 
         active_system_auth_sources = []
         for obj in auth_ldap:
+            target_hosts, target_groups = self.validate_target_selectors(obj, label=f"system LDAP auth `{obj.data.get('name')}`")
             self.require_fields(obj, ["name"])
             if obj.effective_state == "absent":
                 continue
@@ -1174,20 +1216,21 @@ class Validator:
                 self.error(obj.relpath, f"system LDAP auth `{obj.data.get('name')}` uses `update_password: on_create` without `bind_password`")
 
             if obj.data.get("use_for_auth") is True:
-                active_system_auth_sources.append(("ldap", obj))
+                active_system_auth_sources.append(("ldap", obj, target_hosts, target_groups))
 
-        self.check_duplicates(auth_ldap, lambda obj: ("system_auth_ldap", obj.data.get("name")), "system LDAP auth")
+        self.check_targeted_identity_collisions(
+            auth_ldap,
+            identity_func=lambda obj: ("system_auth_ldap", obj.data.get("name")),
+            label="system LDAP auth",
+        )
 
-        active_tacacs_present = [obj for obj in auth_tacacs if obj.effective_state != "absent"]
-        if len(active_tacacs_present) > 1:
-            self.error(
-                active_tacacs_present[1].relpath,
-                "system TACACS auth is device-scoped and supports only one active declaration per target BIG-IP",
-            )
+        active_tacacs_present = []
 
         for obj in auth_tacacs:
+            target_hosts, target_groups = self.validate_target_selectors(obj, label="system TACACS auth object")
             if obj.effective_state == "absent":
                 continue
+            active_tacacs_present.append((obj, target_hosts, target_groups))
 
             self.require_fields(obj, ["servers"])
             servers = obj.data.get("servers")
@@ -1243,18 +1286,21 @@ class Validator:
             if use_for_auth is not None and not isinstance(use_for_auth, bool):
                 self.error(obj.relpath, "system TACACS auth `use_for_auth` must be a boolean")
             if use_for_auth is True:
-                active_system_auth_sources.append(("tacacs", obj))
+                active_system_auth_sources.append(("tacacs", obj, target_hosts, target_groups))
 
-        active_radius_present = [obj for obj in auth_radius if obj.effective_state != "absent"]
-        if len(active_radius_present) > 1:
-            self.error(
-                active_radius_present[1].relpath,
-                "system RADIUS auth is device-scoped and supports only one active declaration per target BIG-IP",
-            )
+        self.check_targeted_identity_collisions(
+            auth_tacacs,
+            identity_func=lambda obj: ("system_auth_tacacs",),
+            label="system TACACS auth object",
+        )
+
+        active_radius_present = []
 
         for obj in auth_radius:
+            target_hosts, target_groups = self.validate_target_selectors(obj, label="system RADIUS auth object")
             if obj.effective_state == "absent":
                 continue
+            active_radius_present.append((obj, target_hosts, target_groups))
 
             self.require_fields(obj, ["servers"])
             servers = obj.data.get("servers")
@@ -1290,24 +1336,40 @@ class Validator:
                     self.error(obj.relpath, f"system RADIUS auth `{field}` must be a boolean")
 
             if obj.data.get("use_for_auth") is True:
-                active_system_auth_sources.append(("radius", obj))
+                active_system_auth_sources.append(("radius", obj, target_hosts, target_groups))
 
-        if len(active_system_auth_sources) > 1:
-            _, conflicting_obj = active_system_auth_sources[1]
-            active_types = ", ".join(sorted(auth_type for auth_type, _ in active_system_auth_sources))
+        self.check_targeted_identity_collisions(
+            auth_radius,
+            identity_func=lambda obj: ("system_auth_radius",),
+            label="system RADIUS auth object",
+        )
+
+        active_auth_targets: dict[str, tuple[str, LoadedObject]] = {}
+        grouped_auth_sources = [entry for entry in active_system_auth_sources if entry[2] or entry[3]]
+        if len(grouped_auth_sources) > 1 and any(target_groups for _, _, _, target_groups in grouped_auth_sources):
+            conflicting_obj = grouped_auth_sources[1][1]
             self.error(
                 conflicting_obj.relpath,
-                f"only one management-plane auth source can set `use_for_auth: true` on a target BIG-IP; found {active_types}",
+                "multiple management-plane auth sources with `use_for_auth: true` cannot use `target_groups`; use disjoint `target_hosts` instead",
             )
+        else:
+            for auth_type, obj, target_hosts, _ in active_system_auth_sources:
+                for host in target_hosts:
+                    if host in active_auth_targets:
+                        existing_type, existing_obj = active_auth_targets[host]
+                        self.error(
+                            obj.relpath,
+                            f"only one management-plane auth source can set `use_for_auth: true` for target host `{host}`; conflicts with {existing_type} in {existing_obj.relpath}",
+                        )
+                    else:
+                        active_auth_targets[host] = (auth_type, obj)
 
-        active_login_banners = [obj for obj in login_banners if obj.effective_state != "absent"]
-        if len(active_login_banners) > 1:
-            self.error(
-                active_login_banners[1].relpath,
-                "system login banner is device-scoped and supports only one active declaration per target BIG-IP",
-            )
+        active_login_banners = []
 
         for obj in login_banners:
+            target_hosts, target_groups = self.validate_target_selectors(obj, label="system login banner object")
+            if obj.effective_state != "absent":
+                active_login_banners.append((obj, target_hosts, target_groups))
             enabled = obj.data.get("enabled")
             if enabled is not None and not isinstance(enabled, bool):
                 self.error(obj.relpath, "system login banner `enabled` must be a boolean")
@@ -1316,6 +1378,21 @@ class Validator:
             text = obj.data.get("text")
             if text is not None and not isinstance(text, str):
                 self.error(obj.relpath, "system login banner `text` must be a string")
+
+        self.check_targeted_identity_collisions(
+            login_banners,
+            identity_func=lambda obj: ("system_login_banner",),
+            label="system login banner object",
+        )
+
+        for obj in config:
+            self.validate_target_selectors(obj, label="system config object")
+
+        self.check_targeted_identity_collisions(
+            config,
+            identity_func=lambda obj: ("system_config",),
+            label="system config object",
+        )
 
         for obj in config:
             if "save" in obj.data and not isinstance(obj.data.get("save"), bool):
@@ -3266,15 +3343,47 @@ class Validator:
         Side effects:
             Calls self.error() for each duplicate found.
         """
-        seen: dict[tuple[Any, ...], LoadedObject] = {}
+        seen: dict[tuple[Any, ...], list[LoadedObject]] = {}
         for obj in objects:
             key = key_func(obj)
             if any(part is None for part in key):
                 continue
-            if key in seen:
-                self.error(obj.relpath, f"{label} `{key[1:]}` duplicates {seen[key].relpath}")
-            else:
-                seen[key] = obj
+            seen.setdefault(key, []).append(obj)
+
+        for key, dupes in seen.items():
+            if len(dupes) < 2:
+                continue
+
+            selector_sets = [
+                self.validate_target_selectors(
+                    obj,
+                    label=f"{label} `{key[1:]}`",
+                    allow_absent=True,
+                )
+                for obj in dupes
+            ]
+
+            if any(not target_hosts and not target_groups for target_hosts, target_groups in selector_sets):
+                self.error(dupes[1].relpath, f"{label} `{key[1:]}` duplicates {dupes[0].relpath}")
+                continue
+
+            if any(target_groups for _, target_groups in selector_sets):
+                self.error(
+                    dupes[1].relpath,
+                    f"{label} `{key[1:]}` has multiple declarations using `target_groups`; use disjoint `target_hosts` instead",
+                )
+                continue
+
+            seen_hosts: dict[str, LoadedObject] = {}
+            for obj, (target_hosts, _) in zip(dupes, selector_sets):
+                for host in target_hosts:
+                    if host in seen_hosts:
+                        self.error(
+                            obj.relpath,
+                            f"{label} `{key[1:]}` targets host `{host}` more than once; first declared in {seen_hosts[host].relpath}",
+                        )
+                    else:
+                        seen_hosts[host] = obj
 
     def require_fields(
         self,
@@ -3303,6 +3412,117 @@ class Validator:
         for field in fields:
             if data.get(field) in (None, ""):
                 self.error(source_ref, f"{prefix} must define `{field}`")
+
+    def validate_target_selectors(
+        self,
+        obj: LoadedObject,
+        *,
+        label: str,
+        require_single_host: bool = False,
+        allow_absent: bool = False,
+    ) -> tuple[set[str], set[str]]:
+        """Validate `target_hosts` / `target_groups` selectors on a scoped system object.
+
+        Purpose:
+            System-domain objects can be targeted to explicit inventory hosts or
+            inventory groups. This helper validates selector presence and shape so
+            offline validation can reject unsafe or ambiguous declarations before
+            runtime filtering happens.
+
+        Inputs:
+            obj (LoadedObject): The scoped object being validated.
+            label (str): Human-readable label for error messages.
+            require_single_host (bool): When true, require exactly one host target
+                and forbid `target_groups`.
+
+        Outputs:
+            tuple[set[str], set[str]]: Normalized host and group selector sets.
+        """
+        target_hosts_raw = obj.data.get("target_hosts")
+        target_groups_raw = obj.data.get("target_groups")
+
+        target_hosts: set[str] = set()
+        target_groups: set[str] = set()
+
+        if target_hosts_raw is not None:
+            if not isinstance(target_hosts_raw, list) or not target_hosts_raw:
+                self.error(obj.relpath, f"{label} `target_hosts` must be a non-empty list when defined")
+            else:
+                for idx, host in enumerate(target_hosts_raw):
+                    if not isinstance(host, str) or not host:
+                        self.error(obj.relpath, f"{label} `target_hosts[{idx}]` must be a non-empty string")
+                    else:
+                        if host in target_hosts:
+                            self.error(obj.relpath, f"{label} duplicates `target_hosts` entry `{host}`")
+                        target_hosts.add(host)
+
+        if target_groups_raw is not None:
+            if not isinstance(target_groups_raw, list) or not target_groups_raw:
+                self.error(obj.relpath, f"{label} `target_groups` must be a non-empty list when defined")
+            else:
+                for idx, group in enumerate(target_groups_raw):
+                    if not isinstance(group, str) or not group:
+                        self.error(obj.relpath, f"{label} `target_groups[{idx}]` must be a non-empty string")
+                    else:
+                        if group in target_groups:
+                            self.error(obj.relpath, f"{label} duplicates `target_groups` entry `{group}`")
+                        target_groups.add(group)
+
+        if not allow_absent and not target_hosts and not target_groups:
+            self.error(obj.relpath, f"{label} must define at least one of `target_hosts` or `target_groups`")
+
+        if require_single_host:
+            if target_groups:
+                self.error(obj.relpath, f"{label} must not define `target_groups`; use exactly one `target_hosts` entry")
+            if len(target_hosts) != 1:
+                self.error(obj.relpath, f"{label} must define exactly one `target_hosts` entry")
+
+        return target_hosts, target_groups
+
+    def check_targeted_identity_collisions(
+        self,
+        objects: list[LoadedObject],
+        *,
+        identity_func,
+        label: str,
+    ) -> None:
+        """Reject ambiguous targeted declarations that could affect the same BIG-IP.
+
+        Purpose:
+            Allows one logical object identity to appear more than once only when
+            validation can prove the declarations are disjoint by explicit
+            `target_hosts`. If any declaration for the same identity uses
+            `target_groups`, validation rejects multiple declarations because group
+            overlap cannot be proven offline.
+        """
+        grouped: dict[tuple[Any, ...], list[tuple[LoadedObject, set[str], set[str]]]] = {}
+        for obj in objects:
+            if any(part is None for part in identity_func(obj)):
+                continue
+            target_hosts, target_groups = self.validate_target_selectors(obj, label=f"{label} `{identity_func(obj)[1:]}`")
+            grouped.setdefault(identity_func(obj), []).append((obj, target_hosts, target_groups))
+
+        for identity, scoped_objects in grouped.items():
+            if len(scoped_objects) < 2:
+                continue
+            if any(target_groups for _, _, target_groups in scoped_objects):
+                conflict_obj = scoped_objects[1][0]
+                self.error(
+                    conflict_obj.relpath,
+                    f"{label} `{identity[1:]}` has multiple declarations while using `target_groups`; use disjoint `target_hosts` for per-device variants",
+                )
+                continue
+
+            seen_hosts: dict[str, LoadedObject] = {}
+            for obj, target_hosts, _ in scoped_objects:
+                for host in target_hosts:
+                    if host in seen_hosts:
+                        self.error(
+                            obj.relpath,
+                            f"{label} `{identity[1:]}` targets host `{host}` more than once; first declared in {seen_hosts[host].relpath}",
+                        )
+                    else:
+                        seen_hosts[host] = obj
 
     def fq_name(self, partition: str, name: str) -> str:
         return f"/{partition}/{name}"

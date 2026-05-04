@@ -2,13 +2,14 @@
 
 ## Targeting Model
 
-This repository talks to one BIG-IP management endpoint per run.
+This repository talks to one BIG-IP management endpoint per inventory host execution.
 
 - the playbooks use the `provider` object in `vars/common.yml`
 - canonical playbooks target AWX inventory hosts with `connection: local`
 - `provider.server` prefers the inventory host var `f5_host`
 - `F5_HOST` is an environment fallback for local testing or one-off runs
-- if `f5_host` or `F5_HOST` points at one BIG-IP, only that BIG-IP is directly configured by that job
+- each selected inventory host resolves its own BIG-IP target through `f5_host`
+- if an AWX job targets more than one inventory host, the playbook runs once per selected host
 
 ## HA Operating Rule
 
@@ -34,6 +35,12 @@ The HA example vars under `vars/ha/...` are written from the target device persp
 
 Use one execution target host per HA domain for routine shared configuration.
 
+When a playbook is used against more than one inventory host, object-level selectors in the repo can become part of the targeting contract:
+
+- `target_hosts` matches AWX `inventory_hostname`
+- `target_groups` matches AWX inventory group names
+- a shared group such as `all_bigip` should be deliberate and documented, not accidental
+
 ### Host Vars
 
 Minimum required:
@@ -49,6 +56,15 @@ f5_host: bigip-east.example.com
 f5_pair_name: east-prod-pair
 f5_role: sync_owner
 f5_dc: east
+```
+
+Recommended reserved group names when using targeted `system_*` objects:
+
+```text
+all_bigip
+east_prod
+west_prod
+sync_owners
 ```
 
 ### Recommended Inventory Shape

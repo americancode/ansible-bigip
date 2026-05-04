@@ -1,9 +1,189 @@
+- name: Filter system hostname objects for the current inventory host
+  ansible.builtin.import_tasks: "{{ playbook_dir }}/shared/prep/filter-targeted-objects.yml"
+  vars:
+    object_label: system hostname
+    source_objects: "{{ system_hostnames | default([]) }}"
+    matched_var: system_hostnames_targeted
+    skipped_var: system_hostnames_skipped
+    summary_var: system_hostnames_targeting_summary
+
+- name: Filter system DNS objects for the current inventory host
+  ansible.builtin.import_tasks: "{{ playbook_dir }}/shared/prep/filter-targeted-objects.yml"
+  vars:
+    object_label: system DNS
+    source_objects: "{{ system_dns | default([]) }}"
+    matched_var: system_dns_targeted
+    skipped_var: system_dns_skipped
+    summary_var: system_dns_targeting_summary
+
+- name: Filter system DNS deletions for the current inventory host
+  ansible.builtin.import_tasks: "{{ playbook_dir }}/shared/prep/filter-targeted-objects.yml"
+  vars:
+    object_label: system DNS deletion
+    source_objects: "{{ system_dns_deletions | default([]) }}"
+    matched_var: system_dns_deletions_targeted
+    skipped_var: system_dns_deletions_skipped
+    summary_var: system_dns_deletions_targeting_summary
+
+- name: Filter system NTP objects for the current inventory host
+  ansible.builtin.import_tasks: "{{ playbook_dir }}/shared/prep/filter-targeted-objects.yml"
+  vars:
+    object_label: system NTP
+    source_objects: "{{ system_ntp | default([]) }}"
+    matched_var: system_ntp_targeted
+    skipped_var: system_ntp_skipped
+    summary_var: system_ntp_targeting_summary
+
+- name: Filter system NTP deletions for the current inventory host
+  ansible.builtin.import_tasks: "{{ playbook_dir }}/shared/prep/filter-targeted-objects.yml"
+  vars:
+    object_label: system NTP deletion
+    source_objects: "{{ system_ntp_deletions | default([]) }}"
+    matched_var: system_ntp_deletions_targeted
+    skipped_var: system_ntp_deletions_skipped
+    summary_var: system_ntp_deletions_targeting_summary
+
+- name: Filter system provisioning objects for the current inventory host
+  ansible.builtin.import_tasks: "{{ playbook_dir }}/shared/prep/filter-targeted-objects.yml"
+  vars:
+    object_label: system provisioning
+    source_objects: "{{ system_provisioning | default([]) }}"
+    matched_var: system_provisioning_targeted
+    skipped_var: system_provisioning_skipped
+    summary_var: system_provisioning_targeting_summary
+
+- name: Filter system provisioning deletions for the current inventory host
+  ansible.builtin.import_tasks: "{{ playbook_dir }}/shared/prep/filter-targeted-objects.yml"
+  vars:
+    object_label: system provisioning deletion
+    source_objects: "{{ system_provisioning_deletions | default([]) }}"
+    matched_var: system_provisioning_deletions_targeted
+    skipped_var: system_provisioning_deletions_skipped
+    summary_var: system_provisioning_deletions_targeting_summary
+
+- name: Filter system user objects for the current inventory host
+  ansible.builtin.import_tasks: "{{ playbook_dir }}/shared/prep/filter-targeted-objects.yml"
+  vars:
+    object_label: system user
+    source_objects: "{{ system_users | default([]) }}"
+    matched_var: system_users_targeted
+    skipped_var: system_users_skipped
+    summary_var: system_users_targeting_summary
+
+- name: Filter system user deletions for the current inventory host
+  ansible.builtin.import_tasks: "{{ playbook_dir }}/shared/prep/filter-targeted-objects.yml"
+  vars:
+    object_label: system user deletion
+    source_objects: "{{ system_user_deletions | default([]) }}"
+    matched_var: system_user_deletions_targeted
+    skipped_var: system_user_deletions_skipped
+    summary_var: system_user_deletions_targeting_summary
+
+- name: Filter system LDAP auth objects for the current inventory host
+  ansible.builtin.import_tasks: "{{ playbook_dir }}/shared/prep/filter-targeted-objects.yml"
+  vars:
+    object_label: system LDAP auth
+    source_objects: "{{ system_auth_ldap | default([]) }}"
+    matched_var: system_auth_ldap_targeted
+    skipped_var: system_auth_ldap_skipped
+    summary_var: system_auth_ldap_targeting_summary
+
+- name: Filter system LDAP auth deletions for the current inventory host
+  ansible.builtin.import_tasks: "{{ playbook_dir }}/shared/prep/filter-targeted-objects.yml"
+  vars:
+    object_label: system LDAP auth deletion
+    source_objects: "{{ system_auth_ldap_deletions | default([]) }}"
+    matched_var: system_auth_ldap_deletions_targeted
+    skipped_var: system_auth_ldap_deletions_skipped
+    summary_var: system_auth_ldap_deletions_targeting_summary
+
+- name: Filter system TACACS auth objects for the current inventory host
+  ansible.builtin.import_tasks: "{{ playbook_dir }}/shared/prep/filter-targeted-objects.yml"
+  vars:
+    object_label: system TACACS auth
+    source_objects: "{{ system_auth_tacacs | default([]) }}"
+    matched_var: system_auth_tacacs_targeted
+    skipped_var: system_auth_tacacs_skipped
+    summary_var: system_auth_tacacs_targeting_summary
+
+- name: Filter system TACACS auth deletions for the current inventory host
+  ansible.builtin.import_tasks: "{{ playbook_dir }}/shared/prep/filter-targeted-objects.yml"
+  vars:
+    object_label: system TACACS auth deletion
+    source_objects: "{{ system_auth_tacacs_deletions | default([]) }}"
+    matched_var: system_auth_tacacs_deletions_targeted
+    skipped_var: system_auth_tacacs_deletions_skipped
+    summary_var: system_auth_tacacs_deletions_targeting_summary
+
+- name: Filter system RADIUS server objects for the current inventory host
+  ansible.builtin.import_tasks: "{{ playbook_dir }}/shared/prep/filter-targeted-objects.yml"
+  vars:
+    object_label: system RADIUS server
+    source_objects: "{{ system_auth_radius_servers | default([]) }}"
+    matched_var: system_auth_radius_servers_targeted
+    skipped_var: system_auth_radius_servers_skipped
+    summary_var: system_auth_radius_servers_targeting_summary
+
+- name: Filter system RADIUS server deletions for the current inventory host
+  ansible.builtin.import_tasks: "{{ playbook_dir }}/shared/prep/filter-targeted-objects.yml"
+  vars:
+    object_label: system RADIUS server deletion
+    source_objects: "{{ system_auth_radius_server_deletions | default([]) }}"
+    matched_var: system_auth_radius_server_deletions_targeted
+    skipped_var: system_auth_radius_server_deletions_skipped
+    summary_var: system_auth_radius_server_deletions_targeting_summary
+
+- name: Filter system RADIUS auth objects for the current inventory host
+  ansible.builtin.import_tasks: "{{ playbook_dir }}/shared/prep/filter-targeted-objects.yml"
+  vars:
+    object_label: system RADIUS auth
+    source_objects: "{{ system_auth_radius | default([]) }}"
+    matched_var: system_auth_radius_targeted
+    skipped_var: system_auth_radius_skipped
+    summary_var: system_auth_radius_targeting_summary
+
+- name: Filter system RADIUS auth deletions for the current inventory host
+  ansible.builtin.import_tasks: "{{ playbook_dir }}/shared/prep/filter-targeted-objects.yml"
+  vars:
+    object_label: system RADIUS auth deletion
+    source_objects: "{{ system_auth_radius_deletions | default([]) }}"
+    matched_var: system_auth_radius_deletions_targeted
+    skipped_var: system_auth_radius_deletions_skipped
+    summary_var: system_auth_radius_deletions_targeting_summary
+
+- name: Filter system login banner objects for the current inventory host
+  ansible.builtin.import_tasks: "{{ playbook_dir }}/shared/prep/filter-targeted-objects.yml"
+  vars:
+    object_label: system login banner
+    source_objects: "{{ system_login_banners | default([]) }}"
+    matched_var: system_login_banners_targeted
+    skipped_var: system_login_banners_skipped
+    summary_var: system_login_banners_targeting_summary
+
+- name: Filter system login banner deletions for the current inventory host
+  ansible.builtin.import_tasks: "{{ playbook_dir }}/shared/prep/filter-targeted-objects.yml"
+  vars:
+    object_label: system login banner deletion
+    source_objects: "{{ system_login_banner_deletions | default([]) }}"
+    matched_var: system_login_banner_deletions_targeted
+    skipped_var: system_login_banner_deletions_skipped
+    summary_var: system_login_banner_deletions_targeting_summary
+
+- name: Filter system config objects for the current inventory host
+  ansible.builtin.import_tasks: "{{ playbook_dir }}/shared/prep/filter-targeted-objects.yml"
+  vars:
+    object_label: system config save
+    source_objects: "{{ system_config | default([]) }}"
+    matched_var: system_config_targeted
+    skipped_var: system_config_skipped
+    summary_var: system_config_targeting_summary
+
 - name: Classify system DNS operations into system_dns_present/system_dns_delete
   ansible.builtin.import_tasks: "{{ playbook_dir }}/shared/prep/classify-operations.yml"
   vars:
     object_label: system DNS
-    active_objects: "{{ system_dns | default([]) }}"
-    deletion_objects: "{{ system_dns_deletions | default([]) }}"
+    active_objects: "{{ system_dns_targeted | default([]) }}"
+    deletion_objects: "{{ system_dns_deletions_targeted | default([]) }}"
     delete_var: system_dns_delete
     present_var: system_dns_present
 
@@ -11,8 +191,8 @@
   ansible.builtin.import_tasks: "{{ playbook_dir }}/shared/prep/classify-operations.yml"
   vars:
     object_label: system NTP
-    active_objects: "{{ system_ntp | default([]) }}"
-    deletion_objects: "{{ system_ntp_deletions | default([]) }}"
+    active_objects: "{{ system_ntp_targeted | default([]) }}"
+    deletion_objects: "{{ system_ntp_deletions_targeted | default([]) }}"
     delete_var: system_ntp_delete
     present_var: system_ntp_present
 
@@ -20,8 +200,8 @@
   ansible.builtin.import_tasks: "{{ playbook_dir }}/shared/prep/classify-operations.yml"
   vars:
     object_label: system provisioning
-    active_objects: "{{ system_provisioning | default([]) }}"
-    deletion_objects: "{{ system_provisioning_deletions | default([]) }}"
+    active_objects: "{{ system_provisioning_targeted | default([]) }}"
+    deletion_objects: "{{ system_provisioning_deletions_targeted | default([]) }}"
     delete_var: system_provisioning_delete
     present_var: system_provisioning_present
 
@@ -29,8 +209,8 @@
   ansible.builtin.import_tasks: "{{ playbook_dir }}/shared/prep/classify-operations.yml"
   vars:
     object_label: system user
-    active_objects: "{{ system_users | default([]) }}"
-    deletion_objects: "{{ system_user_deletions | default([]) }}"
+    active_objects: "{{ system_users_targeted | default([]) }}"
+    deletion_objects: "{{ system_user_deletions_targeted | default([]) }}"
     delete_var: system_users_delete
     present_var: system_users_present
 
@@ -38,8 +218,8 @@
   ansible.builtin.import_tasks: "{{ playbook_dir }}/shared/prep/classify-operations.yml"
   vars:
     object_label: system LDAP auth
-    active_objects: "{{ system_auth_ldap | default([]) }}"
-    deletion_objects: "{{ system_auth_ldap_deletions | default([]) }}"
+    active_objects: "{{ system_auth_ldap_targeted | default([]) }}"
+    deletion_objects: "{{ system_auth_ldap_deletions_targeted | default([]) }}"
     delete_var: system_auth_ldap_delete
     present_var: system_auth_ldap_present
 
@@ -47,8 +227,8 @@
   ansible.builtin.import_tasks: "{{ playbook_dir }}/shared/prep/classify-operations.yml"
   vars:
     object_label: system TACACS auth
-    active_objects: "{{ system_auth_tacacs | default([]) }}"
-    deletion_objects: "{{ system_auth_tacacs_deletions | default([]) }}"
+    active_objects: "{{ system_auth_tacacs_targeted | default([]) }}"
+    deletion_objects: "{{ system_auth_tacacs_deletions_targeted | default([]) }}"
     delete_var: system_auth_tacacs_delete
     present_var: system_auth_tacacs_present
 
@@ -56,8 +236,8 @@
   ansible.builtin.import_tasks: "{{ playbook_dir }}/shared/prep/classify-operations.yml"
   vars:
     object_label: system RADIUS server
-    active_objects: "{{ system_auth_radius_servers | default([]) }}"
-    deletion_objects: "{{ system_auth_radius_server_deletions | default([]) }}"
+    active_objects: "{{ system_auth_radius_servers_targeted | default([]) }}"
+    deletion_objects: "{{ system_auth_radius_server_deletions_targeted | default([]) }}"
     delete_var: system_auth_radius_servers_delete
     present_var: system_auth_radius_servers_present
 
@@ -65,8 +245,8 @@
   ansible.builtin.import_tasks: "{{ playbook_dir }}/shared/prep/classify-operations.yml"
   vars:
     object_label: system RADIUS auth
-    active_objects: "{{ system_auth_radius | default([]) }}"
-    deletion_objects: "{{ system_auth_radius_deletions | default([]) }}"
+    active_objects: "{{ system_auth_radius_targeted | default([]) }}"
+    deletion_objects: "{{ system_auth_radius_deletions_targeted | default([]) }}"
     delete_var: system_auth_radius_delete
     present_var: system_auth_radius_present
 
@@ -74,7 +254,7 @@
   ansible.builtin.import_tasks: "{{ playbook_dir }}/shared/prep/classify-operations.yml"
   vars:
     object_label: system login banner
-    active_objects: "{{ system_login_banners | default([]) }}"
-    deletion_objects: "{{ system_login_banner_deletions | default([]) }}"
+    active_objects: "{{ system_login_banners_targeted | default([]) }}"
+    deletion_objects: "{{ system_login_banner_deletions_targeted | default([]) }}"
     delete_var: system_login_banner_delete
     present_var: system_login_banner_present
