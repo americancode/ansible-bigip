@@ -1,5 +1,8 @@
 # LTM apply tasks.
 # Runtime effect: create/update LTM monitors, profiles, nodes, pools, persistence, iRules, virtuals, data groups, and policies.
+
+# Monitors, profiles, nodes, pools, and virtuals have inter-object dependencies.
+# This ordering is intentional so downstream objects can reference already-created dependencies.
 - name: Create LTM TCP monitors
   f5networks.f5_modules.bigip_monitor_tcp:
     provider: "{{ provider }}"
@@ -77,6 +80,7 @@
     label: "{{ item.name }}"
   when: item.type == 'gateway_icmp'
 
+# Nodes are created before they are referenced by pool members.
 - name: Create LTM nodes
   f5networks.f5_modules.bigip_node:
     provider: "{{ provider }}"
@@ -262,6 +266,7 @@
     label: "{{ item.partition | default('Common') }}/{{ item.name }}"
   when: item.type == 'oneconnect'
 
+# Pools must be created before members and before virtuals attach to them.
 - name: Create LTM pools
   f5networks.f5_modules.bigip_pool:
     provider: "{{ provider }}"
@@ -285,6 +290,7 @@
   loop_control:
     label: "{{ item.partition | default('Common') }}/{{ item.name }}"
 
+# pool-member tuples are materialized from canonical pools and rely on node existence above.
 - name: Add members to pools
   f5networks.f5_modules.bigip_pool_member:
     provider: "{{ provider }}"
@@ -310,6 +316,7 @@
   loop_control:
     label: "{{ item.0.partition | default('Common') }}/{{ item.0.name }}:{{ item.1.name | default(item.1.host | default(item.1.address | default(item.1.fqdn | default('member')))) }}:{{ item.1.port }}"
 
+# Virtual servers are the last consumer of pool and profile outputs in this flow.
 - name: Create virtual servers
   f5networks.f5_modules.bigip_virtual_server:
     provider: "{{ provider }}"

@@ -90,6 +90,8 @@
     delete_var: ltm_policies_delete
     present_var: ltm_policies_present
 
+# Intent compilers must run after classification because they rewrite shortcut objects into
+# canonical pools/virtuals, then merge back into the same present/delete collections.
 - name: Build LTM virtual-server intent shortcuts
   # Inline virtual-server shortcuts are not executed directly by runtime tasks.
   # This prep step rewrites them into canonical pools and canonical virtual servers

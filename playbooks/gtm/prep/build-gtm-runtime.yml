@@ -1,5 +1,8 @@
 # GTM runtime build tasks.
 # Runtime effect: classify canonical GTM objects into delete/present runtimes and merge intent-built lookup collections.
+
+# Canonical GTM collections are classified first so intent expansion can safely merge
+# into the same present/delete buckets expected by runtime apply/delete tasks.
 - name: Classify GTM datacenter operations
   ansible.builtin.import_tasks: "{{ playbook_dir }}/shared/prep/classify-operations.yml"
   vars:
@@ -64,9 +67,12 @@
     present_var: gtm_topology_records_present
 
 - name: Publish canonical GTM datacenter operations
+  # The rest of the runtime model expects datacenters under `gtm_canonical_*` keys.
   ansible.builtin.set_fact:
     gtm_canonical_datacenters_delete: "{{ gtm_datacenters_delete | default([]) }}"
     gtm_canonical_datacenters_present: "{{ gtm_datacenters_present | default([]) }}"
 
+# Wide-IP intent shortcuts are merged after canonical classification so runtime still
+# consumes a single canonical object model for all GTM object families.
 - name: Build GTM Wide IP intent shortcuts
   ansible.builtin.import_tasks: "{{ playbook_dir }}/gtm/prep/intents/inline/build-wide-ip-intents.yml"

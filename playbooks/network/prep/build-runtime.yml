@@ -1,5 +1,8 @@
 # Network runtime build.
 # Classifies each canonical network collection into present/delete buckets consumed by delete/apply order.
+
+# NAT operations include a command-existence pre-scan before mutation to support
+# both module-based and command-based lifecycle behavior.
 - name: Classify VLAN operations into bigip_vlans_present/bigip_vlans_delete
   ansible.builtin.import_tasks: "{{ playbook_dir }}/shared/prep/classify-operations.yml"
   vars:
@@ -72,6 +75,7 @@
     delete_var: bigip_nats_delete
     present_var: bigip_nats_present
 
+# probe and derive a name-keyed NAT existence map used to skip or route downstream command behavior.
 - name: Probe NAT presence on BIG-IP
   ansible.builtin.include_tasks: "{{ playbook_dir }}/shared/tasks/debug-tmsh-commands.yml"
   vars:
@@ -94,6 +98,7 @@
   register: nat_probe_results
   failed_when: false
 
+# Build a map keyed by 'partition/name' for downstream consumers that need quick existence checks.
 - name: Build NAT existence map
   ansible.builtin.set_fact:
     bigip_nat_exists_by_name: >-

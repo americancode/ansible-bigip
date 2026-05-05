@@ -1,5 +1,7 @@
 # GTM delete tasks.
 # Runtime effect: remove GTM topology records, wide IPs, pools, servers, datacenters, and regions in the safe reverse-runtime order.
+
+# Delete in reverse dependency order so consumers are removed before their referenced providers.
 - name: Delete GTM topology records
   f5networks.f5_modules.bigip_gtm_topology_record:
     provider: "{{ provider }}"
@@ -11,6 +13,7 @@
   loop_control:
     label: "source={{ item.source | to_json }} destination={{ item.destination | to_json }}"
 
+# Wide IPs are removed after topology references and before their backing pools disappear.
 - name: Delete Wide IPs
   f5networks.f5_modules.bigip_gtm_wide_ip:
     provider: "{{ provider }}"
@@ -22,6 +25,7 @@
   loop_control:
     label: "{{ item.partition | default('Common') }}/{{ item.name }}"
 
+# Pools should be deleted after any dependent manual virtual servers are removed.
 - name: Delete GTM pools
   f5networks.f5_modules.bigip_gtm_pool:
     provider: "{{ provider }}"
@@ -33,6 +37,7 @@
   loop_control:
     label: "{{ item.partition | default('Common') }}/{{ item.name }}"
 
+# Manual per-member GTM virtual servers are synthetic dependencies and must be removed before pools/servers.
 - name: Delete manual GTM virtual servers for deleted pools
   f5networks.f5_modules.bigip_gtm_virtual_server:
     provider: "{{ provider }}"
@@ -44,6 +49,7 @@
   loop_control:
     label: "{{ item.1.partition | default(item.0.partition | default('Common')) }}/{{ item.1.server }}/{{ item.1.virtual_server }}"
 
+# Servers can be removed after all of their synthetic virtual servers are gone.
 - name: Delete GTM servers
   f5networks.f5_modules.bigip_gtm_server:
     provider: "{{ provider }}"
@@ -54,6 +60,7 @@
   loop_control:
     label: "{{ item.partition | default('Common') }}/{{ item.name }}"
 
+# Datacenters are parent objects to servers and therefore removed last in the server cluster.
 - name: Delete GTM datacenters
   f5networks.f5_modules.bigip_gtm_datacenter:
     provider: "{{ provider }}"

@@ -1,5 +1,8 @@
 # GTM variable-load tasks.
 # Runtime effect: load canonical GTM fragments and deletions into prep working sets.
+
+# Wide-IP and pool runtime collections are intentionally loaded with shared settings layering
+# before runtime classification so canonical defaults and intent shortcuts are normalized first.
 - name: Load GTM datacenter fragments into gtm_datacenters/gtm_datacenter_deletions
   ansible.builtin.import_tasks: "{{ playbook_dir }}/shared/prep/load-fragment-tree.yml"
   vars:
@@ -59,6 +62,8 @@
   register: gtm_pool_deletion_include_results
 
 - name: Aggregate GTM pools with layered directory settings
+  # GTM pools are normalized here because member virtual_server references can be
+  # resolved from the repo LTM lookup map at compile time.
   ansible.builtin.set_fact:
     gtm_pools: >-
       {{
@@ -154,6 +159,8 @@
       }}
 
 - name: Aggregate GTM Wide IP deletions with layered directory settings
+  # Deletion intents are transformed with the same settings hierarchy to keep
+  # delete ordering and source-file traceability aligned with creates.
   ansible.builtin.set_fact:
     gtm_wide_ip_deletions: >-
       {{

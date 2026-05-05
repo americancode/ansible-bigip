@@ -2,23 +2,6 @@
 
 ## To Do
 
-2. Add targeted inline comments to high-risk or non-obvious playbook paths.
-   - `playbooks/bootstrap/tasks/apply.yml`
-   - `playbooks/network/tasks/apply.yml`
-   - `playbooks/network/tasks/delete.yml`
-   - `playbooks/system/tasks/apply.yml`
-   - `playbooks/ha/tasks/apply.yml`
-   - `playbooks/ha/tasks/delete.yml`
-   - `playbooks/tls/tasks/apply.yml`
-   - `playbooks/tls/tasks/delete.yml`
-   - `playbooks/ltm/tasks/apply.yml`
-   - `playbooks/ltm/tasks/delete.yml`
-   - `playbooks/ltm/prep/intents/clusters/*.yml`
-   - `playbooks/gtm/tasks/apply.yml`
-   - `playbooks/gtm/tasks/delete.yml`
-   - `playbooks/security/tasks/apply.yml`
-   - `playbooks/security/tasks/delete.yml`
-
 3. Refactor `tools/validate-vars.py` into a modular package.
 
 4. Refactor `tools/drift-check.py` into a modular package.

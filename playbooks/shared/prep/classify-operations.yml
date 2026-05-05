@@ -1,5 +1,8 @@
 # Shared operation classifier.
 # Filters source collections for host targeting and classifies them into present/delete runtime arrays.
+
+# classify_operations keeps the canonical "present/delete" split stable for each object identity,
+# allowing explicit intent outputs and deletions to be merged without losing host-targeting context.
 - name: Filter {{ object_label }} objects for the current inventory host
   ansible.builtin.import_tasks: "{{ playbook_dir }}/shared/prep/filter-targeted-objects.yml"
   vars:

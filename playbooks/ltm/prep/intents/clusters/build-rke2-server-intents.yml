@@ -10,6 +10,8 @@
     ltm_compiled_rke2_pools_present: []
 
 - name: Build deleted LTM RKE2 server intents
+  # Deleted and active RKE2 clusters emit the same canonical virtual/pool schema,
+  # so compile outputs can be concatenated uniformly into runtime delete/present arrays.
   ansible.builtin.set_fact:
     ltm_compiled_rke2_virtual_servers_delete: >-
       {{

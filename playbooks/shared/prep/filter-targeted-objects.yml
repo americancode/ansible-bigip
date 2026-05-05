@@ -1,5 +1,8 @@
 # Shared target filter.
 # Evaluates host/group selector targeting, emits matched/skipped subsets, and logs a concise targeting summary.
+
+# Targeting defaults to match-only mode unless selectors are present on the object;
+# this keeps untagged canonical objects backward-compatible during host-specific runs.
 - name: Evaluate {{ object_label }} targeting for the current inventory host
   ansible.builtin.set_fact:
     _prep_targeted_objects: >-

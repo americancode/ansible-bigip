@@ -17,6 +17,8 @@
     gtm_compiled_datacenters_present: []
 
 - name: Build deleted GTM Wide IP shortcut objects
+  # Deleted and active intent collections are compiled with the same shape so later
+  # merge steps can concat collections without branch-specific handling.
   ansible.builtin.set_fact:
     gtm_compiled_wide_ips_delete: >-
       {{

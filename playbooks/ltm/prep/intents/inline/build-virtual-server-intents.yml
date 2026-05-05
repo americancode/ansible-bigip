@@ -11,6 +11,7 @@
     ltm_compiled_pools_present: []
 
 - name: Build deleted LTM virtual-server shortcut objects
+  # Deleted and active paths use the same compiler output shape to keep merge logic symmetric.
   ansible.builtin.set_fact:
     ltm_compiled_virtual_servers_delete: >-
       {{

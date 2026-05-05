@@ -1,5 +1,7 @@
 # LTM delete tasks.
 # Runtime effect: remove virtuals, pools, nodes, monitors, and related virtual-stack objects in dependency-safe reverse order.
+
+# Reverse order deletes preserve references: remove virtuals first, then pools, then nodes and monitors.
 - name: Delete virtual servers
   f5networks.f5_modules.bigip_virtual_server:
     provider: "{{ provider }}"
@@ -10,6 +12,7 @@
   loop_control:
     label: "{{ item.partition | default('Common') }}/{{ item.name }}"
 
+# Virtuals are removed before pools because they are the first-level dependency edge.
 - name: Delete LTM TCP profiles
   f5networks.f5_modules.bigip_profile_tcp:
     provider: "{{ provider }}"
@@ -76,6 +79,7 @@
     label: "{{ item.partition | default('Common') }}/{{ item.name }}"
   when: item.type == 'oneconnect'
 
+# Pools must be removed before member nodes so pool member cleanup does not fail on dangling references.
 - name: Delete pools
   f5networks.f5_modules.bigip_pool:
     provider: "{{ provider }}"
@@ -86,6 +90,7 @@
   loop_control:
     label: "{{ item.partition | default('Common') }}/{{ item.name }}"
 
+# Node cleanup follows pool cleanup for the same reason.
 - name: Delete nodes
   f5networks.f5_modules.bigip_node:
     provider: "{{ provider }}"
@@ -96,6 +101,7 @@
   loop_control:
     label: "{{ item.partition | default('Common') }}/{{ item.name }}"
 
+# Monitors are generally leaf-level in this model and removed last.
 - name: Delete LTM TCP monitors
   f5networks.f5_modules.bigip_monitor_tcp:
     provider: "{{ provider }}"

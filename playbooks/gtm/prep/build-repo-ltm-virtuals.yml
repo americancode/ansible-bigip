@@ -1,5 +1,8 @@
 # GTM repo LTM virtual build tasks.
 # Runtime effect: classify built repo-known LTM virtual servers into runtime collections for GTM member resolution.
+
+# The repo-known virtual map is a read-only input used by GTM compilers for virtual-server
+# name-to-address inference during pool/member resolution.
 - name: Classify repo-known LTM virtual server operations
   ansible.builtin.import_tasks: "{{ playbook_dir }}/shared/prep/classify-operations.yml"
   vars:
@@ -23,6 +26,7 @@
 
 - name: Build repo-known LTM virtual server lookup
   ansible.builtin.set_fact:
+    # Build a stable lookup by `/partition/name` for fast resolution of intent and pool members.
     repo_ltm_virtual_server_lookup: >-
       {{
         repo_ltm_virtual_server_lookup | default({}) | combine({

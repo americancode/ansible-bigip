@@ -1,6 +1,8 @@
 # GTM apply tasks.
 # Runtime effect: create/update GTM monitors, datacenters, servers, pools, wide IPs, regions, and topology records.
 # Ordering is governed by shared domain runtime flow and this playbook executes in the standard delete/create order.
+
+# Monitors are defined before servers/pools so object references to monitor names resolve in the normal module path.
 - name: Create GTM BIG-IP monitors
   f5networks.f5_modules.bigip_gtm_monitor_bigip:
     provider: "{{ provider }}"
@@ -165,6 +167,7 @@
   when:
     - item.type == 'tcp_half_open'
 
+# GTM datacenters must be present before any GTM server declarations that reference them.
 - name: Create GTM datacenters
   f5networks.f5_modules.bigip_gtm_datacenter:
     provider: "{{ provider }}"
@@ -178,6 +181,7 @@
   loop_control:
     label: "{{ item.partition | default('Common') }}/{{ item.name }}"
 
+# GTM server declarations reference device objects and become the container for generated virtual members.
 - name: Register GTM servers
   f5networks.f5_modules.bigip_gtm_server:
     provider: "{{ provider }}"
@@ -200,6 +204,8 @@
   loop_control:
     label: "{{ item.partition | default('Common') }}/{{ item.name }}"
 
+# Manual virtual-server objects are synthesized from pool members so that every virtual-server
+# object is explicitly materialized before its parent pool is created.
 - name: Create manual GTM virtual servers for pool members
   f5networks.f5_modules.bigip_gtm_virtual_server:
     provider: "{{ provider }}"
@@ -216,6 +222,7 @@
   loop_control:
     label: "{{ item.1.partition | default(item.0.partition | default('Common')) }}/{{ item.1.server }}/{{ item.1.virtual_server }}"
 
+# Aggregate pool members into name-keyed GTM pool payloads before creating pools.
 - name: Build GTM pool member map
   ansible.builtin.set_fact:
     gtm_pool_members_by_pool: >-
@@ -240,6 +247,7 @@
       }}
   loop: "{{ query('subelements', gtm_canonical_pools_present | default([]), 'members', {'skip_missing': True}) }}"
 
+# Pools consume the aggregated member map and should be created before Wide IPs.
 - name: Create GTM pools
   f5networks.f5_modules.bigip_gtm_pool:
     provider: "{{ provider }}"
