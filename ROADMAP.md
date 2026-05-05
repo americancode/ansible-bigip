@@ -3,41 +3,6 @@
 ## To Do
 
 
-8. Improve helper-tool fidelity where `basic field drift` is no longer sufficient.
-   - Define the target fidelity per object family before coding:
-     - keep `identity-only` only where the repo model intentionally manages name/existence only
-     - keep `basic field drift` only where flat field comparison is operationally enough
-     - promote to `model-aware` where nested runtime structures, references, child collections, or compiler output affect correctness
-   - Audit current `basic field drift` families and classify which need promotion:
-     - network: route domains, trunks, SNAT translations, SNAT pools, NATs
-     - GTM: topology regions, topology records, pools, Wide IP intent output
-     - TLS: CA bundles, client SSL profiles, server SSL profiles
-     - APM: SSO configs, access profiles, policy nodes
-     - LTM: pools, virtual servers, persistence profiles, policies, data groups where nested fields matter
-   - Upgrade `tools/drift-check.py` fidelity for promoted families:
-     - compare nested members, profiles, monitors, policies, rules, VLAN bindings, SNAT/persistence references, and profile references using normalized repo field names
-     - normalize BIG-IP live values before comparison (fully-qualified names, partition defaults, booleans, integers, lists, generated defaults)
-     - compare intent-compiled canonical objects, not raw intent files, for LTM inline virtual-server intents and GTM Wide IP intents
-     - report field-level drift in a way that points to the repo field that should be changed
-   - Upgrade `tools/import-from-bigip.py` fidelity for promoted families:
-     - reconstruct nested repo shapes instead of flat identity stubs where runtime supports nested data
-     - import child collections such as pool members, virtual profiles, virtual policies, topology members, APM policy node properties, SSL profile cert/key chains, and WAF/APM subcollections where supported
-     - emit canonical object trees by default; only emit intent-shaped files when the importer can reconstruct that intent model accurately
-     - preserve explicit limitations in generated comments when live state cannot round-trip cleanly
-   - Add shared helper modules used by both drift and import:
-     - reference normalization helpers for `/Partition/name`, default partition handling, and short-name comparison
-     - list/set normalization helpers for monitors, profiles, VLANs, members, and policies
-     - BIG-IP boolean/integer/default normalization helpers
-     - object identity helpers for non-name identities such as GTM topology records and WAF server technologies
-   - Add validation guardrails for helper-tool changes:
-     - fixture-style unit tests for normalizers and transforms where practical
-     - sample live REST payloads for at least one promoted family per domain
-     - a no-device test path that verifies import/drift transform logic without requiring BIG-IP connectivity
-   - Update docs after each fidelity promotion:
-     - `docs/drift-import.md` must state the new fidelity level and remaining gaps
-     - domain docs must stop claiming `basic field drift` once `model-aware` support exists
-     - `ROADMAP.md` must keep any families that remain shallow listed explicitly
-
 ## Proposals
 
 1. Split high-risk `system` functionality into narrower playbooks if AWX blast radius still feels too broad.
