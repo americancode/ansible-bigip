@@ -171,6 +171,24 @@
     skipped_var: system_auth_radius_deletions_skipped
     summary_var: system_auth_radius_deletions_targeting_summary
 
+- name: Filter system remote-role auth objects for the current inventory host
+  ansible.builtin.import_tasks: "{{ playbook_dir }}/shared/prep/filter-targeted-objects.yml"
+  vars:
+    object_label: system remote-role auth
+    source_objects: "{{ system_auth_remote_roles | default([]) }}"
+    matched_var: system_auth_remote_roles_targeted
+    skipped_var: system_auth_remote_roles_skipped
+    summary_var: system_auth_remote_roles_targeting_summary
+
+- name: Filter system remote-role auth deletions for the current inventory host
+  ansible.builtin.import_tasks: "{{ playbook_dir }}/shared/prep/filter-targeted-objects.yml"
+  vars:
+    object_label: system remote-role auth deletion
+    source_objects: "{{ system_auth_remote_role_deletions | default([]) }}"
+    matched_var: system_auth_remote_role_deletions_targeted
+    skipped_var: system_auth_remote_role_deletions_skipped
+    summary_var: system_auth_remote_role_deletions_targeting_summary
+
 - name: Filter system login banner objects for the current inventory host
   ansible.builtin.import_tasks: "{{ playbook_dir }}/shared/prep/filter-targeted-objects.yml"
   vars:
@@ -278,6 +296,15 @@
     deletion_objects: "{{ system_auth_radius_deletions_targeted | default([]) }}"
     delete_var: system_auth_radius_delete
     present_var: system_auth_radius_present
+
+- name: Classify system remote-role auth operations into system_auth_remote_roles_present/system_auth_remote_roles_delete
+  ansible.builtin.import_tasks: "{{ playbook_dir }}/shared/prep/classify-operations.yml"
+  vars:
+    object_label: system remote-role auth
+    active_objects: "{{ system_auth_remote_roles_targeted | default([]) }}"
+    deletion_objects: "{{ system_auth_remote_role_deletions_targeted | default([]) }}"
+    delete_var: system_auth_remote_roles_delete
+    present_var: system_auth_remote_roles_present
 
 - name: Classify system login banner operations into system_login_banner_present/system_login_banner_delete
   ansible.builtin.import_tasks: "{{ playbook_dir }}/shared/prep/classify-operations.yml"

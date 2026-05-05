@@ -203,6 +203,29 @@ class Importer(ImporterSpecialized):
             if isinstance(value, str):
                 parts = value.rsplit(":", 1)
                 return parts[0].lstrip("/")
+        if key == "assigned_role" and isinstance(value, str):
+            role_map = {
+                "applicationeditor": "application-editor",
+                "noaccess": "none",
+                "certificatemanager": "certificate-manager",
+                "irulemanager": "irule-manager",
+                "usermanager": "user-manager",
+                "resourceadmin": "resource-administrator",
+                "firewallmanager": "firewall-manager",
+            }
+            return role_map.get(value, value)
+        if key == "partition_access" and value == "All":
+            return "all"
+        if key == "terminal_access" and value == "disable":
+            return "none"
+        if key == "remote_access":
+            if isinstance(value, str):
+                lowered = value.lower()
+                if lowered == "disabled":
+                    return True
+                if lowered == "enabled":
+                    return False
+            return bool(value)
         if key == "enabled":
             return value == "yes"
         if key == "min_active_members":

@@ -22,6 +22,7 @@
     - { name: "system_provisioning_delete", items: "{{ system_provisioning_delete | default([]) }}" }
     - { name: "system_users_delete", items: "{{ system_users_delete | default([]) }}" }
     - { name: "system_partitions_delete", items: "{{ system_partitions_delete | default([]) }}" }
+    - { name: "system_auth_remote_roles_delete", items: "{{ system_auth_remote_roles_delete | default([]) }}" }
     - { name: "system_auth_radius_delete", items: "{{ system_auth_radius_delete | default([]) }}" }
     - { name: "system_auth_radius_servers_delete", items: "{{ system_auth_radius_servers_delete | default([]) }}" }
     - { name: "system_auth_tacacs_delete", items: "{{ system_auth_tacacs_delete | default([]) }}" }
@@ -47,6 +48,7 @@
     - { name: "system_auth_tacacs_present", items: "{{ system_auth_tacacs_present | default([]) }}" }
     - { name: "system_auth_radius_servers_present", items: "{{ system_auth_radius_servers_present | default([]) }}" }
     - { name: "system_auth_radius_present", items: "{{ system_auth_radius_present | default([]) }}" }
+    - { name: "system_auth_remote_roles_present", items: "{{ system_auth_remote_roles_present | default([]) }}" }
     - { name: "system_login_banner_present", items: "{{ system_login_banner_present | default([]) }}" }
     - { name: "system_config_targeted", items: "{{ system_config_targeted | default([]) }}" }
   loop_control:

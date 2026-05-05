@@ -17,6 +17,7 @@ def validate_system(validator) -> None:
         "auth_tacacs": validator.objects.get("system_auth_tacacs", []),
         "auth_radius_servers": validator.objects.get("system_auth_radius_servers", []),
         "auth_radius": validator.objects.get("system_auth_radius", []),
+        "auth_remote_roles": validator.objects.get("system_auth_remote_roles", []),
         "login_banners": validator.objects.get("system_login_banners", []),
         "config": validator.objects.get("system_config", []),
     }

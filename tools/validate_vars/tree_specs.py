@@ -231,6 +231,13 @@ def build_tree_specs() -> list[TreeSpec]:
             settings_key="system_auth_radius_defaults",
         ),
         TreeSpec(
+            name="system_auth_remote_roles",
+            active_dir=VARS_DIR / "system" / "auth" / "remote_roles",
+            deletion_dir=VARS_DIR / "system" / "deletions" / "auth" / "remote_roles",
+            top_key="system_auth_remote_roles",
+            settings_key="system_auth_remote_role_defaults",
+        ),
+        TreeSpec(
             name="system_login_banners",
             active_dir=VARS_DIR / "system" / "login_banners",
             deletion_dir=VARS_DIR / "system" / "deletions" / "login_banners",

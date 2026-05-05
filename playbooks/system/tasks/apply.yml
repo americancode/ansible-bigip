@@ -144,6 +144,24 @@
   loop_control:
     label: "{{ item.name | default('radius-auth') }}"
 
+# Remote role mappings should be applied after the management-plane auth source
+# is configured so the external directory group bindings are ready when operators
+# authenticate through LDAP, TACACS, or RADIUS.
+- name: Configure remote auth role-group mappings
+  f5networks.f5_modules.bigip_remote_role:
+    provider: "{{ provider }}"
+    name: "{{ item.name }}"
+    line_order: "{{ item.line_order | default(omit) }}"
+    attribute_string: "{{ item.attribute_string | default(omit) }}"
+    remote_access: "{{ item.remote_access | default(omit) }}"
+    assigned_role: "{{ item.assigned_role | default(omit) }}"
+    partition_access: "{{ item.partition_access | default(omit) }}"
+    terminal_access: "{{ item.terminal_access | default(omit) }}"
+    state: "{{ item.state | default('present') }}"
+  loop: "{{ system_auth_remote_roles_present | default([]) }}"
+  loop_control:
+    label: "{{ item.name }}"
+
 - name: Configure system login banner
   ansible.builtin.include_tasks: "{{ playbook_dir }}/shared/tasks/debug-tmsh-commands.yml"
   vars:

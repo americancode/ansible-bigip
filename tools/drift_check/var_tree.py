@@ -11,6 +11,7 @@ from .constants import VARS_DIR
 
 LOAD_SPECS: tuple[tuple[str, Path, str], ...] = (
     ("system_partitions", VARS_DIR / "system" / "partitions", "system_partitions"),
+    ("system_auth_remote_roles", VARS_DIR / "system" / "auth" / "remote_roles", "system_auth_remote_roles"),
     ("ltm_nodes", VARS_DIR / "ltm" / "nodes", "ltm_nodes"),
     ("ltm_monitors", VARS_DIR / "ltm" / "monitors", "ltm_monitors"),
     ("ltm_pools", VARS_DIR / "ltm" / "pools", "ltm_pools"),

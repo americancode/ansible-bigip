@@ -83,7 +83,7 @@ Canonical playbooks live under `playbooks/`. Root-level `*.yml` files are compat
 |---|---|---|
 | `playbooks/network.yml` | VLANs, trunks, route domains, self IPs, routes, SNATs, NATs | [docs/network-objects.md](docs/network-objects.md) |
 | `playbooks/bootstrap.yml` | device licensing and initial management IP/default-route bootstrap | [docs/02-bootstrap-playbook.md](docs/02-bootstrap-playbook.md) |
-| `playbooks/system.yml` | hostname, DNS, NTP, provisioning, administrative partitions, users, management-plane admin auth, login banners | [docs/system-management.md](docs/system-management.md) |
+| `playbooks/system.yml` | hostname, DNS, NTP, provisioning, administrative partitions, users, management-plane admin auth, remote auth role mappings, login banners | [docs/system-management.md](docs/system-management.md) |
 | `playbooks/ha.yml` | device connectivity, device trust, device groups, HA groups, traffic groups, config sync | [docs/ha.md](docs/ha.md) |
 | `playbooks/ltm.yml` | monitors, profiles, data groups, iRules, persistence, nodes, pools, virtual servers | [docs/ltm.md](docs/ltm.md) |
 | `playbooks/gtm.yml` | monitors, datacenters, servers, pools, Wide IPs, regions, topology | [docs/gtm.md](docs/gtm.md) |

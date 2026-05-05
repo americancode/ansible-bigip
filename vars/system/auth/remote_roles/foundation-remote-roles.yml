@@ -1,0 +1,26 @@
+---
+# BIG-IP remote auth role-mapping examples for external admin groups.
+# These mappings are consumed by `playbooks/system.yml` and typically accompany auth-provider
+# configuration in `vars/system/auth/ldap/foundation-ldap.yml`, `vars/system/auth/tacacs/foundation-tacacs.yml`,
+# or `vars/system/auth/radius/foundation-radius.yml`. `partition_access` can reference custom
+# partitions declared in `vars/system/partitions/platform-partitions.yml`.
+# Supported fields: `name`, `line_order`, `attribute_string`, `assigned_role`, `partition_access`,
+# `remote_access`, `terminal_access`, `target_hosts`, and `target_groups`.
+system_auth_remote_roles:
+  - name: "corp-platform-admins"
+    line_order: 1000
+    attribute_string: "memberOf=CN=BIGIP-Platform-Admins,OU=Groups,DC=example,DC=com"
+    assigned_role: "administrator"
+    partition_access: "all"
+    terminal_access: "tmsh"
+    target_groups:
+      - "all_bigip"
+
+  - name: "corp-app-managers"
+    line_order: 1100
+    attribute_string: "memberOf=CN=BIGIP-App-Managers,OU=Groups,DC=example,DC=com"
+    assigned_role: "manager"
+    partition_access: "apps"
+    terminal_access: "tmsh"
+    target_groups:
+      - "all_bigip"

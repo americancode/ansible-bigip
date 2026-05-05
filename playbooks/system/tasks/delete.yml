@@ -1,5 +1,5 @@
 # System delete tasks.
-# Runtime effect: remove system-level hostname/user/provisioning/auth/banner/partition settings in delete phase.
+# Runtime effect: remove system-level hostname/user/provisioning/auth/banner/partition settings in reverse dependency order.
 - name: Remove DNS settings
   f5networks.f5_modules.bigip_device_dns:
     provider: "{{ provider }}"
@@ -50,6 +50,15 @@
     name: "{{ item.name }}"
     state: absent
   loop: "{{ system_partitions_delete | default([]) }}"
+  loop_control:
+    label: "{{ item.name }}"
+
+- name: Remove remote auth role-group mappings
+  f5networks.f5_modules.bigip_remote_role:
+    provider: "{{ provider }}"
+    name: "{{ item.name }}"
+    state: absent
+  loop: "{{ system_auth_remote_roles_delete | default([]) }}"
   loop_control:
     label: "{{ item.name }}"
 

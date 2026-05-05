@@ -43,6 +43,20 @@ IMPORT_SPECS: dict[str, ImportSpec] = {
             "route_domain": "defaultRouteDomain",
         },
     ),
+    "system_auth_remote_roles": ImportSpec(
+        endpoint="auth/remote-role/role-info",
+        top_key="system_auth_remote_roles",
+        output_dir="system/auth/remote_roles",
+        extract={
+            "name": "name",
+            "line_order": "lineOrder",
+            "attribute_string": "attribute",
+            "assigned_role": "role",
+            "partition_access": "userPartition",
+            "terminal_access": "console",
+            "remote_access": "deny",
+        },
+    ),
     "ltm_nodes": ImportSpec(
         endpoint="ltm/node",
         top_key="ltm_nodes",
@@ -452,4 +466,3 @@ BUILTIN_PROFILES = {
     "tcp", "udp", "fastL4", "fasthttp", "http", "http2", "oneconnect",
     "clientssl", "serverssl", "dns", "ftp", "smtp",
 }
-

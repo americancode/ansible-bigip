@@ -1,6 +1,6 @@
 # System Management
 
-The `playbooks/system.yml` playbook manages base BIG-IP device settings after the device is already reachable through a stable management endpoint: hostname, DNS, NTP, module provisioning, administrative partitions, local users, management-plane admin authentication providers, login banner compliance messaging, and config persistence.
+The `playbooks/system.yml` playbook manages base BIG-IP device settings after the device is already reachable through a stable management endpoint: hostname, DNS, NTP, module provisioning, administrative partitions, local users, management-plane admin authentication providers, remote auth role-group mappings, login banner compliance messaging, and config persistence.
 
 For day-0 licensing and the first management IP/default route, use [02-bootstrap-playbook.md](02-bootstrap-playbook.md) and `playbooks/bootstrap.yml` first. For normal AWX inventory and targeting guidance, see [03-awx-inventory-and-targeting.md](03-awx-inventory-and-targeting.md).
 
@@ -219,6 +219,44 @@ system_auth_radius_servers:
 
 Required: `name`, `ip`. Common fields: `partition`, `description`, `port`, `secret`, `timeout`, `update_secret`, `target_hosts`, `target_groups`.
 
+### Remote Auth Role Mappings
+
+Location: `vars/system/auth/remote_roles/`
+
+These objects map externally authenticated LDAP, TACACS+, or RADIUS admin groups to BIG-IP authorization and partition access. They do not enable the auth source by themselves; use `system_auth_ldap`, `system_auth_tacacs`, or `system_auth_radius` for that layer.
+
+```yaml
+system_auth_remote_roles:
+  - name: "corp-platform-admins"
+    line_order: 1000
+    attribute_string: "memberOf=CN=BIGIP-Platform-Admins,OU=Groups,DC=example,DC=com"
+    assigned_role: "administrator"
+    partition_access: "all"
+    terminal_access: "tmsh"
+    remote_access: true
+    target_groups:
+      - "all_bigip"
+
+  - name: "corp-app-managers"
+    line_order: 1100
+    attribute_string: "memberOf=CN=BIGIP-App-Managers,OU=Groups,DC=example,DC=com"
+    assigned_role: "manager"
+    partition_access: "apps"
+    terminal_access: "tmsh"
+    target_groups:
+      - "all_bigip"
+```
+
+Required: `name`, `line_order`, `attribute_string`. Common fields: `assigned_role`, `partition_access`, `terminal_access`, `remote_access`, `target_hosts`, `target_groups`.
+
+Validation and runtime rules:
+
+- `partition_access` is a single partition selector string, not the local-user `partition_access` list format
+- `partition_access` may use `all`, `Common`, or a custom partition name declared in `vars/system/partitions/`
+- `administrator`, `auditor`, and `resource-administrator` must use `partition_access: all`
+- `line_order` should leave gaps such as `1000`, `1100`, `1200` so new mappings can be inserted later without renumbering every rule
+- remote role mappings are applied after the auth source is configured so the external group bindings line up with the enabled provider
+
 ### Management-Plane RADIUS Auth Profile
 
 Location: `vars/system/auth/radius/`
@@ -284,8 +322,9 @@ This runs `bigip_config` to save the running config. It is the last task in the 
 5. Administrative partitions
 6. Users
 7. Management-plane auth providers
-8. Login banner
-9. Config save
+8. Remote auth role mappings
+9. Login banner
+10. Config save
 
 ## Partition and Naming Conventions
 
@@ -293,6 +332,7 @@ System objects are device-scoped, not partition-scoped, with two practical excep
 
 - administrative partitions are first-class system objects under `vars/system/partitions/`
 - users support `partition_access` for role assignment
+- remote auth role mappings support external group-to-role and partition assignment without local user creation
 - RADIUS server objects can still live in a partition, usually `Common`
 
 For environments with multiple auth methods defined in Git, only one of LDAP, TACACS, or RADIUS should set `use_for_auth: true` for a given target BIG-IP.
@@ -301,14 +341,15 @@ For environments with multiple HA pairs, system settings are typically applied p
 
 ## Current Lifecycle Boundary
 
-The `system` domain is intentionally `runtime+validation` for the current phase.
+The `system` domain is still intentionally broader than its helper-tool coverage, even though some object families now have helper support.
 
 - runtime playbook support is first-class
 - `tools/validate-vars.py` supports the tree and references
 - administrative partitions now have helper-tool support at `basic field drift` fidelity
+- remote auth role mappings now have `runtime+validation+helper-tools` coverage at `basic field drift` fidelity
 - broader helper-tool drift/import support is still intentionally incomplete for the rest of `system`
 
-Treat `system.yml` as the Git-authored runtime source of truth. Today only administrative partitions have drift/import helper-tool coverage inside this domain.
+Treat `system.yml` as the Git-authored runtime source of truth. Inside this domain, helper-tool coverage currently exists for administrative partitions and remote auth role mappings, but not for the rest of the system object families.
 
 ## Deletion
 

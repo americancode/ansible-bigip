@@ -10,6 +10,7 @@
 # - `system_auth_tacacs_present` / `system_auth_tacacs_delete`
 # - `system_auth_radius_servers_present` / `system_auth_radius_servers_delete`
 # - `system_auth_radius_present` / `system_auth_radius_delete`
+# - `system_auth_remote_roles_present` / `system_auth_remote_roles_delete`
 # - `system_login_banner_present` / `system_login_banner_delete`
 # - `system_config_targeted`
 

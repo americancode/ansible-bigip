@@ -1,0 +1,11 @@
+---
+# Default settings for BIG-IP remote auth role mappings in the system domain.
+# Objects in `vars/system/auth/remote_roles/*.yml` are consumed by `playbooks/system.yml`
+# and map external LDAP/TACACS/RADIUS group selectors to BIG-IP roles and partition access.
+# Supported fields: `assigned_role`, `partition_access`, `remote_access`, `terminal_access`,
+# `target_hosts`, and `target_groups`, with per-object `line_order` and `attribute_string`.
+system_auth_remote_role_defaults:
+  assigned_role: "manager"
+  partition_access: "all"
+  remote_access: true
+  terminal_access: "none"

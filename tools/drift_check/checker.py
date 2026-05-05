@@ -262,6 +262,7 @@ class VarTreeLoader:
     def load(self) -> None:
         """Load all var trees into memory."""
         self._load_simple_tree("system_partitions", VARS_DIR / "system" / "partitions", "system_partitions")
+        self._load_simple_tree("system_auth_remote_roles", VARS_DIR / "system" / "auth" / "remote_roles", "system_auth_remote_roles")
         self._load_simple_tree("ltm_nodes", VARS_DIR / "ltm" / "nodes", "ltm_nodes")
         self._load_simple_tree("ltm_monitors", VARS_DIR / "ltm" / "monitors", "ltm_monitors")
         self._load_simple_tree("ltm_pools", VARS_DIR / "ltm" / "pools", "ltm_pools")
@@ -327,6 +328,7 @@ class VarTreeLoader:
 class DriftChecker:
     BIGIP_ENDPOINTS = {
         "system_partitions": "auth/partition",
+        "system_auth_remote_roles": "auth/remote-role/role-info",
         "ltm_nodes": "ltm/node",
         "ltm_monitors": "ltm/monitor",
         "ltm_pools": "ltm/pool",
@@ -579,7 +581,54 @@ class DriftChecker:
             if declared_monitors - live_monitors:
                 drifts.append(f"monitors: declared {declared_monitors} vs live {live_monitors}")
 
+        if obj_type == "system_auth_remote_roles":
+            if "line_order" in declared:
+                self._compare_field(drifts, "line_order", declared.get("line_order"), live.get("lineOrder"), self._normalize_int)
+            if "attribute_string" in declared:
+                self._compare_field(drifts, "attribute_string", declared.get("attribute_string"), live.get("attribute"))
+            if "assigned_role" in declared:
+                self._compare_field(drifts, "assigned_role", declared.get("assigned_role"), self._normalize_remote_role_name(live.get("role")))
+            if "partition_access" in declared:
+                self._compare_field(drifts, "partition_access", declared.get("partition_access"), self._normalize_remote_partition_access(live.get("userPartition")))
+            if "terminal_access" in declared:
+                self._compare_field(drifts, "terminal_access", declared.get("terminal_access"), self._normalize_remote_terminal_access(live.get("console")))
+            if "remote_access" in declared:
+                self._compare_field(drifts, "remote_access", declared.get("remote_access"), self._normalize_remote_access(live.get("deny")), self._normalize_bool)
+
         return drifts
+
+    def _normalize_remote_role_name(self, value: Any) -> Any:
+        role_map = {
+            "applicationeditor": "application-editor",
+            "noaccess": "none",
+            "certificatemanager": "certificate-manager",
+            "irulemanager": "irule-manager",
+            "usermanager": "user-manager",
+            "resourceadmin": "resource-administrator",
+            "firewallmanager": "firewall-manager",
+        }
+        if not isinstance(value, str):
+            return value
+        return role_map.get(value, value)
+
+    def _normalize_remote_partition_access(self, value: Any) -> Any:
+        if value == "All":
+            return "all"
+        return value
+
+    def _normalize_remote_terminal_access(self, value: Any) -> Any:
+        if value == "disable":
+            return "none"
+        return value
+
+    def _normalize_remote_access(self, value: Any) -> Any:
+        if isinstance(value, str):
+            lowered = value.lower()
+            if lowered == "disabled":
+                return True
+            if lowered == "enabled":
+                return False
+        return value
 
     def _find_network_value_drift(self, declared: dict[str, Any], live: dict[str, Any], obj_type: str) -> list[str]:
         if obj_type == "network_route_domains":

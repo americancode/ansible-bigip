@@ -8,6 +8,12 @@ def validate_auth_objects(validator, objects: dict[str, list]) -> None:
     auth_tacacs = objects["auth_tacacs"]
     auth_radius_servers = objects["auth_radius_servers"]
     auth_radius = objects["auth_radius"]
+    auth_remote_roles = objects["auth_remote_roles"]
+    active_partition_names = {"all", "Common"}
+
+    for obj in validator.objects.get("system_partitions", []):
+        if obj.effective_state != "absent" and obj.data.get("name"):
+            active_partition_names.add(str(obj.data["name"]))
 
     active_radius_server_names = set()
     for obj in auth_radius_servers:
@@ -70,3 +76,42 @@ def validate_auth_objects(validator, objects: dict[str, list]) -> None:
                     validator.error(obj.relpath, f"only one management-plane auth source can set `use_for_auth: true` for target host `{host}`; conflicts with {existing_type} in {existing_obj.relpath}")
                 else:
                     active_auth_targets[host] = (auth_type, obj)
+
+    roles_requiring_all_partitions = {"administrator", "auditor", "resource-administrator"}
+    for obj in auth_remote_roles:
+        validator.validate_target_selectors(obj, label=f"system remote auth role `{obj.data.get('name')}`")
+        validator.require_fields(obj, ["name"])
+        if obj.effective_state == "absent":
+            continue
+
+        validator.require_fields(obj, ["line_order", "attribute_string"])
+
+        partition_access = obj.data.get("partition_access")
+        if partition_access is not None and not isinstance(partition_access, str):
+            validator.error(obj.relpath, f"system remote auth role `{obj.data.get('name')}` field `partition_access` must be a string")
+        elif isinstance(partition_access, str) and partition_access not in active_partition_names:
+            validator.error(
+                obj.relpath,
+                f"system remote auth role `{obj.data.get('name')}` references undefined partition access `{partition_access}`",
+            )
+
+        line_order = obj.data.get("line_order")
+        if line_order is not None and not isinstance(line_order, int):
+            validator.error(obj.relpath, f"system remote auth role `{obj.data.get('name')}` field `line_order` must be an integer")
+
+        remote_access = obj.data.get("remote_access")
+        if remote_access is not None and not isinstance(remote_access, bool):
+            validator.error(obj.relpath, f"system remote auth role `{obj.data.get('name')}` field `remote_access` must be a boolean")
+
+        assigned_role = obj.data.get("assigned_role")
+        if assigned_role in roles_requiring_all_partitions and partition_access not in (None, "all"):
+            validator.error(
+                obj.relpath,
+                f"system remote auth role `{obj.data.get('name')}` with assigned_role `{assigned_role}` must use `partition_access: all`",
+            )
+
+    validator.check_targeted_identity_collisions(
+        auth_remote_roles,
+        identity_func=lambda obj: ("system_auth_remote_role", obj.data.get("name")),
+        label="system remote auth role",
+    )

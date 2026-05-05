@@ -129,6 +129,19 @@
     aggregate_var: system_auth_radius
     deletion_aggregate_var: system_auth_radius_deletions
 
+- name: Load system remote-role auth fragments into system_auth_remote_roles/system_auth_remote_role_deletions
+  ansible.builtin.import_tasks: "{{ playbook_dir }}/shared/prep/load-fragment-tree.yml"
+  vars:
+    fragment_label: system remote-role auth
+    source_root: "{{ repo_root }}/vars/system/auth/remote_roles"
+    deletion_root: "{{ repo_root }}/vars/system/deletions/auth/remote_roles"
+    fragment_var_name: system_auth_remote_role_fragment
+    fragment_deletion_var_name: system_auth_remote_role_deletion_fragment
+    collection_key: system_auth_remote_roles
+    defaults_key: system_auth_remote_role_defaults
+    aggregate_var: system_auth_remote_roles
+    deletion_aggregate_var: system_auth_remote_role_deletions
+
 - name: Load system login banner fragments into system_login_banners/system_login_banner_deletions
   ansible.builtin.import_tasks: "{{ playbook_dir }}/shared/prep/load-fragment-tree.yml"
   vars:

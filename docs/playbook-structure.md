@@ -8,7 +8,7 @@ For a doc map by task, start with [index.md](index.md). For extension work, use 
 
 - `playbooks/network.yml`: VLANs, trunks, route domains, self IPs, static routes, SNAT translations, SNAT pools, and NATs
 - `playbooks/bootstrap.yml`: BIG-IP day-0 licensing and first management reachability
-- `playbooks/system.yml`: base system settings like hostname, DNS, NTP, provisioning, administrative partitions, users, management-plane admin auth providers, and login banners
+- `playbooks/system.yml`: base system settings like hostname, DNS, NTP, provisioning, administrative partitions, users, management-plane admin auth providers, remote auth role mappings, and login banners
 - `playbooks/ha.yml`: device connectivity, device trust, device groups, HA groups, traffic groups, config sync actions
 - `playbooks/ltm.yml`: LTM monitors, non-TLS profiles, nodes, pools, virtual servers
 - `playbooks/gtm.yml`: GTM monitors, datacenters, servers, pools, Wide IPs, regions, and topology records
