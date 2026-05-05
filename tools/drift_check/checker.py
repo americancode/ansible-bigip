@@ -1,0 +1,1587 @@
+#!/usr/bin/env python3
+"""Drift detection: compare live BIG-IP state against declared var tree state.
+
+Reads the live running configuration from a BIG-IP device via its REST API,
+compares it against objects declared in the repository's var trees, and
+produces a report of drift.
+
+Environment variables:
+    F5_HOST         — BIG-IP hostname or IP (required)
+    F5_USERNAME     — BIG-IP username (default: admin)
+    F5_PASSWORD     — BIG-IP password (required)
+    F5_SERVER_PORT  — BIG-IP port (default: 443)
+"""
+
+from __future__ import annotations
+
+import json
+import os
+import sys
+import warnings
+from dataclasses import dataclass, field
+from pathlib import Path
+from typing import Any
+
+import yaml
+
+warnings.filterwarnings("ignore", category=DeprecationWarning)
+
+try:
+    import requests
+except ImportError:
+    print("ERROR: 'requests' package is required. Install with: pip install requests", file=sys.stderr)
+    sys.exit(1)
+
+ROOT = Path(__file__).resolve().parents[1]
+VARS_DIR = ROOT / "vars"
+
+
+class AnsibleVarLoader(yaml.SafeLoader):
+    """YAML loader for Ansible variable files.
+
+    Purpose:
+        Extended SafeLoader that handles Ansible-specific YAML tags (e.g., !vault, !unsafe)
+        by passing them through unchanged rather than raising parse errors.
+
+    Usage:
+        Use this loader when reading var files that may contain Ansible vault-encrypted
+        values or other custom tags.
+    """
+    pass
+
+
+def construct_ansible_tag(loader: AnsibleVarLoader, tag_suffix: str, node: yaml.Node) -> Any:
+    """YAML constructor that passes through Ansible-style tags (!) unchanged.
+
+    Purpose:
+        Allows the AnsibleVarLoader to parse YAML files that use Ansible-specific
+        tags (e.g., !vault, !unsafe) without raising errors.
+
+    Inputs:
+        loader (AnsibleVarLoader): The YAML loader instance.
+        tag_suffix (str): The tag suffix after the "!" prefix.
+        node (yaml.Node): The YAML node being constructed.
+
+    Outputs:
+        The constructed Python object (str, list, or dict depending on node type).
+
+    Constraints:
+        - Raises TypeError for unsupported node types.
+    """
+    if isinstance(node, yaml.ScalarNode):
+        return loader.construct_scalar(node)
+    if isinstance(node, yaml.SequenceNode):
+        return loader.construct_sequence(node)
+    if isinstance(node, yaml.MappingNode):
+        return loader.construct_mapping(node)
+    raise TypeError(f"Unsupported YAML node type: {type(node)!r}")
+
+
+AnsibleVarLoader.add_multi_constructor("!", construct_ansible_tag)
+
+
+@dataclass
+class BigIPConnection:
+    """Manage authenticated REST API connections to a BIG-IP device.
+
+    Purpose:
+        Reads connection details from environment variables and provides
+        helpers to query the BIG-IP REST API for drift detection.
+
+    Attributes:
+        host (str): BIG-IP hostname or IP address.
+        username (str): BIG-IP username (default: "admin").
+        password (str): BIG-IP password.
+        port (int): BIG-IP management port (default: 443).
+
+    Environment variables:
+        F5_HOST (required), F5_USERNAME (default: admin), F5_PASSWORD (required),
+        F5_SERVER_PORT / F5_PORT (default: 443).
+
+    Example:
+        conn = BigIPConnection.from_env()
+        data = conn.get("ltm/node")
+    """
+    host: str
+    username: str
+    password: str
+    port: int = 443
+
+    @property
+    def base_url(self) -> str:
+        """Return the base URL for BIG-IP REST API calls."""
+        return f"https://{self.host}:{self.port}/mgmt/tm"
+
+    @classmethod
+    def from_env(cls) -> "BigIPConnection":
+        """Create a BigIPConnection from environment variables.
+
+        Returns:
+            BigIPConnection: Configured connection instance.
+
+        Side effects:
+            Exits with code 1 if F5_HOST or F5_PASSWORD are missing.
+        """
+        host = os.environ.get("F5_HOST")
+        if not host:
+            print("ERROR: F5_HOST environment variable is required.", file=sys.stderr)
+            sys.exit(1)
+        password = os.environ.get("F5_PASSWORD")
+        if not password:
+            print("ERROR: F5_PASSWORD environment variable is required.", file=sys.stderr)
+            sys.exit(1)
+        return cls(
+            host=host,
+            username=os.environ.get("F5_USERNAME") or os.environ.get("F5_USER", "admin"),
+            password=password,
+            port=int(os.environ.get("F5_SERVER_PORT") or os.environ.get("F5_PORT", "443")),
+        )
+
+    def get(self, uri: str, params: dict | None = None) -> Any:
+        url = f"{self.base_url}/{uri}"
+        resp = requests.get(
+            url,
+            auth=(self.username, self.password),
+            params=params,
+            verify=False,
+            timeout=30,
+        )
+        resp.raise_for_status()
+        return resp.json()
+
+    def get_all(self, uri: str, params: dict | None = None) -> list[dict[str, Any]]:
+        url = f"{self.base_url}/{uri}"
+        query = dict(params or {})
+        if "$top" not in query:
+            query["$top"] = 1000
+        items: list[dict[str, Any]] = []
+
+        while url:
+            resp = requests.get(
+                url,
+                auth=(self.username, self.password),
+                params=query,
+                verify=False,
+                timeout=30,
+            )
+            resp.raise_for_status()
+            data = resp.json()
+            if isinstance(data, dict):
+                items.extend(data.get("items", []))
+                url = data.get("nextSelfLink")
+            else:
+                url = None
+            query = {}
+
+        return items
+
+
+@dataclass
+class DriftEntry:
+    """Represents a single drift detection result for one object.
+
+    Purpose:
+        Captures the type, name, partition, and drift details for an object
+        that differs between the live BIG-IP and Git-declared state.
+
+    Attributes:
+        object_type (str): The object family (e.g., "ltm_nodes", "ltm_pools").
+        name (str): The object name.
+        partition (str): The BIG-IP partition (default: "Common").
+        status (str): Status or state information.
+        detail (str): Human-readable description of the drift.
+    """
+    object_type: str
+    name: str
+    partition: str = "Common"
+    status: str = ""
+    detail: str = ""
+
+
+@dataclass
+class DriftReport:
+    """Aggregates drift detection results across all object types.
+
+    Purpose:
+        Collects and summarizes drift between live BIG-IP state and Git-declared state.
+
+    Attributes:
+        missing_from_git (list[DriftEntry]): Objects on device but not in Git.
+        missing_from_device (list[DriftEntry]): Objects in Git but not on device.
+        value_drift (list[DriftEntry]): Objects with field value differences.
+        unchanged (int): Count of objects that match between device and Git.
+
+    Properties:
+        has_drift (bool): True if any drift was detected.
+    """
+    missing_from_git: list[DriftEntry] = field(default_factory=list)
+    missing_from_device: list[DriftEntry] = field(default_factory=list)
+    value_drift: list[DriftEntry] = field(default_factory=list)
+    unchanged: int = 0
+
+    def summarize(self) -> str:
+        lines = []
+        if self.missing_from_git:
+            lines.append(f"\nON DEVICE BUT NOT IN GIT ({len(self.missing_from_git)}):")
+            for e in self.missing_from_git:
+                lines.append(f"  [{e.object_type}] /{e.partition}/{e.name}")
+        if self.missing_from_device:
+            lines.append(f"\nIN GIT BUT NOT ON DEVICE ({len(self.missing_from_device)}):")
+            for e in self.missing_from_device:
+                lines.append(f"  [{e.object_type}] /{e.partition}/{e.name}")
+        if self.value_drift:
+            lines.append(f"\nVALUE DRIFT ({len(self.value_drift)}):")
+            for e in self.value_drift:
+                lines.append(f"  [{e.object_type}] /{e.partition}/{e.name}: {e.detail}")
+        lines.append(f"\nSummary: {len(self.missing_from_git)} not in git, {len(self.missing_from_device)} not on device, {len(self.value_drift)} drifted, {self.unchanged} unchanged.")
+        return "\n".join(lines)
+
+    @property
+    def has_drift(self) -> bool:
+        return bool(self.missing_from_git or self.missing_from_device or self.value_drift)
+
+
+class VarTreeLoader:
+    """Loads var tree objects from the repository for drift comparison.
+
+    Purpose:
+        Reads all YAML files from the vars/ directory and loads them into
+        an in-memory structure for comparison against live BIG-IP state.
+
+    Attributes:
+        objects (dict): Dictionary mapping object type keys to lists of loaded objects.
+
+    Example:
+        loader = VarTreeLoader()
+        loader.load()
+        pools = loader.objects.get("ltm_pools", [])
+    """
+    def __init__(self) -> None:
+        self.objects: dict[str, list[dict[str, Any]]] = {}
+
+    def load(self) -> None:
+        """Load all var trees into memory."""
+        self._load_simple_tree("system_partitions", VARS_DIR / "system" / "partitions", "system_partitions")
+        self._load_simple_tree("ltm_nodes", VARS_DIR / "ltm" / "nodes", "ltm_nodes")
+        self._load_simple_tree("ltm_monitors", VARS_DIR / "ltm" / "monitors", "ltm_monitors")
+        self._load_simple_tree("ltm_pools", VARS_DIR / "ltm" / "pools", "ltm_pools")
+        self._load_simple_tree("ltm_virtual_servers", VARS_DIR / "ltm" / "virtual_servers", "ltm_virtual_servers")
+        self._load_simple_tree("ltm_profiles", VARS_DIR / "ltm" / "profiles", "ltm_profiles")
+        self._load_simple_tree("ltm_persistence_profiles", VARS_DIR / "ltm" / "persistence", "ltm_persistence_profiles")
+        self._load_simple_tree("ltm_irules", VARS_DIR / "ltm" / "irules", "ltm_irules")
+        self._load_simple_tree("ltm_data_groups", VARS_DIR / "ltm" / "data_groups", "ltm_data_groups")
+        self._load_simple_tree("ltm_policies", VARS_DIR / "ltm" / "policies", "ltm_policies")
+        self._load_simple_tree("gtm_datacenters", VARS_DIR / "gtm" / "datacenters", "gtm_datacenters")
+        self._load_simple_tree("gtm_servers", VARS_DIR / "gtm" / "servers", "gtm_servers")
+        self._load_simple_tree("gtm_pools", VARS_DIR / "gtm" / "pools", "gtm_pools")
+        self._load_simple_tree("gtm_wide_ips", VARS_DIR / "gtm" / "intents" / "applications", "gtm_wide_ips")
+        self._load_simple_tree("gtm_topology_regions", VARS_DIR / "gtm" / "regions", "gtm_topology_regions")
+        self._load_simple_tree("gtm_topology_records", VARS_DIR / "gtm" / "topology", "gtm_topology_records")
+        self._load_simple_tree("gtm_monitors", VARS_DIR / "gtm" / "monitors", "gtm_monitors")
+        self._load_simple_tree("network_vlans", VARS_DIR / "network" / "vlans", "bigip_vlans")
+        self._load_simple_tree("network_self_ips", VARS_DIR / "network" / "self_ips", "bigip_self_ips")
+        self._load_simple_tree("network_routes", VARS_DIR / "network" / "routes", "bigip_routes")
+        self._load_simple_tree("network_route_domains", VARS_DIR / "network" / "route_domains", "bigip_route_domains")
+        self._load_simple_tree("network_trunks", VARS_DIR / "network" / "trunks", "bigip_trunks")
+        self._load_simple_tree("network_snat_translations", VARS_DIR / "network" / "snat_translations", "bigip_snat_translations")
+        self._load_simple_tree("network_snats", VARS_DIR / "network" / "snats", "bigip_snat_pools")
+        self._load_simple_tree("network_nats", VARS_DIR / "network" / "nats", "bigip_nats")
+        self._load_simple_tree("afm_address_lists", VARS_DIR / "security" / "afm" / "address_lists", "afm_address_lists")
+        self._load_simple_tree("afm_port_lists", VARS_DIR / "security" / "afm" / "port_lists", "afm_port_lists")
+        self._load_simple_tree("afm_rules", VARS_DIR / "security" / "afm" / "rules", "afm_rules")
+        self._load_simple_tree("afm_policies", VARS_DIR / "security" / "afm" / "policies", "afm_policies")
+        self._load_simple_tree("waf_policies", VARS_DIR / "security" / "waf" / "policies", "waf_policies")
+        self._load_simple_tree("apm_acls", VARS_DIR / "security" / "apm" / "acls", "apm_acls")
+        self._load_simple_tree("apm_auth_servers", VARS_DIR / "security" / "apm" / "auth_servers", "apm_auth_servers")
+        self._load_simple_tree("apm_sso_configs", VARS_DIR / "security" / "apm" / "sso_configs", "apm_sso_configs")
+        self._load_simple_tree("apm_resources", VARS_DIR / "security" / "apm" / "resources", "apm_resources")
+        self._load_simple_tree("apm_access_profiles", VARS_DIR / "security" / "apm" / "access_profiles", "apm_access_profiles")
+        self._load_simple_tree("apm_per_session_policies", VARS_DIR / "security" / "apm" / "per_session_policies", "apm_per_session_policies")
+        self._load_simple_tree("apm_macros", VARS_DIR / "security" / "apm" / "macros", "apm_macros")
+        self._load_simple_tree("apm_policy_nodes", VARS_DIR / "security" / "apm" / "policy_nodes", "apm_policy_nodes")
+        self._load_simple_tree("tls_keys", VARS_DIR / "tls" / "keys", "tls_keys")
+        self._load_simple_tree("tls_certificates", VARS_DIR / "tls" / "certificates", "tls_certificates")
+        self._load_simple_tree("tls_ca_bundles", VARS_DIR / "tls" / "ca_bundles", "tls_ca_bundles")
+        self._load_simple_tree("tls_client_ssl_profiles", VARS_DIR / "tls" / "client_ssl_profiles", "tls_client_ssl_profiles")
+        self._load_simple_tree("tls_server_ssl_profiles", VARS_DIR / "tls" / "server_ssl_profiles", "tls_server_ssl_profiles")
+
+    def _load_simple_tree(self, key: str, directory: Path, top_key: str) -> None:
+        if not directory.exists():
+            return
+        objects: list[dict[str, Any]] = []
+        for path in sorted(directory.rglob("*.yml")):
+            if path.name == "settings.yml":
+                continue
+            try:
+                with path.open("r") as f:
+                    payload = yaml.load(f, Loader=AnsibleVarLoader) or {}
+                entries = payload.get(top_key, [])
+                if isinstance(entries, list):
+                    objects.extend(entries)
+            except (yaml.YAMLError, OSError):
+                continue
+        if objects:
+            self.objects[key] = objects
+
+
+class DriftChecker:
+    BIGIP_ENDPOINTS = {
+        "system_partitions": "auth/partition",
+        "ltm_nodes": "ltm/node",
+        "ltm_monitors": "ltm/monitor",
+        "ltm_pools": "ltm/pool",
+        "ltm_virtual_servers": "ltm/virtual",
+        "ltm_profiles": "ltm/profile",
+        "ltm_irules": "ltm/rule",
+        "ltm_data_groups": "ltm/data-group",
+        "ltm_policies": "ltm/policy",
+        "ltm_persistence_profiles": "ltm/persistence",
+        "gtm_datacenters": "gtm/datacenter",
+        "gtm_servers": "gtm/server",
+        "gtm_pools": "gtm/pool",
+        "gtm_wide_ips": "gtm/wideip",
+        "gtm_topology_regions": "gtm/region",
+        "gtm_topology_records": "gtm/topology",
+        "network_vlans": "net/vlan",
+        "network_self_ips": "net/self",
+        "network_routes": "net/route",
+        "network_route_domains": "net/route-domain",
+        "network_trunks": "net/trunk",
+        "network_snat_translations": "ltm/snat-translation",
+        "network_snats": "ltm/snatpool",
+        "network_nats": "ltm/nat",
+        "afm_address_lists": "security/firewall/address-list",
+        "afm_port_lists": "security/firewall/port-list",
+        "afm_rules": "security/firewall/rule",
+        "afm_policies": "security/firewall/rule-list",
+        "waf_policies": "asm/policies",
+        "waf_server_technologies": "asm/policies",
+        "apm_acls": "access/policy/acl",
+        "apm_auth_servers": "auth/remote-server",
+        "apm_sso_configs": "apm/sso",
+        "apm_resources": "apm/resource",
+        "apm_access_profiles": "access/profile",
+        "apm_per_session_policies": "access/per-session-policy",
+        "apm_macros": "access/macro",
+        "apm_policy_nodes": "apm/policy/access-policy",
+        "tls_keys": "sys/crypto/key",
+        "tls_certificates": "sys/crypto/cert",
+        "tls_ca_bundles": "sys/crypto/ca-bundle",
+        "tls_client_ssl_profiles": "ltm/profile/client-ssl",
+        "tls_server_ssl_profiles": "ltm/profile/server-ssl",
+    }
+
+    NAME_FIELDS = {
+        "ltm_monitors": "name",
+        "ltm_policies": "name",
+        "ltm_profiles": "name",
+    }
+
+    NETWORK_DEEP_DRIFT_TYPES = {
+        "network_route_domains",
+        "network_trunks",
+        "network_snat_translations",
+        "network_snats",
+        "network_nats",
+    }
+
+    GTM_DEEP_DRIFT_TYPES = {
+        "gtm_topology_regions",
+        "gtm_topology_records",
+    }
+
+    TLS_DEEP_DRIFT_TYPES = {
+        "tls_ca_bundles",
+        "tls_client_ssl_profiles",
+        "tls_server_ssl_profiles",
+    }
+
+    APM_DEEP_DRIFT_TYPES = {
+        "apm_sso_configs",
+        "apm_access_profiles",
+        "apm_policy_nodes",
+    }
+
+    def __init__(self, conn: BigIPConnection, var_loader: VarTreeLoader) -> None:
+        """Initialize the drift checker.
+
+        Purpose:
+            Compare Git-declared objects against live BIG-IP state to detect drift.
+
+        Inputs:
+            conn (BigIPConnection): Authenticated connection to the BIG-IP device.
+            var_loader (VarTreeLoader): Loaded var tree objects from the repository.
+
+        Attributes:
+            conn: The BIG-IP connection instance.
+            var_loader: The var tree loader with Git-declared objects.
+            report (DriftReport): Accumulated drift results.
+        """
+        self.conn = conn
+        self.var_loader = var_loader
+        self.report = DriftReport()
+
+    def run(self, types: list[str] | None = None) -> DriftReport:
+        endpoints = self.BIGIP_ENDPOINTS
+        if types:
+            endpoints = {k: v for k, v in endpoints.items() if k in types}
+
+        for obj_type, endpoint in endpoints.items():
+            if obj_type not in self.var_loader.objects:
+                continue
+            if obj_type == "waf_server_technologies":
+                self._check_waf_server_technologies()
+                continue
+            if obj_type == "apm_policy_nodes":
+                self._check_apm_policy_nodes()
+                continue
+            if obj_type == "gtm_topology_records":
+                self._check_gtm_topology_records(endpoint)
+                continue
+            self._check_type(obj_type, endpoint)
+
+        return self.report
+
+    def _check_type(self, obj_type: str, endpoint: str) -> None:
+        try:
+            live_items = self._fetch_live_items(obj_type, endpoint)
+        except Exception as exc:
+            print(f"WARN: could not query {endpoint}: {exc}", file=sys.stderr)
+            return
+
+        live_by_name: dict[tuple[str, str], dict[str, Any]] = {}
+        live_names = set()
+        for item in live_items:
+            partition = item.get("partition") or item.get("tmPartition") or "Common"
+            name = self._extract_live_name(obj_type, item)
+            if not name:
+                continue
+            key = (partition, name)
+            live_names.add(key)
+            live_by_name[key] = item
+
+        declared = self.var_loader.objects.get(obj_type, [])
+        declared_names = set()
+        declared_by_name: dict[tuple[str, str], dict[str, Any]] = {}
+
+        for obj in declared:
+            if obj.get("state") == "absent":
+                continue
+            partition = obj.get("partition", "Common")
+            name = obj.get("name", "")
+            if not name:
+                continue
+            declared_names.add((partition, name))
+            declared_by_name[(partition, name)] = obj
+
+        for partition, name in live_names - declared_names:
+            self.report.missing_from_git.append(DriftEntry(
+                object_type=obj_type, name=name, partition=partition,
+                detail="exists on device but not declared in vars/",
+            ))
+
+        for partition, name in declared_names - live_names:
+            self.report.missing_from_device.append(DriftEntry(
+                object_type=obj_type, name=name, partition=partition,
+                detail="declared in vars/ but not found on device",
+            ))
+
+        for key in declared_names & live_names:
+            partition, name = key
+            declared_obj = declared_by_name[key]
+            live_obj = live_by_name.get(key, {})
+            drift_fields = self._find_value_drift(declared_obj, live_obj, obj_type)
+            if drift_fields:
+                self.report.value_drift.append(DriftEntry(
+                    object_type=obj_type, name=name, partition=partition,
+                    detail=", ".join(drift_fields),
+                ))
+            else:
+                self.report.unchanged += 1
+
+    def _fetch_live_items(self, obj_type: str, endpoint: str) -> list[dict[str, Any]]:
+        items = self.conn.get_all(endpoint)
+        if obj_type == "network_trunks":
+            for item in items:
+                self._hydrate_trunk_interfaces(item)
+        return items
+
+    def _hydrate_trunk_interfaces(self, item: dict[str, Any]) -> None:
+        interfaces = item.get("interfacesReference", {}).get("link", "")
+        if not interfaces:
+            return
+        try:
+            iface_data = self.conn.get_all(interfaces.split("/mgmt/tm/")[-1])
+        except Exception:
+            return
+
+        members = []
+        for iface in iface_data:
+            name = iface.get("name", "")
+            if name:
+                members.append(self._normalize_short_name(name))
+        if members:
+            item["interfaces"] = members
+
+    def _extract_live_name(self, obj_type: str, item: dict[str, Any]) -> str:
+        name_field = self.NAME_FIELDS.get(obj_type, "name")
+        name = item.get(name_field, item.get("fullPath", ""))
+        return self._normalize_short_name(name)
+
+    def _find_value_drift(self, declared: dict, live: dict, obj_type: str) -> list[str]:
+        if obj_type in self.NETWORK_DEEP_DRIFT_TYPES:
+            return self._find_network_value_drift(declared, live, obj_type)
+        if obj_type in self.GTM_DEEP_DRIFT_TYPES:
+            return self._find_gtm_value_drift(declared, live, obj_type)
+        if obj_type in self.TLS_DEEP_DRIFT_TYPES:
+            return self._find_tls_value_drift(declared, live, obj_type)
+        if obj_type in self.APM_DEEP_DRIFT_TYPES:
+            return self._find_apm_value_drift(declared, live, obj_type)
+
+        drifts: list[str] = []
+        comparisons = {
+            "description": ("description", ""),
+            "enabled": ("enabled", True),
+            "disabled": ("disabled", False),
+            "lb_method": ("loadBalancingMode", ""),
+            "destination": ("destination", ""),
+            "protocol": ("ipProtocol", ""),
+            "location": ("location", ""),
+            "contact": ("contact", ""),
+            "tag": ("tag", ""),
+            "mtu": ("mtu", ""),
+            "address": ("address", ""),
+            "vlan": ("vlan", ""),
+            "gateway_address": ("gw", ""),
+            "route_domain": ("defaultRouteDomain", 0),
+            "partition": ("partition", "Common"),
+            "rule": ("rule", ""),
+            "type": ("type", ""),
+            "name": ("name", ""),
+        }
+
+        for decl_key, (live_key, default) in comparisons.items():
+            if decl_key not in declared:
+                continue
+            declared_val = declared[decl_key]
+            live_val = live.get(live_key, default)
+            if str(declared_val).lower() != str(live_val).lower():
+                drifts.append(f"{decl_key}: declared={declared_val} vs live={live_val}")
+
+        if "monitors" in declared:
+            declared_monitors = set(declared["monitors"])
+            live_monitors_str = live.get("monitors", "")
+            live_monitors = set()
+            if isinstance(live_monitors_str, str) and live_monitors_str:
+                live_monitors = set(live_monitors_str.replace(" and ", " ").replace(" or ", " ").split())
+            elif isinstance(live_monitors_str, list):
+                live_monitors = set(live_monitors_str)
+            if declared_monitors - live_monitors:
+                drifts.append(f"monitors: declared {declared_monitors} vs live {live_monitors}")
+
+        return drifts
+
+    def _find_network_value_drift(self, declared: dict[str, Any], live: dict[str, Any], obj_type: str) -> list[str]:
+        if obj_type == "network_route_domains":
+            return self._find_route_domain_drift(declared, live)
+        if obj_type == "network_trunks":
+            return self._find_trunk_drift(declared, live)
+        if obj_type == "network_snat_translations":
+            return self._find_snat_translation_drift(declared, live)
+        if obj_type == "network_snats":
+            return self._find_snat_pool_drift(declared, live)
+        if obj_type == "network_nats":
+            return self._find_nat_drift(declared, live)
+        return []
+
+    def _find_gtm_value_drift(self, declared: dict[str, Any], live: dict[str, Any], obj_type: str) -> list[str]:
+        if obj_type == "gtm_topology_regions":
+            return self._find_gtm_topology_region_drift(declared, live)
+        if obj_type == "gtm_topology_records":
+            return self._find_gtm_topology_record_drift(declared, live)
+        return []
+
+    def _find_tls_value_drift(self, declared: dict[str, Any], live: dict[str, Any], obj_type: str) -> list[str]:
+        if obj_type == "tls_ca_bundles":
+            return self._find_tls_ca_bundle_drift(declared, live)
+        if obj_type == "tls_client_ssl_profiles":
+            return self._find_tls_client_ssl_profile_drift(declared, live)
+        if obj_type == "tls_server_ssl_profiles":
+            return self._find_tls_server_ssl_profile_drift(declared, live)
+        return []
+
+    def _find_apm_value_drift(self, declared: dict[str, Any], live: dict[str, Any], obj_type: str) -> list[str]:
+        if obj_type == "apm_sso_configs":
+            return self._find_apm_sso_config_drift(declared, live)
+        if obj_type == "apm_access_profiles":
+            return self._find_apm_access_profile_drift(declared, live)
+        if obj_type == "apm_policy_nodes":
+            return self._find_apm_policy_node_drift(declared, live)
+        return []
+
+    def _find_route_domain_drift(self, declared: dict[str, Any], live: dict[str, Any]) -> list[str]:
+        drifts: list[str] = []
+        self._compare_field(drifts, "description", declared.get("description"), live.get("description"))
+        self._compare_field(drifts, "id", declared.get("id"), live.get("id"), self._normalize_int)
+        self._compare_field(drifts, "parent", declared.get("parent"), live.get("parent"), self._normalize_short_name)
+        self._compare_field(drifts, "strict", declared.get("strict"), live.get("strict"), self._normalize_bool)
+        self._compare_field(drifts, "vlans", declared.get("vlans"), live.get("vlans"), self._normalize_name_list)
+        return drifts
+
+    def _find_trunk_drift(self, declared: dict[str, Any], live: dict[str, Any]) -> list[str]:
+        drifts: list[str] = []
+        self._compare_field(drifts, "description", declared.get("description"), live.get("description"))
+        self._compare_field(drifts, "interfaces", declared.get("interfaces"), live.get("interfaces"), self._normalize_name_list)
+        self._compare_optional_live_field(
+            drifts, "lacp_enabled", declared.get("lacp_enabled"), live, ("lacpEnabled", "lacp"), self._normalize_bool
+        )
+        self._compare_optional_live_field(
+            drifts, "lacp_mode", declared.get("lacp_mode"), live, ("lacpMode", "lacp-mode")
+        )
+        self._compare_optional_live_field(
+            drifts, "lacp_timeout", declared.get("lacp_timeout"), live, ("lacpTimeout", "timeout")
+        )
+        self._compare_optional_live_field(
+            drifts, "link_selection_policy", declared.get("link_selection_policy"), live, ("linkSelectionPolicy",)
+        )
+        self._compare_optional_live_field(
+            drifts, "frame_distribution_hash", declared.get("frame_distribution_hash"), live, ("distributionHash",)
+        )
+        self._compare_optional_live_field(
+            drifts, "qinq_ethertype", declared.get("qinq_ethertype"), live, ("qinqEthertype",)
+        )
+        return drifts
+
+    def _find_snat_translation_drift(self, declared: dict[str, Any], live: dict[str, Any]) -> list[str]:
+        drifts: list[str] = []
+        self._compare_field(drifts, "address", declared.get("address"), live.get("address"))
+        self._compare_field(drifts, "arp", declared.get("arp"), live.get("arp"), self._normalize_bool)
+        self._compare_field(
+            drifts, "connection_limit", declared.get("connection_limit"), live.get("connectionLimit"), self._normalize_int
+        )
+        self._compare_field(drifts, "description", declared.get("description"), live.get("description"))
+        self._compare_field(
+            drifts, "ip_idle_timeout", declared.get("ip_idle_timeout"), live.get("ipIdleTimeout"), self._normalize_int
+        )
+        self._compare_field(
+            drifts, "tcp_idle_timeout", declared.get("tcp_idle_timeout"), live.get("tcpIdleTimeout"), self._normalize_int
+        )
+        self._compare_field(
+            drifts, "udp_idle_timeout", declared.get("udp_idle_timeout"), live.get("udpIdleTimeout"), self._normalize_int
+        )
+        self._compare_field(
+            drifts, "traffic_group", declared.get("traffic_group"), live.get("trafficGroup"), self._normalize_short_name
+        )
+        return drifts
+
+    def _find_snat_pool_drift(self, declared: dict[str, Any], live: dict[str, Any]) -> list[str]:
+        drifts: list[str] = []
+        self._compare_field(drifts, "description", declared.get("description"), live.get("description"))
+        self._compare_field(drifts, "members", declared.get("members"), live.get("members"), self._normalize_name_list)
+        return drifts
+
+    def _find_nat_drift(self, declared: dict[str, Any], live: dict[str, Any]) -> list[str]:
+        drifts: list[str] = []
+        self._compare_field(drifts, "description", declared.get("description"), live.get("description"))
+        self._compare_field(
+            drifts,
+            "originating_address",
+            declared.get("originating_address"),
+            self._first_present(live, ("originatingAddress", "originating-address")),
+        )
+        self._compare_field(
+            drifts,
+            "translation_address",
+            declared.get("translation_address"),
+            self._first_present(live, ("translationAddress", "translation-address")),
+        )
+        self._compare_optional_live_field(
+            drifts, "traffic_group", declared.get("traffic_group"), live, ("trafficGroup",), self._normalize_short_name
+        )
+        self._compare_optional_live_field(
+            drifts, "auto_lasthop", declared.get("auto_lasthop"), live, ("autoLasthop", "auto-lasthop")
+        )
+        self._compare_optional_live_field(
+            drifts, "arp", declared.get("arp"), live, ("arp",), self._normalize_bool
+        )
+        if declared.get("enabled") is not None:
+            live_enabled = self._derive_enabled(live)
+            if live_enabled is not None:
+                self._compare_field(drifts, "enabled", declared.get("enabled"), live_enabled, self._normalize_bool)
+        self._compare_optional_live_field(
+            drifts, "vlans", declared.get("vlans"), live, ("vlans",), self._normalize_name_list
+        )
+        if declared.get("vlans_enabled") is not None:
+            live_vlans_enabled = self._derive_vlans_enabled(live)
+            if live_vlans_enabled is not None:
+                self._compare_field(
+                    drifts, "vlans_enabled", declared.get("vlans_enabled"), live_vlans_enabled, self._normalize_bool
+                )
+        return drifts
+
+    def _find_gtm_topology_region_drift(self, declared: dict[str, Any], live: dict[str, Any]) -> list[str]:
+        drifts: list[str] = []
+        self._compare_field(drifts, "description", declared.get("description"), live.get("description"))
+        self._compare_optional_live_field(
+            drifts,
+            "region_members",
+            declared.get("region_members"),
+            live,
+            ("regionMembers", "region_members"),
+            self._normalize_member_list,
+        )
+        return drifts
+
+    def _find_gtm_topology_record_drift(self, declared: dict[str, Any], live: dict[str, Any]) -> list[str]:
+        drifts: list[str] = []
+        self._compare_field(
+            drifts,
+            "source",
+            declared.get("source"),
+            live.get("source"),
+            self._normalize_topology_side,
+        )
+        self._compare_field(
+            drifts,
+            "destination",
+            declared.get("destination"),
+            live.get("destination"),
+            self._normalize_topology_side,
+        )
+        self._compare_optional_live_field(
+            drifts, "weight", declared.get("weight"), live, ("weight",), self._normalize_int
+        )
+        return drifts
+
+    def _find_tls_ca_bundle_drift(self, declared: dict[str, Any], live: dict[str, Any]) -> list[str]:
+        drifts: list[str] = []
+        self._compare_field(drifts, "description", declared.get("description"), live.get("description"))
+        self._compare_optional_live_field(
+            drifts, "issuer_cert", declared.get("issuer_cert"), live, ("issuerCert", "issuer_cert"), self._normalize_reference
+        )
+        self._compare_optional_live_field(
+            drifts, "true_names", declared.get("true_names"), live, ("trueNames", "true_names"), self._normalize_bool
+        )
+        return drifts
+
+    def _find_tls_client_ssl_profile_drift(self, declared: dict[str, Any], live: dict[str, Any]) -> list[str]:
+        drifts: list[str] = []
+        self._compare_field(drifts, "parent", declared.get("parent"), live.get("defaultsFrom"), self._normalize_reference)
+        self._compare_field(drifts, "ciphers", declared.get("ciphers"), live.get("ciphers"))
+        self._compare_optional_live_field(
+            drifts, "cipher_group", declared.get("cipher_group"), live, ("cipherGroup", "cipher_group"), self._normalize_reference
+        )
+        self._compare_optional_live_field(
+            drifts, "options", declared.get("options"), live, ("options",), self._normalize_string_list
+        )
+        self._compare_optional_live_field(
+            drifts,
+            "secure_renegotiation",
+            declared.get("secure_renegotiation"),
+            live,
+            ("secureRenegotiation", "secure_renegotiation"),
+        )
+        self._compare_optional_live_field(
+            drifts, "allow_non_ssl", declared.get("allow_non_ssl"), live, ("allowNonSsl", "allow_non_ssl"), self._normalize_bool
+        )
+        self._compare_optional_live_field(
+            drifts, "cache_size", declared.get("cache_size"), live, ("cacheSize", "cache_size"), self._normalize_int
+        )
+        self._compare_optional_live_field(
+            drifts, "cache_timeout", declared.get("cache_timeout"), live, ("cacheTimeout", "cache_timeout"), self._normalize_int
+        )
+        self._compare_optional_live_field(
+            drifts, "client_certificate", declared.get("client_certificate"), live, ("clientCertificate", "client_certificate")
+        )
+        self._compare_optional_live_field(
+            drifts, "client_auth_frequency", declared.get("client_auth_frequency"), live, ("clientAuthFrequency", "client_auth_frequency")
+        )
+        self._compare_optional_live_field(
+            drifts, "cert_auth_depth", declared.get("cert_auth_depth"), live, ("certAuthDepth", "cert_auth_depth"), self._normalize_int
+        )
+        self._compare_optional_live_field(
+            drifts, "trusted_cert_authority", declared.get("trusted_cert_authority"), live, ("trustedCertAuthority", "trusted_cert_authority"), self._normalize_reference
+        )
+        self._compare_optional_live_field(
+            drifts, "advertised_cert_authority", declared.get("advertised_cert_authority"), live, ("advertisedCertAuthority", "advertised_cert_authority"), self._normalize_reference
+        )
+        self._compare_optional_live_field(
+            drifts, "client_auth_crl", declared.get("client_auth_crl"), live, ("clientAuthCrl", "client_auth_crl"), self._normalize_reference
+        )
+        self._compare_optional_live_field(
+            drifts, "allow_expired_crl", declared.get("allow_expired_crl"), live, ("allowExpiredCrl", "allow_expired_crl"), self._normalize_bool
+        )
+        self._compare_optional_live_field(
+            drifts, "renegotiation", declared.get("renegotiation"), live, ("renegotiation",)
+        )
+        self._compare_optional_live_field(
+            drifts, "retain_certificate", declared.get("retain_certificate"), live, ("retainCertificate", "retain_certificate"), self._normalize_bool
+        )
+        self._compare_optional_live_field(
+            drifts, "server_name", declared.get("server_name"), live, ("serverName", "server_name")
+        )
+        self._compare_optional_live_field(
+            drifts, "sni_default", declared.get("sni_default"), live, ("sniDefault", "sni_default"), self._normalize_bool
+        )
+        self._compare_optional_live_field(
+            drifts, "sni_require", declared.get("sni_require"), live, ("sniRequire", "sni_require"), self._normalize_bool
+        )
+        self._compare_optional_live_field(
+            drifts, "strict_resume", declared.get("strict_resume"), live, ("strictResume", "strict_resume"), self._normalize_bool
+        )
+        self._compare_optional_live_field(
+            drifts, "cert_key_chain", declared.get("cert_key_chain"), live, ("certKeyChain", "cert_key_chain"), self._normalize_cert_key_chain
+        )
+        return drifts
+
+    def _find_tls_server_ssl_profile_drift(self, declared: dict[str, Any], live: dict[str, Any]) -> list[str]:
+        drifts: list[str] = []
+        self._compare_field(drifts, "parent", declared.get("parent"), live.get("defaultsFrom"), self._normalize_reference)
+        self._compare_optional_live_field(
+            drifts, "certificate", declared.get("certificate"), live, ("cert", "certificate"), self._normalize_reference
+        )
+        self._compare_optional_live_field(
+            drifts, "key", declared.get("key"), live, ("key",), self._normalize_reference
+        )
+        self._compare_optional_live_field(
+            drifts, "chain", declared.get("chain"), live, ("chain",), self._normalize_reference
+        )
+        self._compare_field(drifts, "ciphers", declared.get("ciphers"), live.get("ciphers"))
+        self._compare_optional_live_field(
+            drifts, "cipher_group", declared.get("cipher_group"), live, ("cipherGroup", "cipher_group"), self._normalize_reference
+        )
+        self._compare_optional_live_field(
+            drifts, "options", declared.get("options"), live, ("options",), self._normalize_string_list
+        )
+        self._compare_optional_live_field(
+            drifts, "secure_renegotiation", declared.get("secure_renegotiation"), live, ("secureRenegotiation", "secure_renegotiation")
+        )
+        self._compare_optional_live_field(
+            drifts, "authenticate_name", declared.get("authenticate_name"), live, ("authenticateName", "authenticate_name")
+        )
+        self._compare_optional_live_field(
+            drifts, "ca_file", declared.get("ca_file"), live, ("caFile", "ca_file"), self._normalize_reference
+        )
+        self._compare_optional_live_field(
+            drifts, "ocsp_profile", declared.get("ocsp_profile"), live, ("ocspProfile", "ocsp_profile"), self._normalize_reference
+        )
+        self._compare_optional_live_field(
+            drifts, "renegotiation", declared.get("renegotiation"), live, ("renegotiation",)
+        )
+        self._compare_optional_live_field(
+            drifts, "server_certificate", declared.get("server_certificate"), live, ("serverCertificate", "server_certificate")
+        )
+        self._compare_optional_live_field(
+            drifts, "server_name", declared.get("server_name"), live, ("serverName", "server_name")
+        )
+        self._compare_optional_live_field(
+            drifts, "sni_default", declared.get("sni_default"), live, ("sniDefault", "sni_default"), self._normalize_bool
+        )
+        self._compare_optional_live_field(
+            drifts, "sni_require", declared.get("sni_require"), live, ("sniRequire", "sni_require"), self._normalize_bool
+        )
+        return drifts
+
+    def _find_apm_access_profile_drift(self, declared: dict[str, Any], live: dict[str, Any]) -> list[str]:
+        drifts: list[str] = []
+        self._compare_field(drifts, "description", declared.get("description"), live.get("description"))
+        self._compare_optional_live_field(
+            drifts, "default_access_policy", declared.get("default_access_policy"), live, ("defaultAccessPolicy", "default_access_policy"), self._normalize_reference
+        )
+        self._compare_optional_live_field(
+            drifts, "default_per_session_policy", declared.get("default_per_session_policy"), live, ("defaultPerSessionPolicy", "default_per_session_policy"), self._normalize_reference
+        )
+        self._compare_optional_live_field(
+            drifts, "sso_configuration", declared.get("sso_configuration"), live, ("ssoConfiguration", "sso_configuration"), self._normalize_reference
+        )
+        self._compare_optional_live_field(
+            drifts, "domain", declared.get("domain"), live, ("domain",)
+        )
+        self._compare_optional_live_field(
+            drifts, "agent_cap", declared.get("agent_cap"), live, ("agentCap", "agent_cap"), self._normalize_bool
+        )
+        self._compare_optional_live_field(
+            drifts, "session_timeout", declared.get("session_timeout"), live, ("sessionTimeout", "session_timeout"), self._normalize_int
+        )
+        self._compare_optional_live_field(
+            drifts, "idle_timeout", declared.get("idle_timeout"), live, ("idleTimeout", "idle_timeout"), self._normalize_int
+        )
+        self._compare_optional_live_field(
+            drifts, "max_sessions", declared.get("max_sessions"), live, ("maxSessions", "max_sessions"), self._normalize_int
+        )
+        self._compare_optional_live_field(
+            drifts, "cookie_fallback", declared.get("cookie_fallback"), live, ("cookieFallback", "cookie_fallback"), self._normalize_bool
+        )
+        return drifts
+
+    def _find_apm_sso_config_drift(self, declared: dict[str, Any], live: dict[str, Any]) -> list[str]:
+        drifts: list[str] = []
+        self._compare_field(drifts, "description", declared.get("description"), live.get("description"))
+        live_type = self._derive_apm_sso_type(live)
+        if declared.get("type") is not None and live_type is not None:
+            self._compare_field(drifts, "type", declared.get("type"), live_type)
+
+        for field_name, live_keys, normalizer in self._apm_sso_field_specs(declared.get("type") or live_type):
+            self._compare_optional_live_field(drifts, field_name, declared.get(field_name), live, live_keys, normalizer)
+        return drifts
+
+    def _find_apm_policy_node_drift(self, declared: dict[str, Any], live: dict[str, Any]) -> list[str]:
+        drifts: list[str] = []
+        self._compare_field(drifts, "type", declared.get("type"), live.get("type"))
+
+        declared_properties = declared.get("properties")
+        live_properties = live.get("properties")
+        if declared_properties is None:
+            return drifts
+        if not isinstance(declared_properties, dict):
+            drifts.append(f"properties: declared={declared_properties} vs live={live_properties}")
+            return drifts
+        if not isinstance(live_properties, dict):
+            live_properties = {}
+
+        for key, declared_value in declared_properties.items():
+            normalized_declared = self._normalize_apm_policy_property_value(key, declared_value)
+            normalized_live = self._normalize_apm_policy_property_value(key, live_properties.get(key))
+            if normalized_declared != normalized_live:
+                drifts.append(f"properties.{key}: declared={normalized_declared} vs live={normalized_live}")
+        return drifts
+
+    def _compare_optional_live_field(
+        self,
+        drifts: list[str],
+        field_name: str,
+        declared_value: Any,
+        live: dict[str, Any],
+        live_keys: tuple[str, ...],
+        normalizer: Any = None,
+    ) -> None:
+        if declared_value is None:
+            return
+        live_value = self._first_present(live, live_keys)
+        if live_value is None:
+            return
+        self._compare_field(drifts, field_name, declared_value, live_value, normalizer)
+
+    def _compare_field(
+        self,
+        drifts: list[str],
+        field_name: str,
+        declared_value: Any,
+        live_value: Any,
+        normalizer: Any = None,
+    ) -> None:
+        """Compare a single field between declared and live objects.
+
+        Inputs:
+            drifts (list[str]): The drift list to append to if mismatch.
+            field_name (str): Human-readable field name for the error.
+            declared_value (Any): The value from the var tree.
+            live_value (Any): The value from the BIG-IP device.
+            normalizer (callable|None): Optional function to normalize both values.
+
+        Side effects:
+            Appends a drift description to drifts if values mismatch.
+        """
+        if declared_value is None:
+            return
+        normalize = normalizer or (lambda value: value)
+        normalized_declared = normalize(declared_value)
+        normalized_live = normalize(live_value)
+        if normalized_declared != normalized_live:
+            drifts.append(f"{field_name}: declared={normalized_declared} vs live={normalized_live}")
+
+    def _first_present(self, item: dict[str, Any], keys: tuple[str, ...]) -> Any:
+        """Return the first non-empty value from a dict given multiple possible keys.
+
+        Inputs:
+            item (dict): The dictionary to search.
+            keys (tuple): Ordered list of keys to try.
+
+        Returns:
+            The first non-None, non-empty value, or None.
+        """
+        for key in keys:
+            if key in item and item.get(key) not in (None, ""):
+                return item.get(key)
+        return None
+
+    def _normalize_short_name(self, value: Any) -> Any:
+        """Extract the short name from a BIG-IP FQ name or reference.
+
+        Inputs:
+            value (Any): The value to normalize.
+
+        Returns:
+            str: The last segment after "/" if value is a string starting with "/",
+                otherwise returns value unchanged.
+        """
+        if not isinstance(value, str):
+            return value
+        text = value.strip()
+        if not text:
+            return text
+        if text.startswith("/"):
+            return text.split("/")[-1]
+        return text
+
+    def _normalize_name_list(self, value: Any) -> Any:
+        """Normalize a list of BIG-IP names to sorted short names.
+
+        Inputs:
+            value (Any): A list of names, a single name string, or None.
+
+        Returns:
+            sorted list: Sorted short names, or None.
+        """
+        if value is None:
+            return None
+        if isinstance(value, list):
+            normalized = [self._normalize_short_name(item) for item in value if item not in (None, "")]
+            return sorted(normalized)
+        if isinstance(value, str):
+            return sorted([self._normalize_short_name(value)])
+        return value
+
+    def _normalize_string_list(self, value: Any) -> Any:
+        """Normalize a list or space-separated string to a sorted list of strings.
+
+        Inputs:
+            value (Any): A list, a string, or None.
+
+        Returns:
+            sorted list of str, or None.
+        """
+        if value is None:
+            return None
+        if isinstance(value, list):
+            return sorted(str(item) for item in value if item not in (None, ""))
+        if isinstance(value, str):
+            return sorted(part for part in value.split() if part)
+        return value
+
+    def _normalize_reference(self, value: Any) -> Any:
+        if value is None:
+            return None
+        if isinstance(value, str):
+            return self._normalize_short_name(value)
+        return value
+
+    def _normalize_member_list(self, value: Any) -> Any:
+        if value is None:
+            return None
+        if not isinstance(value, list):
+            return value
+
+        normalized = []
+        for item in value:
+            if not isinstance(item, dict):
+                normalized.append(str(item))
+                continue
+            normalized_item = {}
+            for key in sorted(item):
+                member_value = item[key]
+                if key in {"datacenter", "pool", "region"}:
+                    normalized_item[key] = self._normalize_reference(member_value)
+                elif key == "negate":
+                    normalized_item[key] = self._normalize_bool(member_value)
+                else:
+                    normalized_item[key] = member_value
+            normalized.append(tuple(sorted(normalized_item.items())))
+        return sorted(normalized)
+
+    def _normalize_cert_key_chain(self, value: Any) -> Any:
+        if value is None:
+            return None
+        if not isinstance(value, list):
+            return value
+
+        normalized = []
+        for item in value:
+            if not isinstance(item, dict):
+                normalized.append(str(item))
+                continue
+            normalized_item = {}
+            for key in ("name", "cert", "key", "chain", "passphrase"):
+                if item.get(key) in (None, ""):
+                    continue
+                chain_value = item.get(key)
+                if key in {"cert", "key", "chain"}:
+                    normalized_item[key] = self._normalize_reference(chain_value)
+                else:
+                    normalized_item[key] = chain_value
+            if "trueNames" in item and item.get("trueNames") not in (None, ""):
+                normalized_item["true_names"] = self._normalize_bool(item.get("trueNames"))
+            if "true_names" in item and item.get("true_names") not in (None, ""):
+                normalized_item["true_names"] = self._normalize_bool(item.get("true_names"))
+            normalized.append(tuple(sorted(normalized_item.items())))
+        return sorted(normalized)
+
+    def _normalize_topology_side(self, value: Any) -> Any:
+        if value is None:
+            return None
+        items = [value] if isinstance(value, dict) else value
+        if not isinstance(items, list):
+            return value
+
+        normalized = []
+        for item in items:
+            if not isinstance(item, dict):
+                normalized.append(str(item))
+                continue
+            normalized_item = {}
+            for key in sorted(item):
+                member_value = item[key]
+                if key in {"datacenter", "pool", "region"}:
+                    normalized_item[key] = self._normalize_reference(member_value)
+                elif key == "negate":
+                    normalized_item[key] = self._normalize_bool(member_value)
+                else:
+                    normalized_item[key] = member_value
+            normalized.append(tuple(sorted(normalized_item.items())))
+        return tuple(sorted(normalized))
+
+    def _derive_apm_sso_type(self, live: dict[str, Any]) -> str | None:
+        type_value = self._first_present(live, ("type", "ssoType", "sso_type"))
+        if isinstance(type_value, str) and type_value:
+            return type_value.replace("-", "_")
+
+        kind = live.get("kind")
+        if isinstance(kind, str):
+            parts = kind.lower().split(":")
+            if "sso" in parts:
+                idx = parts.index("sso")
+                if idx + 1 < len(parts):
+                    raw = parts[idx + 1].split("state")[0].replace("-", "_")
+                    if raw:
+                        return raw
+
+        if any(self._first_present(live, keys) is not None for keys in (("keytab",), ("servicePrincipalName", "spn"), ("kdcServers", "kdc"))):
+            return "kerberos"
+        if any(self._first_present(live, keys) is not None for keys in (("formActionUrl", "form_action_url"), ("loginSuccessRegex", "login_success_regex"))):
+            return "form_based"
+        if self._first_present(live, ("storefrontUrl", "storefront_url")) is not None:
+            return "citrix"
+        if any(self._first_present(live, keys) is not None for keys in (("idpMetadataUrl", "idp_metadata_url"), ("spEntityId", "sp_entity_id"))):
+            return "saml"
+        if any(self._first_present(live, keys) is not None for keys in (("providerUrl", "provider_url"), ("tokenEndpoint", "token_endpoint"))):
+            return "oauth"
+        if self._first_present(live, ("useMachineAccount", "use_machine_account")) is not None:
+            return "ntlm"
+        if self._first_present(live, ("useSessionCredentials", "use_session_creds")) is not None:
+            return "http_basic"
+        if self._first_present(live, ("server",)) is not None and self._first_present(live, ("domain",)) is not None:
+            return "domain_join"
+        return None
+
+    def _apm_sso_field_specs(self, sso_type: Any) -> list[tuple[str, tuple[str, ...], Any]]:
+        field_specs: dict[str, list[tuple[str, tuple[str, ...], Any]]] = {
+            "kerberos": [
+                ("keytab", ("keytab",), None),
+                ("spn", ("servicePrincipalName", "spn"), None),
+                ("kdc", ("kdcServers", "kdc"), None),
+                ("realm", ("realm",), None),
+                ("method", ("method",), None),
+                ("upn_domain", ("upnDomain", "upn_domain"), None),
+            ],
+            "form_based": [
+                ("form_action_url", ("formActionUrl", "form_action_url"), None),
+                ("username_field", ("usernameField", "username_field"), None),
+                ("password_field", ("passwordField", "password_field"), None),
+                ("submit_button", ("submitButton", "submit_button"), None),
+                ("login_success_regex", ("loginSuccessRegex", "login_success_regex"), None),
+                ("login_failure_regex", ("loginFailureRegex", "login_failure_regex"), None),
+            ],
+            "http_basic": [
+                ("domain", ("domain",), None),
+                ("use_session_creds", ("useSessionCredentials", "use_session_creds"), self._normalize_bool),
+            ],
+            "ntlm": [
+                ("server", ("server",), None),
+                ("domain", ("domain",), None),
+                ("use_machine_account", ("useMachineAccount", "use_machine_account"), self._normalize_bool),
+            ],
+            "saml": [
+                ("idp_metadata_url", ("idpMetadataUrl", "idp_metadata_url"), None),
+                ("sp_entity_id", ("spEntityId", "sp_entity_id"), None),
+                ("assertion_consumer_url", ("assertionConsumerUrl", "assertion_consumer_url"), None),
+                ("nameid_format", ("nameidFormat", "nameid_format"), None),
+                ("sign_assertion", ("signAssertion", "sign_assertion"), self._normalize_bool),
+                ("encrypt_assertion", ("encryptAssertion", "encrypt_assertion"), self._normalize_bool),
+                ("signing_cert", ("signingCert", "signing_cert"), self._normalize_reference),
+                ("signing_key", ("signingKey", "signing_key"), self._normalize_reference),
+            ],
+            "oauth": [
+                ("provider_url", ("providerUrl", "provider_url"), None),
+                ("client_id", ("clientId", "client_id"), None),
+                ("client_secret", ("clientSecret", "client_secret"), None),
+                ("authorization_endpoint", ("authorizationEndpoint", "authorization_endpoint"), None),
+                ("token_endpoint", ("tokenEndpoint", "token_endpoint"), None),
+                ("scopes", ("scopes",), self._normalize_string_list),
+            ],
+            "citrix": [
+                ("storefront_url", ("storefrontUrl", "storefront_url"), None),
+                ("username_field", ("usernameField", "username_field"), None),
+                ("password_field", ("passwordField", "password_field"), None),
+                ("domain_field", ("domainField", "domain_field"), None),
+                ("use_session_creds", ("useSessionCredentials", "use_session_creds"), self._normalize_bool),
+            ],
+            "domain_join": [
+                ("domain", ("domain",), None),
+                ("server", ("server",), None),
+            ],
+        }
+        return field_specs.get(str(sso_type), [])
+
+    def _extract_apm_policy_node_properties(self, item: dict[str, Any]) -> dict[str, Any]:
+        ignored_keys = {
+            "name",
+            "partition",
+            "tmPartition",
+            "policy",
+            "subPath",
+            "appService",
+            "fullPath",
+            "generation",
+            "kind",
+            "selfLink",
+            "type",
+            "itemType",
+            "item_type",
+        }
+        properties: dict[str, Any] = {}
+        for key, value in item.items():
+            if key in ignored_keys or value in (None, "", []):
+                continue
+            if isinstance(key, str) and key.endswith("Reference"):
+                continue
+            property_key = self._normalize_apm_property_key(key)
+            properties[property_key] = self._normalize_apm_policy_property_value(property_key, value)
+        return properties
+
+    def _normalize_apm_property_key(self, key: Any) -> str:
+        if not isinstance(key, str):
+            return str(key)
+        text = key.replace("-", "_")
+        output = []
+        for idx, char in enumerate(text):
+            if char.isupper() and idx > 0 and text[idx - 1] != "_":
+                output.append("_")
+            output.append(char.lower())
+        return "".join(output)
+
+    def _normalize_apm_policy_property_value(self, key: str, value: Any) -> Any:
+        if value is None:
+            return None
+        if key == "rules":
+            return self._normalize_apm_rules(value)
+        if key in {
+            "ad_server",
+            "ldap_server",
+            "kerberos_sso_object",
+            "sso_config",
+            "auth_server",
+            "saml_sso",
+            "oauth_sso",
+            "form_based_sso",
+            "http_basic_sso",
+            "ntlm_sso",
+        }:
+            return self._normalize_reference(value)
+        if isinstance(value, list):
+            return tuple(self._normalize_apm_policy_property_value(key, item) for item in value)
+        if isinstance(value, dict):
+            return tuple(
+                sorted(
+                    (
+                        self._normalize_apm_property_key(subkey),
+                        self._normalize_apm_policy_property_value(self._normalize_apm_property_key(subkey), subvalue),
+                    )
+                    for subkey, subvalue in value.items()
+                    if subvalue not in (None, "")
+                )
+            )
+        normalized_bool = self._normalize_bool(value)
+        if isinstance(normalized_bool, bool):
+            return normalized_bool
+        normalized_int = self._normalize_int(value)
+        if isinstance(normalized_int, int):
+            return normalized_int
+        return value
+
+    def _normalize_apm_rules(self, value: Any) -> Any:
+        if value is None:
+            return None
+        if not isinstance(value, list):
+            return value
+        normalized = []
+        for item in value:
+            if not isinstance(item, dict):
+                normalized.append(str(item))
+                continue
+            normalized.append(
+                tuple(
+                    sorted(
+                        (
+                            self._normalize_apm_property_key(key),
+                            item.get(key),
+                        )
+                        for key in item
+                        if item.get(key) not in (None, "")
+                    )
+                )
+            )
+        return tuple(sorted(normalized))
+
+    def _normalize_int(self, value: Any) -> Any:
+        if value in (None, ""):
+            return value
+        try:
+            return int(value)
+        except (TypeError, ValueError):
+            return value
+
+    def _normalize_bool(self, value: Any) -> Any:
+        if isinstance(value, bool):
+            return value
+        if isinstance(value, (int, float)):
+            return bool(value)
+        if isinstance(value, str):
+            text = value.strip().lower()
+            if text in {"true", "yes", "enabled", "enable", "on"}:
+                return True
+            if text in {"false", "no", "disabled", "disable", "off"}:
+                return False
+        return value
+
+    def _derive_enabled(self, live: dict[str, Any]) -> bool | None:
+        if "enabled" in live and live.get("enabled") not in (None, ""):
+            return self._normalize_bool(live.get("enabled"))
+        if "disabled" in live and live.get("disabled") not in (None, ""):
+            disabled = self._normalize_bool(live.get("disabled"))
+            if isinstance(disabled, bool):
+                return not disabled
+        return None
+
+    def _derive_vlans_enabled(self, live: dict[str, Any]) -> bool | None:
+        if "vlansEnabled" in live and live.get("vlansEnabled") not in (None, ""):
+            return self._normalize_bool(live.get("vlansEnabled"))
+        if "vlansDisabled" in live and live.get("vlansDisabled") not in (None, ""):
+            disabled = self._normalize_bool(live.get("vlansDisabled"))
+            if isinstance(disabled, bool):
+                return not disabled
+        return None
+
+    def _check_waf_server_technologies(self) -> None:
+        try:
+            policies = self.conn.get_all("asm/policies")
+        except Exception as exc:
+            print(f"WARN: could not query asm/policies for waf_server_technologies: {exc}", file=sys.stderr)
+            return
+
+        live_objects: list[dict[str, Any]] = []
+        for policy in policies:
+            policy_name = policy.get("name")
+            if not policy_name:
+                continue
+            partition = policy.get("partition", "Common")
+            tech_ref = policy.get("serverTechnologyReference", {})
+            tech_link = tech_ref.get("link") if isinstance(tech_ref, dict) else None
+            if not tech_link:
+                continue
+            try:
+                technologies = self.conn.get_all(tech_link.split("/mgmt/tm/")[-1])
+            except Exception:
+                continue
+            for technology in technologies:
+                tech_name = technology.get("name")
+                if not tech_name:
+                    continue
+                live_objects.append(
+                    {
+                        "partition": partition,
+                        "name": tech_name.split("/")[-1] if "/" in str(tech_name) else tech_name,
+                        "policy_name": policy_name.split("/")[-1] if "/" in str(policy_name) else policy_name,
+                    }
+                )
+
+        self._compare_custom_objects("waf_server_technologies", live_objects, ("partition", "policy_name", "name"))
+
+    def _check_apm_policy_nodes(self) -> None:
+        try:
+            policies = self.conn.get_all("apm/policy/access-policy")
+        except Exception as exc:
+            print(f"WARN: could not query apm/policy/access-policy for apm_policy_nodes: {exc}", file=sys.stderr)
+            return
+
+        live_objects: list[dict[str, Any]] = []
+        for policy in policies:
+            policy_name = policy.get("name")
+            if not policy_name:
+                continue
+            partition = policy.get("partition") or policy.get("tmPartition") or "Common"
+            items = policy.get("items", [])
+            if not isinstance(items, list):
+                continue
+            for item in items:
+                if not isinstance(item, dict):
+                    continue
+                node_name = item.get("name")
+                if not node_name:
+                    continue
+                live_objects.append(
+                    {
+                        "partition": partition,
+                        "name": node_name.split("/")[-1] if "/" in str(node_name) else node_name,
+                        "policy": policy_name.split("/")[-1] if "/" in str(policy_name) else policy_name,
+                        "type": item.get("type") or item.get("itemType") or item.get("item_type") or "",
+                        "properties": self._extract_apm_policy_node_properties(item),
+                    }
+                )
+
+        self._compare_custom_objects("apm_policy_nodes", live_objects, ("partition", "policy", "name"))
+
+    def _check_gtm_topology_records(self, endpoint: str) -> None:
+        try:
+            records = self.conn.get_all(endpoint)
+        except Exception as exc:
+            print(f"WARN: could not query {endpoint} for gtm_topology_records: {exc}", file=sys.stderr)
+            return
+
+        live_objects: list[dict[str, Any]] = []
+        for record in records:
+            source = self._normalize_topology_side(record.get("source"))
+            destination = self._normalize_topology_side(record.get("destination"))
+            if not source or not destination:
+                continue
+            live_objects.append(
+                {
+                    "partition": record.get("partition", "Common"),
+                    "source": record.get("source"),
+                    "destination": record.get("destination"),
+                    "weight": record.get("weight"),
+                }
+            )
+
+        self._compare_custom_objects("gtm_topology_records", live_objects, ("partition", "source", "destination"))
+
+    def _compare_custom_objects(
+        self,
+        obj_type: str,
+        live_objects: list[dict[str, Any]],
+        identity_fields: tuple[str, ...],
+    ) -> None:
+        declared = self.var_loader.objects.get(obj_type, [])
+        declared_by_id: dict[tuple[Any, ...], dict[str, Any]] = {}
+        declared_ids = set()
+
+        for obj in declared:
+            if obj.get("state") == "absent":
+                continue
+            identity = tuple(obj.get(field, "Common" if field == "partition" else "") for field in identity_fields)
+            if any(value in (None, "") for value in identity):
+                continue
+            declared_ids.add(identity)
+            declared_by_id[identity] = obj
+
+        live_by_id: dict[tuple[Any, ...], dict[str, Any]] = {}
+        live_ids = set()
+        for obj in live_objects:
+            identity = tuple(obj.get(field, "Common" if field == "partition" else "") for field in identity_fields)
+            if any(value in (None, "") for value in identity):
+                continue
+            live_ids.add(identity)
+            live_by_id[identity] = obj
+
+        for identity in live_ids - declared_ids:
+            partition = str(identity[0]) if identity_fields and identity_fields[0] == "partition" else "Common"
+            name = str(identity[-1])
+            detail = "exists on device but not declared in vars/"
+            if obj_type == "waf_server_technologies":
+                detail = f"policy={identity[1]} exists on device but not declared in vars/"
+            elif obj_type == "apm_policy_nodes":
+                detail = f"policy={identity[1]} exists on device but not declared in vars/"
+            elif obj_type == "gtm_topology_records":
+                detail = f"source={identity[1]} destination={identity[2]} exists on device but not declared in vars/"
+            self.report.missing_from_git.append(
+                DriftEntry(object_type=obj_type, name=name, partition=partition, detail=detail)
+            )
+
+        for identity in declared_ids - live_ids:
+            partition = str(identity[0]) if identity_fields and identity_fields[0] == "partition" else "Common"
+            name = str(identity[-1])
+            detail = "declared in vars/ but not found on device"
+            if obj_type == "waf_server_technologies":
+                detail = f"policy={identity[1]} declared in vars/ but not found on device"
+            elif obj_type == "apm_policy_nodes":
+                detail = f"policy={identity[1]} declared in vars/ but not found on device"
+            elif obj_type == "gtm_topology_records":
+                detail = f"source={identity[1]} destination={identity[2]} declared in vars/ but not found on device"
+            self.report.missing_from_device.append(
+                DriftEntry(object_type=obj_type, name=name, partition=partition, detail=detail)
+            )
+
+        for identity in declared_ids & live_ids:
+            declared_obj = declared_by_id[identity]
+            live_obj = live_by_id[identity]
+            drift_fields = self._find_value_drift(declared_obj, live_obj, obj_type)
+            if drift_fields:
+                partition = str(identity[0]) if identity_fields and identity_fields[0] == "partition" else "Common"
+                self.report.value_drift.append(
+                    DriftEntry(
+                        object_type=obj_type,
+                        name=str(identity[-1]),
+                        partition=partition,
+                        detail=", ".join(drift_fields),
+                    )
+                )
+            else:
+                self.report.unchanged += 1
+
+
+def main() -> int:
+    """CLI entry point for drift-check.
+
+    Purpose:
+        Compare live BIG-IP device state against Git-declared var tree to detect drift.
+        Reports objects missing from Git, missing from device, and value mismatches.
+
+    Outputs:
+        Returns 0 on success, 1 if no objects found in var trees.
+        Prints drift report to stdout in human-readable or JSON format.
+
+    Example:
+        F5_HOST=10.1.1.1 F5_PASSWORD=secret python tools/drift-check.py --types ltm_pools
+    """
+    import argparse
+
+    parser = argparse.ArgumentParser(description="Compare live BIG-IP state against declared var tree state.")
+    parser.add_argument("--types", nargs="+", help="Object types to check (e.g., ltm_nodes ltm_pools)")
+    parser.add_argument("--json", action="store_true", help="Output report as JSON")
+    args = parser.parse_args()
+
+    conn = BigIPConnection.from_env()
+    loader = VarTreeLoader()
+    loader.load()
+
+    if not loader.objects:
+        print("No objects found in var trees.", file=sys.stderr)
+        return 1
+
+    checker = DriftChecker(conn, loader)
+    report = checker.run(types=args.types)
+
+    if args.json:
+        print(json.dumps({
+            "missing_from_git": [{"type": e.object_type, "name": e.name, "partition": e.partition, "detail": e.detail} for e in report.missing_from_git],
+            "missing_from_device": [{"type": e.object_type, "name": e.name, "partition": e.partition, "detail": e.detail} for e in report.missing_from_device],
+            "value_drift": [{"type": e.object_type, "name": e.name, "partition": e.partition, "detail": e.detail} for e in report.value_drift],
+            "unchanged": report.unchanged,
+        }, indent=2))
+    else:
+        print(report.summarize())
+
+    return 1 if report.has_drift else 0
+
+
+if __name__ == "__main__":
+    raise SystemExit(main())

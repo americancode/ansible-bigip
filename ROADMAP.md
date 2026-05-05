@@ -2,15 +2,9 @@
 
 ## To Do
 
-3. Refactor `tools/validate-vars.py` into a modular package.
-
 4. Refactor `tools/drift-check.py` into a modular package.
 
 5. Refactor `tools/import-from-bigip.py` into a modular package.
-
-6. Add UCS backup and export workflow support.
-
-7. Add certificate rotation and renewal detection.
 
 8. Improve helper-tool fidelity where `basic field drift` is no longer sufficient.
 
