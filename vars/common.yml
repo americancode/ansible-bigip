@@ -8,7 +8,7 @@ provider:
   server: "{{ f5_host | default(lookup('env', 'F5_HOST'), true) | default('bigip-mgmt.my.domain.com', true) }}"
   user: "{{ lookup('env', 'F5_USERNAME') | default('admin', true) }}"
   password: "{{ lookup('env', 'F5_PASSWORD') }}"
-  server_port: "{{ lookup('env', 'F5_SERVER_PORT') | default(443, true) }}"
+  server_port: "{{ f5_server_port | default(lookup('env', 'F5_SERVER_PORT'), true) | default(443, true) }}"
   validate_certs: "{{ lookup('env', 'F5_VALIDATE_CERTS') | default(false, true) }}"
 
 # Set `audit_mode: true` at launch time to print the final delete/apply runtime
