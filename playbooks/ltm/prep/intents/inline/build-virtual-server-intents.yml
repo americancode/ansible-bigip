@@ -1,3 +1,5 @@
+# Inline virtual-server intent compiler.
+# Expands inline virtual/pool intents into canonical virtual server + pool objects for runtime and de-duping.
 - name: Initialize built LTM shortcut objects from virtual servers
   ansible.builtin.set_fact:
     ltm_compiled_virtual_servers_delete: []

@@ -1,3 +1,5 @@
+# LTM manage tasks.
+# Runtime effect: delegate to LTM delete/apply sequencing or audit preview using shared delete/apply runtime collections.
 - name: Audit planned objects
   ansible.builtin.import_tasks: audit.yml
   when: audit_mode | default(false)

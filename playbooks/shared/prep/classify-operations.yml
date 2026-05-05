@@ -1,3 +1,5 @@
+# Shared operation classifier.
+# Filters source collections for host targeting and classifies them into present/delete runtime arrays.
 - name: Filter {{ object_label }} objects for the current inventory host
   ansible.builtin.import_tasks: "{{ playbook_dir }}/shared/prep/filter-targeted-objects.yml"
   vars:

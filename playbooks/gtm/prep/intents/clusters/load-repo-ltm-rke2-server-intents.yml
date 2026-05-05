@@ -1,3 +1,5 @@
+# GTM intent discovery task.
+# Runtime effect: discover repo LTM RKE2 intent fragments to support GTM-wide-ip member resolution.
 - name: Discover repo-known LTM RKE2 server intent fragments
   ansible.builtin.set_fact:
     # GTM uses this path only to build a repo-known lookup of built LTM virtual servers.

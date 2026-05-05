@@ -1,3 +1,5 @@
+# TLS apply tasks.
+# Runtime effect: create/update keys, certs, CA bundles, and SSL profiles used by managed TLS workflows.
 - name: Create TLS keys
   f5networks.f5_modules.bigip_ssl_key:
     provider: "{{ provider }}"

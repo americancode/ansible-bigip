@@ -1,3 +1,5 @@
+# Bootstrap audit tasks.
+# Runtime effect: prints bootstrap runtime collections in delete/apply (preview) form before any bootstrap command execution.
 ---
 # Bootstrap audit mode.
 # Prints the final bootstrap runtime collections that would be applied without

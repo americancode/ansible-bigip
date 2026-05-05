@@ -1,3 +1,5 @@
+# TLS audit tasks.
+# Runtime effect: prints planned TLS delete/apply collections before any BIG-IP module calls.
 ---
 # TLS audit mode.
 # Prints the TLS delete/apply collections and explains the config-save step.

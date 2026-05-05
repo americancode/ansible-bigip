@@ -1,3 +1,5 @@
+# Network delete tasks.
+# Runtime effect: remove network objects in dependency-safe reverse order (higher-dependency objects first).
 - name: Delete NATs
   ansible.builtin.include_tasks: "{{ playbook_dir }}/shared/tasks/debug-tmsh-commands.yml"
   vars:

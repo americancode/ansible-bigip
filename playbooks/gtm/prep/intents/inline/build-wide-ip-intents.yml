@@ -1,3 +1,5 @@
+# GTM intent build task.
+# Runtime effect: build canonical GTM objects from wide-IP-style intent inputs.
 - name: Initialize built GTM shortcut objects from deleted Wide IPs
   ansible.builtin.set_fact:
     # One Wide IP intent can emit several canonical object families.

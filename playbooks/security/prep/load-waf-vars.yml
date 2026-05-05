@@ -1,3 +1,5 @@
+# WAF var loader.
+# Loads WAF policy/server-technology fragments and merges defaults into runtime input collections.
 - name: Load WAF policy fragments into waf_policies/waf_policy_deletions
   ansible.builtin.import_tasks: "{{ playbook_dir }}/shared/prep/load-fragment-tree.yml"
   vars:

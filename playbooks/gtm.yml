@@ -1,3 +1,5 @@
+# GTM entrypoint.
+# Loads `vars/common.yml` and runs GTM prep before applying canonical DNS/GTM runtime tasks.
 ---
 - name: Configure BIG-IP DNS/GTM objects
   hosts: all

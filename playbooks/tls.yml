@@ -1,3 +1,5 @@
+# TLS entrypoint.
+# Loads `vars/common.yml` and runs TLS prep before applying canonical TLS runtime tasks.
 ---
 - name: Configure BIG-IP TLS objects
   hosts: all

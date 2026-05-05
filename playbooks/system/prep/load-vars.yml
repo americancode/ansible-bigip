@@ -1,3 +1,5 @@
+# System var loader.
+# Loads system hostname/dns/ntp/user/etc fragment trees and merges with defaults for targeting.
 - name: Load system hostname fragments into system_hostnames
   ansible.builtin.import_tasks: "{{ playbook_dir }}/shared/prep/load-fragment-tree.yml"
   vars:

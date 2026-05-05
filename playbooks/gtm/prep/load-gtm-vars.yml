@@ -1,3 +1,5 @@
+# GTM variable-load tasks.
+# Runtime effect: load canonical GTM fragments and deletions into prep working sets.
 - name: Load GTM datacenter fragments into gtm_datacenters/gtm_datacenter_deletions
   ansible.builtin.import_tasks: "{{ playbook_dir }}/shared/prep/load-fragment-tree.yml"
   vars:

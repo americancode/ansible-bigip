@@ -1,3 +1,5 @@
+# TLS runtime build tasks.
+# Classifies TLS objects into present/delete runtime buckets for delete-first/create-second execution.
 - name: Classify TLS key operations into tls_keys_present/tls_keys_delete
   ansible.builtin.import_tasks: "{{ playbook_dir }}/shared/prep/classify-operations.yml"
   vars:

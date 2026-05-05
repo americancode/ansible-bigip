@@ -1,3 +1,5 @@
+# Network var loader.
+# Discovers network fragment trees (VLAN/route domain/self IP/etc) and aggregates canonical collection sets.
 - name: Load VLAN fragments into bigip_vlans/bigip_vlan_deletions
   ansible.builtin.import_tasks: "{{ playbook_dir }}/shared/prep/load-fragment-tree.yml"
   vars:

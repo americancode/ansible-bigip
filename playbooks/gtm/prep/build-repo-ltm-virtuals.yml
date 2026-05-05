@@ -1,3 +1,5 @@
+# GTM repo LTM virtual build tasks.
+# Runtime effect: classify built repo-known LTM virtual servers into runtime collections for GTM member resolution.
 - name: Classify repo-known LTM virtual server operations
   ansible.builtin.import_tasks: "{{ playbook_dir }}/shared/prep/classify-operations.yml"
   vars:

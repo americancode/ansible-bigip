@@ -1,3 +1,5 @@
+# HA manage tasks.
+# Runtime effect: run HA audit preview first, then delete/create HA objects in the canonical order.
 - name: Audit planned objects
   ansible.builtin.import_tasks: audit.yml
   when: audit_mode | default(false)

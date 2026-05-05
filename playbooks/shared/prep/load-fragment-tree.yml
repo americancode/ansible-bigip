@@ -1,3 +1,5 @@
+# Shared fragment loader.
+# Discovers fragment files and deletions, includes vars, and builds merged runtime collections for a domain object type.
 - name: Discover {{ fragment_label }} fragments
   ansible.builtin.set_fact:
     _prep_fragment_files: "{{ source_root | discover_yaml_fragments }}"

@@ -1,3 +1,6 @@
+# Network apply tasks.
+# Runtime effect: create/update network object families (vlan, route-domain, route, selfip, NAT, SNAT, trunks, etc.).
+# This file executes after discovery and classification from `playbooks/network/prep.yml`.
 - name: Create VLANs
   f5networks.f5_modules.bigip_vlan:
     provider: "{{ provider }}"

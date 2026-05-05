@@ -1,3 +1,5 @@
+# Network manage tasks.
+# Runtime effect: dispatch either audit preview or runtime delete/apply for network object families using shared ordering.
 - name: Audit planned objects
   ansible.builtin.import_tasks: audit.yml
   when: audit_mode | default(false)

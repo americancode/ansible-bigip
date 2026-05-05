@@ -1,3 +1,5 @@
+# System entrypoint.
+# Loads `vars/common.yml` and runs system prep before applying canonical system runtime tasks.
 ---
 - name: Configure BIG-IP base system settings
   hosts: all

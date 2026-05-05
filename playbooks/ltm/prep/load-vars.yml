@@ -1,3 +1,5 @@
+# LTM var loader.
+# Loads LTM canonical object trees (monitors/nodes/pools/virtuals/etc.) plus intent trees and merges defaults.
 - name: Load LTM monitor fragments into ltm_monitors/ltm_monitor_deletions
   ansible.builtin.import_tasks: "{{ playbook_dir }}/shared/prep/load-fragment-tree.yml"
   vars:

@@ -1,3 +1,5 @@
+# LTM RKE2 intent loader.
+# Discovers cluster intent fragments and aligned deletion fragments, then aggregates with directory defaults.
 - name: Discover LTM RKE2 server intent fragments
   ansible.builtin.set_fact:
     # Load every cluster intent file recursively so teams can organize intents by platform/site.

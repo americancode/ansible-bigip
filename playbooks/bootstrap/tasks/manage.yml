@@ -1,3 +1,5 @@
+# Bootstrap manage tasks.
+# Runtime effect: route between audit preview and runtime execution for bootstrap operations.
 - name: Audit planned bootstrap objects
   ansible.builtin.import_tasks: audit.yml
   when: audit_mode | default(false)

@@ -1,3 +1,5 @@
+# Security manage tasks.
+# Runtime effect: route security execution between audit preview and runtime delete/apply flow.
 - name: Audit planned objects
   ansible.builtin.import_tasks: audit.yml
   when: audit_mode | default(false)

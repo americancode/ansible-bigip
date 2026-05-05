@@ -1,3 +1,5 @@
+# System audit tasks.
+# Runtime effect: prints planned system delete/apply collections before any management-plane module execution.
 ---
 # System audit mode.
 # Prints the final delete/apply runtime collections after selector filtering.

@@ -1,3 +1,6 @@
+# GTM apply tasks.
+# Runtime effect: create/update GTM monitors, datacenters, servers, pools, wide IPs, regions, and topology records.
+# Ordering is governed by shared domain runtime flow and this playbook executes in the standard delete/create order.
 - name: Create GTM BIG-IP monitors
   f5networks.f5_modules.bigip_gtm_monitor_bigip:
     provider: "{{ provider }}"

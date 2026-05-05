@@ -1,3 +1,5 @@
+# GTM audit tasks.
+# Runtime effect: prints planned GTM topology/record/pool/wide IP collections in delete/apply order before any BIG-IP mutation.
 ---
 # GTM audit mode.
 # Prints the final canonical GTM collections after intent/build steps.

@@ -1,3 +1,5 @@
+# Bootstrap var load tasks.
+# Runtime effect: load bootstrap license and management var fragments into active and deletion working sets.
 - name: Load bootstrap license fragments into bootstrap_licenses/bootstrap_license_deletions
   ansible.builtin.import_tasks: "{{ playbook_dir }}/shared/prep/load-fragment-tree.yml"
   vars:

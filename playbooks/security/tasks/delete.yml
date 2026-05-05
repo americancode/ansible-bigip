@@ -1,3 +1,5 @@
+# Security delete tasks.
+# Runtime effect: remove security policies and related objects in dependency-safe reverse order.
 - name: Delete AFM firewall policies
   bigip_firewall_rule_list:
     provider: "{{ provider }}"

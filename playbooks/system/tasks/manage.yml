@@ -1,3 +1,5 @@
+# System manage tasks.
+# Runtime effect: switch between preview and runtime apply/delete while preserving execution order and save behavior.
 - name: Audit planned objects
   ansible.builtin.import_tasks: audit.yml
   when: audit_mode | default(false)

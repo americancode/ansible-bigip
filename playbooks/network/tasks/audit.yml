@@ -1,3 +1,5 @@
+# Network audit tasks.
+# Runtime effect: prints planned network delete/apply collections before any BIG-IP module calls.
 ---
 # Network audit mode.
 # Prints the final delete/apply runtime collections in the same order used by

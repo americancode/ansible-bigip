@@ -1,3 +1,5 @@
+# System apply tasks.
+# Runtime effect: create/update hostname, DNS, NTP, provisioning, partitions, users, auth providers, and login banner settings.
 - name: Configure hostname
   f5networks.f5_modules.bigip_hostname:
     provider: "{{ provider }}"

@@ -1,4 +1,3 @@
----
 # Bootstrap prep orchestrator.
 # Produces:
 # - `bootstrap_licenses_present`

@@ -1,3 +1,5 @@
+# HA entrypoint.
+# Loads `vars/common.yml` and runs HA prep before applying canonical HA runtime tasks.
 ---
 - name: Configure BIG-IP HA objects
   hosts: all

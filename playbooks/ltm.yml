@@ -1,3 +1,5 @@
+# LTM entrypoint.
+# Loads `vars/common.yml` and runs LTM prep before applying canonical LTM runtime tasks.
 ---
 - name: Configure BIG-IP LTM objects
   hosts: all

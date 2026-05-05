@@ -1,3 +1,5 @@
+# Bootstrap runtime build tasks.
+# Runtime effect: classify bootstrap object lifecycle intent, derive deletion/apply intent, and build route/mgmt presence maps.
 - name: Classify bootstrap license operations into bootstrap_licenses_present/bootstrap_licenses_delete
   ansible.builtin.import_tasks: "{{ playbook_dir }}/shared/prep/classify-operations.yml"
   vars:

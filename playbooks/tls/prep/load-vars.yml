@@ -1,3 +1,5 @@
+# TLS var loader.
+# Discovers TLS fragment/deletion trees and aggregates canonical TLS objects for runtime classification.
 - name: Load TLS key fragments into tls_keys/tls_key_deletions
   ansible.builtin.import_tasks: "{{ playbook_dir }}/shared/prep/load-fragment-tree.yml"
   vars:

@@ -1,3 +1,5 @@
+# HA var loader.
+# Discovers HA fragment/deletion trees, applies defaults, and aggregates canonical raw objects.
 - name: Load HA device trust fragments into ha_device_trusts/ha_device_trust_deletions
   ansible.builtin.import_tasks: "{{ playbook_dir }}/shared/prep/load-fragment-tree.yml"
   vars:

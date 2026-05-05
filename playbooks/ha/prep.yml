@@ -1,4 +1,3 @@
----
 # HA prep orchestrator.
 # Produces the classified HA object sets consumed by runtime tasks, including:
 # - `ha_device_trusts_present` / `ha_device_trusts_delete`

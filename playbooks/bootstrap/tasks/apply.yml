@@ -1,3 +1,6 @@
+# Bootstrap apply tasks.
+# Runtime effect: apply license and management interface/reachability bootstrap updates, then save config.
+# This is an apply-only workflow; there is no delete equivalent.
 - name: Manage BIG-IP license state
   f5networks.f5_modules.bigip_device_license:
     provider: "{{ provider }}"

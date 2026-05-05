@@ -1,3 +1,5 @@
+# Bootstrap playbook.
+# Runtime effect: orchestrates bootstrap-only operations for licensing and initial management-reachability setup.
 - name: Manage BIG-IP bootstrap state
   hosts: all
   connection: local

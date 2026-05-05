@@ -1,3 +1,5 @@
+# HA delete tasks.
+# Runtime effect: remove HA groups, trust links, and related HA relationships in reverse-runtime order.
 - name: Remove HA device group members
   f5networks.f5_modules.bigip_device_group_member:
     provider: "{{ provider }}"

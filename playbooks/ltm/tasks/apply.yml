@@ -1,3 +1,5 @@
+# LTM apply tasks.
+# Runtime effect: create/update LTM monitors, profiles, nodes, pools, persistence, iRules, virtuals, data groups, and policies.
 - name: Create LTM TCP monitors
   f5networks.f5_modules.bigip_monitor_tcp:
     provider: "{{ provider }}"

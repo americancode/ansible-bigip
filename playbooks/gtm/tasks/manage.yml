@@ -1,3 +1,5 @@
+# GTM manage tasks.
+# Runtime effect: route through delete/apply execution or audit preview using the same GTM runtime collections and ordering.
 - name: Audit planned objects
   ansible.builtin.import_tasks: audit.yml
   when: audit_mode | default(false)

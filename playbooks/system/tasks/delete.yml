@@ -1,3 +1,5 @@
+# System delete tasks.
+# Runtime effect: remove system-level hostname/user/provisioning/auth/banner/partition settings in delete phase.
 - name: Remove DNS settings
   f5networks.f5_modules.bigip_device_dns:
     provider: "{{ provider }}"

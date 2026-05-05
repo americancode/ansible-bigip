@@ -1,3 +1,5 @@
+# TLS manage tasks.
+# Runtime effect: run TLS audit preview or execute delete/apply using prebuilt TLS runtime collections.
 - name: Audit planned objects
   ansible.builtin.import_tasks: audit.yml
   when: audit_mode | default(false)

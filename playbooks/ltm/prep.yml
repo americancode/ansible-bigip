@@ -1,4 +1,3 @@
----
 # LTM prep orchestrator.
 # Produces canonical runtime sets and built intent outputs, including:
 # - `ltm_monitors_present` / `ltm_monitors_delete`

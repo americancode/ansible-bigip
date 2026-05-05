@@ -1,3 +1,5 @@
+# TLS delete tasks.
+# Runtime effect: remove TLS profiles, certs, and keys in dependency-safe reverse order.
 - name: Delete client SSL profiles
   f5networks.f5_modules.bigip_profile_client_ssl:
     provider: "{{ provider }}"
@@ -37,4 +39,3 @@
   loop: "{{ tls_keys_delete | default([]) }}"
   loop_control:
     label: "{{ item.partition | default('Common') }}/{{ item.name }}"
-

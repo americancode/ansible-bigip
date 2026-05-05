@@ -1,3 +1,5 @@
+# AFM runtime build.
+# Classifies AFM objects into present/delete sets for runtime delete/apply ordering.
 - name: Classify AFM address list operations into afm_address_lists_present/afm_address_lists_delete
   ansible.builtin.import_tasks: "{{ playbook_dir }}/shared/prep/classify-operations.yml"
   vars:

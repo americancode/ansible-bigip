@@ -1,3 +1,6 @@
+# Shared TMSH command debug task.
+# Runtime effect: print generated `tmsh` command lists in command-driven tasks before module execution.
+# Shared by bootstrap, network, and system task flows.
 ---
 # Shared generated TMSH command printer.
 # This keeps operator-facing command previews aligned with the exact command

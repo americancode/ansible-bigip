@@ -1,3 +1,5 @@
+# APM var loader.
+# Loads APM ACL/auth/server/SSO/policy fragments and merges defaults into runtime input collections.
 - name: Load APM ACL fragments into apm_acls/apm_acl_deletions
   ansible.builtin.import_tasks: "{{ playbook_dir }}/shared/prep/load-fragment-tree.yml"
   vars:

@@ -1,3 +1,5 @@
+# GTM intent build task.
+# Runtime effect: build canonical GTM consumption maps from repo-known LTM RKE2 virtual server intent output.
 - name: Initialize built repo-known LTM RKE2 virtual servers
   ansible.builtin.set_fact:
     # GTM only needs the built virtual servers here; pools are irrelevant for member resolution.

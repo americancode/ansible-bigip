@@ -1,3 +1,5 @@
+# WAF runtime build.
+# Classifies WAF objects into present/delete sets for runtime delete/apply ordering.
 - name: Classify WAF policy operations into waf_policies_present/waf_policies_delete
   ansible.builtin.import_tasks: "{{ playbook_dir }}/shared/prep/classify-operations.yml"
   vars:

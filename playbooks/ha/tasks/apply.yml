@@ -1,3 +1,5 @@
+# HA apply tasks.
+# Runtime effect: create/update HA connectivity, trust, sync groups, traffic groups, and HA control plane settings.
 - name: Configure HA device connectivity
   f5networks.f5_modules.bigip_device_connectivity:
     provider: "{{ provider }}"

@@ -1,3 +1,5 @@
+# HA audit tasks.
+# Runtime effect: prints planned HA delete/apply collections before any module execution.
 ---
 # HA audit mode.
 # Prints the final HA delete/apply runtime collections, including config-sync

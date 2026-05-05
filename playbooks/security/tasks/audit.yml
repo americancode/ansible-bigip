@@ -1,3 +1,5 @@
+# Security audit tasks.
+# Runtime effect: prints planned security delete/apply collections before any module execution.
 ---
 # Security audit mode.
 # Prints the final security-domain collections in delete/apply order without

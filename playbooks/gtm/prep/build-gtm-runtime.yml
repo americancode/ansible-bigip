@@ -1,3 +1,5 @@
+# GTM runtime build tasks.
+# Runtime effect: classify canonical GTM objects into delete/present runtimes and merge intent-built lookup collections.
 - name: Classify GTM datacenter operations
   ansible.builtin.import_tasks: "{{ playbook_dir }}/shared/prep/classify-operations.yml"
   vars:

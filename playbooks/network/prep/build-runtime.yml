@@ -1,3 +1,5 @@
+# Network runtime build.
+# Classifies each canonical network collection into present/delete buckets consumed by delete/apply order.
 - name: Classify VLAN operations into bigip_vlans_present/bigip_vlans_delete
   ansible.builtin.import_tasks: "{{ playbook_dir }}/shared/prep/classify-operations.yml"
   vars:

@@ -1,3 +1,6 @@
+# Shared audit collection printer task.
+# Runtime effect: print a named runtime collection and object labels for execution preview without calling BIG-IP modules.
+# Shared by audit mode flows across canonical playbooks.
 ---
 # Shared audit collection printer.
 # Prints the final runtime collection name, count, and operator-facing object
@@ -14,4 +17,3 @@
       - "Items: {{ _audit_collection_labels | join('; ') if _audit_collection_labels else 'none' }}"
   when:
     - (audit_show_empty | default(false)) or ((audit_collection_items | default([])) | length > 0)
-

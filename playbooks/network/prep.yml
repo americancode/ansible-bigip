@@ -1,4 +1,3 @@
----
 # Network prep orchestrator.
 # Produces canonical runtime sets and helper facts including:
 # - `network_vlans_present` / `network_vlans_delete`

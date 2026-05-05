@@ -1,3 +1,5 @@
+# LTM audit tasks.
+# Runtime effect: prints planned LTM delete/apply collections before runtime module calls.
 ---
 # LTM audit mode.
 # Prints the canonical LTM runtime collections in delete/apply order.

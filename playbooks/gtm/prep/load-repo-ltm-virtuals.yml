@@ -1,3 +1,5 @@
+# GTM repo LTM discovery task.
+# Runtime effect: discover repo-local LTM virtual server fragments needed by GTM member/lookup compilation.
 - name: Discover repo-known LTM virtual server fragments
   ansible.builtin.set_fact:
     ltm_virtual_server_files: "{{ (repo_root ~ '/vars/ltm/virtual_servers') | discover_yaml_fragments }}"

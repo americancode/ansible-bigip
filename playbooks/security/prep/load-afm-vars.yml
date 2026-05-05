@@ -1,3 +1,5 @@
+# AFM var loader.
+# Loads AFM address/port/rule/policy fragments and merges defaults into runtime input collections.
 - name: Load AFM address list fragments into afm_address_lists/afm_address_list_deletions
   ansible.builtin.import_tasks: "{{ playbook_dir }}/shared/prep/load-fragment-tree.yml"
   vars:

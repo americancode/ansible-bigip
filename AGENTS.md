@@ -203,9 +203,9 @@ If an empty directory must exist intentionally (e.g., a deletions tree with no e
 
 ## Roadmap Maintenance
 
-- update `ROADMAP.md` `Current Platform Summary` when major capability or structure changes land
-- update `ROADMAP.md` `Capability Boundaries` when a domain's completion class or helper-tool expectations change
-- update `ROADMAP.md` `Active Priorities` and `Open Backlog` when work is completed, deferred, or newly discovered
+- keep `ROADMAP.md` limited to concrete `To Do` items and `Proposals`
+- if work is completed, remove it from `ROADMAP.md` instead of keeping historical status sections there
+- when major capability or structure changes land, update the relevant `To Do` items or `Proposals` so the roadmap stays current
 - if a discovered gap changes the real delivery story, record it in `ROADMAP.md` before expanding into more feature work
 - if a playbook is intentionally kept monolithic instead of split, record the reason in ROADMAP.md
 
@@ -259,7 +259,7 @@ These updates are **required after every feature change** (new object types, new
 - [ ] `docs/playbook-structure.md` — add new playbooks to the playbook list
 - [ ] `docs/var-layout.md` — add new var trees to the domain trees list
 - [ ] `README.md` — update quick links table and playbooks table
-- [ ] `ROADMAP.md` — update Current Platform Summary, Capability Boundaries, Active Priorities, and Open Backlog as applicable
+- [ ] `ROADMAP.md` — update `To Do` items and `Proposals` as applicable
 - [ ] verify docs do not describe superseded implementation models
 - [ ] verify example var files still match the documented and implemented field model
 - [ ] state any intentional limitations in the domain docs instead of leaving them implicit

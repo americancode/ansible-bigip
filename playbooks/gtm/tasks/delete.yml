@@ -1,3 +1,5 @@
+# GTM delete tasks.
+# Runtime effect: remove GTM topology records, wide IPs, pools, servers, datacenters, and regions in the safe reverse-runtime order.
 - name: Delete GTM topology records
   f5networks.f5_modules.bigip_gtm_topology_record:
     provider: "{{ provider }}"

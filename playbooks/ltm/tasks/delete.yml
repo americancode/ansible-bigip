@@ -1,3 +1,5 @@
+# LTM delete tasks.
+# Runtime effect: remove virtuals, pools, nodes, monitors, and related virtual-stack objects in dependency-safe reverse order.
 - name: Delete virtual servers
   f5networks.f5_modules.bigip_virtual_server:
     provider: "{{ provider }}"

@@ -1,3 +1,5 @@
+# APM runtime build.
+# Classifies APM objects into present/delete sets and prepares flattened tmsh helpers for execution.
 - name: Classify APM ACL operations into apm_acls_present/apm_acls_delete
   ansible.builtin.import_tasks: "{{ playbook_dir }}/shared/prep/classify-operations.yml"
   vars:

@@ -1,3 +1,5 @@
+# Security apply tasks.
+# Runtime effect: create/update AFM, WAF, and APM security objects in the canonical security domain.
 - name: Create AFM address lists
   bigip_firewall_address_list:
     provider: "{{ provider }}"
