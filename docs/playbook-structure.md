@@ -2,6 +2,8 @@
 
 Canonical playbooks live under `playbooks/`. Root-level `*.yml` files are compatibility wrappers that import the canonical playbooks.
 
+For a doc map by task, start with [index.md](index.md). For extension work, use [extending-the-repo.md](extending-the-repo.md).
+
 ## Playbook List
 
 - `playbooks/network.yml`: VLANs, trunks, route domains, self IPs, static routes, SNAT translations, SNAT pools, and NATs
@@ -12,6 +14,17 @@ Canonical playbooks live under `playbooks/`. Root-level `*.yml` files are compat
 - `playbooks/gtm.yml`: GTM monitors, datacenters, servers, pools, Wide IPs, regions, and topology records
 - `playbooks/tls.yml`: SSL keys, certificates, CA bundles, client SSL profiles, server SSL profiles
 - `playbooks/security.yml`: AFM address lists, port lists, firewall rules, firewall policies; WAF policies and server technologies; APM ACLs, auth servers, SSO configs, resources, policy nodes, access profiles, per-session policies, and macros
+
+Primary domain docs:
+
+- `bootstrap`: [02-bootstrap-playbook.md](02-bootstrap-playbook.md)
+- `network`: [network-objects.md](network-objects.md)
+- `system`: [system-management.md](system-management.md)
+- `ha`: [ha.md](ha.md)
+- `ltm`: [ltm.md](ltm.md)
+- `gtm`: [gtm.md](gtm.md)
+- `tls`: [tls.md](tls.md)
+- `security`: [security.md](security.md)
 
 ## Split Layout
 

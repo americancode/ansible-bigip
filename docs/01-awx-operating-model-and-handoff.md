@@ -11,6 +11,7 @@ The broad operating assumption is:
 Use this document first. The rest of the numbered docs explain the normal AWX operating path in smaller pieces:
 
 - [02-bootstrap-playbook.md](02-bootstrap-playbook.md) explains why `playbooks/bootstrap.yml` exists and what it manages
+- [awx-setup.md](awx-setup.md) is the concrete AWX build sheet for projects, inventory, credentials, and templates
 - [03-awx-inventory-and-targeting.md](03-awx-inventory-and-targeting.md) explains AWX inventory, credentials, and target selectors
 - [04-awx-job-execution.md](04-awx-job-execution.md) explains how to structure AWX job templates and execution boundaries
 - [05-ha-execution-model.md](05-ha-execution-model.md) explains how HA setup and shared-config execution should work
@@ -191,6 +192,7 @@ Recommended AWX ownership after handoff:
 
 See:
 
+- [awx-setup.md](awx-setup.md)
 - [03-awx-inventory-and-targeting.md](03-awx-inventory-and-targeting.md)
 - [04-awx-job-execution.md](04-awx-job-execution.md)
 - [05-ha-execution-model.md](05-ha-execution-model.md)

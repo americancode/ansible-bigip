@@ -2,9 +2,13 @@
 
 Declarative BIG-IP playbooks organized for GitOps-style management.
 
+AWX is the primary control plane for normal operations.
+
+Start with [docs/index.md](docs/index.md) when you need to know where to go.
+
 For the normal AWX-first operator path, follow:
 [docs/01-awx-operating-model-and-handoff.md](docs/01-awx-operating-model-and-handoff.md),
-[docs/02-bootstrap-playbook.md](docs/02-bootstrap-playbook.md),
+[docs/awx-setup.md](docs/awx-setup.md),
 [docs/03-awx-inventory-and-targeting.md](docs/03-awx-inventory-and-targeting.md),
 [docs/04-awx-job-execution.md](docs/04-awx-job-execution.md), and
 [docs/05-ha-execution-model.md](docs/05-ha-execution-model.md).
@@ -34,6 +38,9 @@ Current lifecycle boundaries:
 
 | Topic | Doc |
 |---|---|
+| Where to go | [docs/index.md](docs/index.md) |
+| AWX setup runbook | [docs/awx-setup.md](docs/awx-setup.md) |
+| Extending the repo | [docs/extending-the-repo.md](docs/extending-the-repo.md) |
 | Playbook layout | [docs/playbook-structure.md](docs/playbook-structure.md) |
 | Variables and precedence | [docs/var-layout.md](docs/var-layout.md) |
 | Hybrid authoring | [docs/hybrid-authoring.md](docs/hybrid-authoring.md) |
@@ -50,8 +57,11 @@ Current lifecycle boundaries:
 | Network objects | [docs/network-objects.md](docs/network-objects.md) |
 | System management | [docs/system-management.md](docs/system-management.md) |
 | HA lifecycle | [docs/ha.md](docs/ha.md) |
+| LTM playbook | [docs/ltm.md](docs/ltm.md) |
 | LTM advanced fields | [docs/ltm-advanced.md](docs/ltm-advanced.md) |
+| GTM playbook | [docs/gtm.md](docs/gtm.md) |
 | GTM advanced fields | [docs/gtm-advanced.md](docs/gtm-advanced.md) |
+| TLS playbook | [docs/tls.md](docs/tls.md) |
 | AFM security | [docs/security.md](docs/security.md) |
 | WAF/ASM | [docs/waf.md](docs/waf.md) |
 | APM access | [docs/apm.md](docs/apm.md) |
@@ -69,16 +79,16 @@ Current lifecycle boundaries:
 
 Canonical playbooks live under `playbooks/`. Root-level `*.yml` files are compatibility wrappers.
 
-| Playbook | Domain |
-|---|---|
-| `playbooks/network.yml` | VLANs, trunks, route domains, self IPs, routes, SNATs, NATs |
-| `playbooks/bootstrap.yml` | device licensing and initial management IP/default-route bootstrap |
-| `playbooks/system.yml` | hostname, DNS, NTP, provisioning, administrative partitions, users, management-plane admin auth, login banners |
-| `playbooks/ha.yml` | device connectivity, device trust, device groups, HA groups, traffic groups, config sync |
-| `playbooks/ltm.yml` | monitors, profiles, nodes, pools, virtual servers |
-| `playbooks/gtm.yml` | monitors, datacenters, servers, pools, Wide IPs, topology |
-| `playbooks/tls.yml` | keys, certificates, CA bundles, SSL profiles |
-| `playbooks/security.yml` | AFM address lists, port lists, firewall rules, policies; WAF policies, server technologies; APM ACLs, auth servers, SSO configs, resources, policy nodes, access profiles, per-session policies, macros |
+| Playbook | Domain | Primary Doc |
+|---|---|---|
+| `playbooks/network.yml` | VLANs, trunks, route domains, self IPs, routes, SNATs, NATs | [docs/network-objects.md](docs/network-objects.md) |
+| `playbooks/bootstrap.yml` | device licensing and initial management IP/default-route bootstrap | [docs/02-bootstrap-playbook.md](docs/02-bootstrap-playbook.md) |
+| `playbooks/system.yml` | hostname, DNS, NTP, provisioning, administrative partitions, users, management-plane admin auth, login banners | [docs/system-management.md](docs/system-management.md) |
+| `playbooks/ha.yml` | device connectivity, device trust, device groups, HA groups, traffic groups, config sync | [docs/ha.md](docs/ha.md) |
+| `playbooks/ltm.yml` | monitors, profiles, data groups, iRules, persistence, nodes, pools, virtual servers | [docs/ltm.md](docs/ltm.md) |
+| `playbooks/gtm.yml` | monitors, datacenters, servers, pools, Wide IPs, regions, topology | [docs/gtm.md](docs/gtm.md) |
+| `playbooks/tls.yml` | keys, certificates, CA bundles, client/server SSL profiles | [docs/tls.md](docs/tls.md) |
+| `playbooks/security.yml` | AFM address lists, port lists, firewall rules, policies; WAF policies, server technologies; APM ACLs, auth servers, SSO configs, resources, policy nodes, access profiles, per-session policies, macros | [docs/security.md](docs/security.md) |
 
 ## Current Priorities
 

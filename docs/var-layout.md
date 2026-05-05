@@ -2,6 +2,8 @@
 
 The repo uses split trees under `vars/` so large estates can be managed by domain.
 
+If you are deciding where a new authoring model belongs, read [extending-the-repo.md](extending-the-repo.md) with this page.
+
 ## Domain Trees
 
 - `vars/network/...`
@@ -84,3 +86,9 @@ GTM Wide IP intent authoring follows the same pattern under `vars/gtm/intents/ap
 ## Deletions
 
 Objects can be removed via deletion trees. See [deletion-workflows.md](deletion-workflows.md).
+
+## Where To Extend
+
+- add another runtime object family under the existing domain tree when it is just another canonical BIG-IP object type
+- add convenience bundles under `vars/<domain>/intents/<category>/...` when the new model should compile into canonical objects first
+- add a new top-level domain only when the runtime lifecycle is operationally distinct enough to justify a separate playbook and domain doc

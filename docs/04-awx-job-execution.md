@@ -2,7 +2,7 @@
 
 This document explains how to turn the repo targeting model into safe AWX job templates.
 
-Read this after [03-awx-inventory-and-targeting.md](03-awx-inventory-and-targeting.md). Use [05-ha-execution-model.md](05-ha-execution-model.md) for the HA-specific sequence and perspective rules.
+Read this after [03-awx-inventory-and-targeting.md](03-awx-inventory-and-targeting.md). Use [awx-setup.md](awx-setup.md) for the concrete setup sequence and [05-ha-execution-model.md](05-ha-execution-model.md) for the HA-specific sequence and perspective rules.
 
 ## Core Rule
 

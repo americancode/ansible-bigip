@@ -5,6 +5,7 @@ This document covers the normal AWX-side targeting contract for this repository.
 Use it with:
 
 - [01-awx-operating-model-and-handoff.md](01-awx-operating-model-and-handoff.md) for the overall operator story
+- [awx-setup.md](awx-setup.md) for the concrete project, inventory, and template build sheet
 - [04-awx-job-execution.md](04-awx-job-execution.md) for job-template execution boundaries
 - [05-ha-execution-model.md](05-ha-execution-model.md) for HA-specific sync-owner behavior
 
