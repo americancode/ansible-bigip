@@ -1,7 +1,36 @@
 # BIG-IP Enterprise GitOps Roadmap
 
 ## To Do
+Fix the Ansible recursive templating failure in this repo/branch:
 
+Repo: https://github.com/americancode/ansible-bigip
+Branch: dreams-and-aspirations
+
+Failure:
+TASK [Evaluate {{ object_label }} targeting for the current inventory host]
+fatal: unhandled exception while templating '{{ object_label }}'
+
+Root cause to investigate:
+Ansible task imports are passing variables to included task files using self-referential assignments, especially:
+
+  object_label: "{{ object_label }}"
+
+This causes recursive templating when the included task uses object_label in task names or expressions.
+
+Please update the Ansible task files so that:
+1. No variable is passed through to an imported/included task using the exact same variable name and value, e.g. `foo: "{{ foo }}"`.
+2. `object_label` remains available to `filter-targeted-objects.yml`.
+3. The active-object filtering keeps the caller-provided `object_label` without redefining it.
+4. The deletion-object filtering still uses a distinct label such as `"{{ object_label }} deletion"` or an equivalent safely computed value.
+5. Similar pass-through variables, especially `match_without_selectors: "{{ match_without_selectors | default(true) }}"`, are removed or renamed if they can trigger the same recursion issue.
+6. Preserve existing behavior for targeted object filtering, skipped object tracking, and summary variables.
+7. Add or update a small test/playbook/lint check if practical to confirm the recursion is gone.
+
+Expected fix area:
+  playbooks/shared/prep/classify-operations.yml
+  playbooks/shared/prep/filter-targeted-objects.yml
+
+After the change, running the affected playbook against host `lab-f5` should no longer fail while templating `{{ object_label }}`.
 
 ## Proposals
 
