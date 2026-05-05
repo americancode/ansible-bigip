@@ -35,7 +35,7 @@ Use [cli-bootstrap-and-recovery.md](cli-bootstrap-and-recovery.md) only when AWX
 | `playbooks/system.yml` | [system-management.md](system-management.md) | [authentication.md](authentication.md) |
 | `playbooks/ha.yml` | [ha.md](ha.md) | [05-ha-execution-model.md](05-ha-execution-model.md) |
 | `playbooks/ltm.yml` | [ltm.md](ltm.md) | [ltm-advanced.md](ltm-advanced.md), [intents/ltm-inline-virtual-server-intents.md](intents/ltm-inline-virtual-server-intents.md) |
-| `playbooks/gtm.yml` | [gtm.md](gtm.md) | [gtm-advanced.md](gtm-advanced.md), [intents/gtm-wide-ip-intents.md](intents/gtm-wide-ip-intents.md) |
+| `playbooks/gtm.yml` | [gtm.md](gtm.md) | [gtm-advanced.md](gtm-advanced.md), [intents/gtm-application-intents.md](intents/gtm-application-intents.md) |
 | `playbooks/tls.yml` | [tls.md](tls.md) | [tls-secrets.md](tls-secrets.md) |
 | `playbooks/security.yml` | [security.md](security.md) | [waf.md](waf.md), [apm.md](apm.md), [authentication.md](authentication.md), [kerberos-sso.md](kerberos-sso.md) |
 

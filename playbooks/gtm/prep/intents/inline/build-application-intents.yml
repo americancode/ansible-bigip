@@ -1,22 +1,22 @@
-# GTM intent build task.
-# Runtime effect: build canonical GTM objects from wide-IP-style intent inputs.
-- name: Initialize built GTM shortcut objects from deleted Wide IPs
+# GTM application-intent build task.
+# Runtime effect: build canonical GTM objects from application-intent inputs.
+- name: Initialize built GTM shortcut objects from deleted application intents
   ansible.builtin.set_fact:
-    # One Wide IP intent can emit several canonical object families.
+    # One application intent can emit several canonical object families.
     # These buckets keep object ownership explicit until the final merge below.
     gtm_compiled_wide_ips_delete: []
     gtm_compiled_pools_delete: []
     gtm_compiled_servers_delete: []
     gtm_compiled_datacenters_delete: []
 
-- name: Initialize built GTM shortcut objects from active Wide IPs
+- name: Initialize built GTM shortcut objects from active application intents
   ansible.builtin.set_fact:
     gtm_compiled_wide_ips_present: []
     gtm_compiled_pools_present: []
     gtm_compiled_servers_present: []
     gtm_compiled_datacenters_present: []
 
-- name: Build deleted GTM Wide IP shortcut objects
+- name: Build deleted GTM application intent objects
   # Deleted and active intent collections are compiled with the same shape so later
   # merge steps can concat collections without branch-specific handling.
   ansible.builtin.set_fact:
@@ -36,28 +36,28 @@
       {{
         (gtm_compiled_datacenters_delete | default([])) + (gtm_compiled_service.datacenters | default([]))
       }}
-  loop: "{{ gtm_wide_ips_delete | default([]) }}"
+  loop: "{{ gtm_application_intents_delete | default([]) }}"
   vars:
-    gtm_wide_ip_settings_payload: >-
+    gtm_application_intent_settings_payload: >-
       {{
         item.__source_file
         | load_settings_hierarchy(repo_root ~ '/vars/gtm/intents')
       }}
-    gtm_wide_ip_pool_defaults: "{{ gtm_wide_ip_settings_payload.gtm_pool_defaults | default({}) }}"
-    gtm_wide_ip_member_defaults: "{{ gtm_wide_ip_settings_payload.gtm_member_defaults | default({}) }}"
-    gtm_wide_ip_monitor_sets: "{{ gtm_wide_ip_settings_payload.gtm_monitor_sets | default({}) }}"
+    gtm_application_intent_pool_defaults: "{{ gtm_application_intent_settings_payload.gtm_pool_defaults | default({}) }}"
+    gtm_application_intent_member_defaults: "{{ gtm_application_intent_settings_payload.gtm_member_defaults | default({}) }}"
+    gtm_application_intent_monitor_sets: "{{ gtm_application_intent_settings_payload.gtm_monitor_sets | default({}) }}"
     gtm_compiled_service: >-
       {{
         item
-        | compile_gtm_wide_ip_intent(
-            gtm_wide_ip_pool_defaults,
-            gtm_wide_ip_member_defaults,
-            gtm_wide_ip_monitor_sets,
+        | compile_gtm_application_intent(
+            gtm_application_intent_pool_defaults,
+            gtm_application_intent_member_defaults,
+            gtm_application_intent_monitor_sets,
             repo_ltm_virtual_server_lookup | default({})
           )
       }}
 
-- name: Build active GTM Wide IP shortcut objects
+- name: Build active GTM application intent objects
   ansible.builtin.set_fact:
     gtm_compiled_wide_ips_present: >-
       {{
@@ -75,28 +75,28 @@
       {{
         (gtm_compiled_datacenters_present | default([])) + (gtm_compiled_service.datacenters | default([]))
       }}
-  loop: "{{ gtm_wide_ips_present | default([]) }}"
+  loop: "{{ gtm_application_intents_present | default([]) }}"
   vars:
-    gtm_wide_ip_settings_payload: >-
+    gtm_application_intent_settings_payload: >-
       {{
         item.__source_file
         | load_settings_hierarchy(repo_root ~ '/vars/gtm/intents')
       }}
-    gtm_wide_ip_pool_defaults: "{{ gtm_wide_ip_settings_payload.gtm_pool_defaults | default({}) }}"
-    gtm_wide_ip_member_defaults: "{{ gtm_wide_ip_settings_payload.gtm_member_defaults | default({}) }}"
-    gtm_wide_ip_monitor_sets: "{{ gtm_wide_ip_settings_payload.gtm_monitor_sets | default({}) }}"
+    gtm_application_intent_pool_defaults: "{{ gtm_application_intent_settings_payload.gtm_pool_defaults | default({}) }}"
+    gtm_application_intent_member_defaults: "{{ gtm_application_intent_settings_payload.gtm_member_defaults | default({}) }}"
+    gtm_application_intent_monitor_sets: "{{ gtm_application_intent_settings_payload.gtm_monitor_sets | default({}) }}"
     gtm_compiled_service: >-
       {{
         item
-        | compile_gtm_wide_ip_intent(
-            gtm_wide_ip_pool_defaults,
-            gtm_wide_ip_member_defaults,
-            gtm_wide_ip_monitor_sets,
+        | compile_gtm_application_intent(
+            gtm_application_intent_pool_defaults,
+            gtm_application_intent_member_defaults,
+            gtm_application_intent_monitor_sets,
             repo_ltm_virtual_server_lookup | default({})
           )
       }}
 
-- name: Replace raw Wide IP shortcut objects with built canonical Wide IPs
+- name: Replace raw application intents with built canonical Wide IPs
   ansible.builtin.set_fact:
     gtm_wide_ips_delete: "{{ gtm_compiled_wide_ips_delete | default([]) }}"
     gtm_wide_ips_present: "{{ gtm_compiled_wide_ips_present | default([]) }}"

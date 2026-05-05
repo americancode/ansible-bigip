@@ -64,10 +64,12 @@ Use the app-local GTM model when a Wide IP and its pools should be reviewed toge
   - `vars/gtm/intents/applications/k8s-applications/rke2-registration.yml`
   - `vars/gtm/intents/applications/k8s-applications/argocd.yml`
   - `vars/gtm/intents/applications/k8s-applications/grafana.yml`
-- Pattern: `gtm_wide_ips[*].pools[*]` embeds full GTM pool definitions under a Wide IP
-- Compiler behavior: `gtm/prep.yml` compiles the embedded pools into canonical GTM pool objects and rewrites the Wide IP to carry only pool references before runtime apply/delete
+- Pattern: `gtm_application_intents[*].pools[*]` declares explicit pool bindings with `pool_mode: inline|reference`
+- Compiler behavior: `gtm/prep.yml` compiles inline pools into canonical GTM pool objects and rewrites the Wide IP to carry only canonical pool references before runtime apply/delete
 - Monitor linkage: aliases such as `platform_https` expand from `vars/gtm/intents/applications/k8s-applications/settings.yml`
 - Ownership behavior:
+  - `pools[*].pool_mode: reference` points at canonical `gtm_pools` via `pool_ref`
+  - `pools[*].pool_mode: inline` emits canonical `gtm_pools` from nested `pool`
   - `members[*].server_mode: reference` points at canonical `gtm_servers`
   - `members[*].server_mode: inline` emits canonical `gtm_servers`
   - inline-owned servers choose `datacenter_mode: reference` or `datacenter_mode: inline`
@@ -83,7 +85,7 @@ Use the shared-object GTM model when the same GTM pools are referenced by standa
 
 Linkage works like this:
 
-- `gtm_wide_ips[*].pools[*].name: "pool_inventory_global"` points at `vars/gtm/pools/vm-applications.yml`
+- `gtm_application_intents[*].pools[*].pool_ref: "pool_inventory_global"` points at `vars/gtm/pools/vm-applications.yml`
 - `gtm_pools[*].members[*].server: "bigip-east"` points at `vars/gtm/servers/regional-bigips.yml`
 - `gtm_pools[*].members[*].virtual_server: "vs_inventory_east_443"` points at `vars/ltm/virtual_servers/vm-apps/business-apps.yml`
 - when `address` and `port` are omitted, `gtm.yml` resolves them from that repo-known LTM virtual server definition

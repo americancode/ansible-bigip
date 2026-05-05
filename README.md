@@ -46,7 +46,7 @@ Current lifecycle boundaries:
 | Hybrid authoring | [docs/hybrid-authoring.md](docs/hybrid-authoring.md) |
 | Build new intents | [docs/intents/how-to-build-intents.md](docs/intents/how-to-build-intents.md) |
 | Intent class: LTM inline virtual servers | [docs/intents/ltm-inline-virtual-server-intents.md](docs/intents/ltm-inline-virtual-server-intents.md) |
-| Intent class: GTM Wide IPs | [docs/intents/gtm-wide-ip-intents.md](docs/intents/gtm-wide-ip-intents.md) |
+| Intent class: GTM applications | [docs/intents/gtm-application-intents.md](docs/intents/gtm-application-intents.md) |
 | Deletion workflows | [docs/deletion-workflows.md](docs/deletion-workflows.md) |
 | AWX inventory and targeting | [docs/03-awx-inventory-and-targeting.md](docs/03-awx-inventory-and-targeting.md) |
 | AWX job execution | [docs/04-awx-job-execution.md](docs/04-awx-job-execution.md) |

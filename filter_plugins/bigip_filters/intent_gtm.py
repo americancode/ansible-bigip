@@ -7,7 +7,7 @@ def _compile_inline_gtm_member_infrastructure(member, default_partition, wide_ip
     """Compile inline GTM member infrastructure into canonical datacenter/server objects.
 
     Purpose:
-        Lets one Wide IP intent either reference existing GTM servers/datacenters or
+        Lets one application intent either reference existing GTM servers/datacenters or
         own them inline, while still emitting the same canonical `gtm_servers` and
         `gtm_datacenters` objects that runtime tasks already manage.
 
@@ -68,19 +68,20 @@ def _compile_inline_gtm_member_infrastructure(member, default_partition, wide_ip
     return compiled_member, compiled_servers, compiled_datacenters
 
 
-def compile_gtm_wide_ip_intent(wide_ip, pool_defaults=None, member_defaults=None, monitor_sets=None, ltm_virtual_servers=None):
-    """Compile a GTM Wide IP intent that may embed inline pool definitions.
+def compile_gtm_application_intent(application_intent, pool_defaults=None, member_defaults=None, monitor_sets=None, ltm_virtual_servers=None):
+    """Compile a GTM application intent into canonical Wide IP and pool objects.
 
     Purpose:
-        Allows a Wide IP to declare its pools inline (as dicts) or by name reference
-        (as strings). Inline pools are normalized (monitors expanded, members resolved
-        against LTM virtual servers) and emitted as separate canonical pool objects.
+        Allows one application intent to own a canonical GTM Wide IP and choose
+        whether each referenced pool is canonical-by-reference or inline-owned.
+        Inline pools are normalized (monitors expanded, members resolved against
+        LTM virtual servers) and emitted as separate canonical GTM pool objects.
         Inline pool members can either reference canonical GTM servers/datacenters
         or own those supporting objects inline.
 
     Inputs:
-        wide_ip (dict|None): Wide IP dict with a "pools" list. Each pool may be a
-            string (name reference) or a dict (inline definition).
+        application_intent (dict|None): Application-intent dict with a `pools`
+            list. Each pool entry must declare `pool_mode: reference|inline`.
         pool_defaults (dict|None): Defaults applied to inline pools.
         member_defaults (dict|None): Defaults applied to pool members.
         monitor_sets (dict|None): Monitor alias mapping for pool monitor expansion.
@@ -89,26 +90,25 @@ def compile_gtm_wide_ip_intent(wide_ip, pool_defaults=None, member_defaults=None
 
     Outputs:
         dict: {"wide_ip": dict, "pools": list[dict], "servers": list[dict], "datacenters": list[dict]}
-            - wide_ip: The Wide IP with "pools" replaced by a list of name references
+            - wide_ip: The canonical Wide IP with "pools" replaced by a list of pool references
               (with partition and ratio).
             - pools: A list of normalized inline pool objects (if any).
             - servers: Canonical GTM servers emitted by inline-owned members.
             - datacenters: Canonical GTM datacenters emitted by inline-owned servers.
 
     Constraints:
-        - Pool name references (strings) are passed through with default ratio=1.
-        - Inline pools with a "members" key are normalized via normalize_gtm_pool;
-          those without members are treated as name references.
-        - Inline pools inherit the Wide IP's partition and record_type if not set.
+        - `pool_mode: reference` requires `pool_ref` and emits no canonical pool.
+        - `pool_mode: inline` requires nested `pool` mapping and emits one
+          canonical GTM pool object.
+        - Inline pools inherit the Wide IP partition and record_type if not set.
         - Inline member ownership is explicit:
           `server_mode: reference|inline` and inline servers use
           `datacenter_mode: reference|inline`.
-        - Non-dict, nameless pools are skipped silently.
     """
-    if not isinstance(wide_ip, dict):
-        return {"wide_ip": wide_ip, "pools": [], "servers": [], "datacenters": []}
+    if not isinstance(application_intent, dict):
+        return {"wide_ip": application_intent, "pools": [], "servers": [], "datacenters": []}
 
-    compiled_wide_ip = dict(wide_ip)
+    compiled_wide_ip = dict(application_intent)
     compiled_pools = []
     compiled_servers = []
     compiled_datacenters = []
@@ -116,47 +116,59 @@ def compile_gtm_wide_ip_intent(wide_ip, pool_defaults=None, member_defaults=None
     wide_ip_partition = compiled_wide_ip.get("partition", "Common")
     record_type = compiled_wide_ip.get("record_type", "a")
 
-    for pool in compiled_wide_ip.get("pools", []) or []:
-        if isinstance(pool, str):
-            compiled_pool_refs.append({
-                "name": pool,
-                "ratio": 1,
-            })
+    for pool_binding in compiled_wide_ip.get("pools", []) or []:
+        if not isinstance(pool_binding, dict):
             continue
 
+        pool_mode = pool_binding.get("pool_mode")
+        pool_ratio = pool_binding.get("ratio", 1)
+
+        if pool_mode == "reference":
+            pool_ref = pool_binding.get("pool_ref")
+            if not isinstance(pool_ref, str) or not pool_ref:
+                continue
+            compiled_pool_ref = {
+                "name": pool_ref,
+                "ratio": pool_ratio,
+            }
+            if pool_binding.get("partition") not in (None, ""):
+                compiled_pool_ref["partition"] = pool_binding.get("partition")
+            compiled_pool_refs.append(compiled_pool_ref)
+            continue
+
+        if pool_mode != "inline":
+            continue
+
+        pool = pool_binding.get("pool")
         if not isinstance(pool, dict) or not pool.get("name"):
             continue
 
-        if pool.get("members") is not None:
-            pool_with_compiled_members = dict(pool)
-            pool_partition = pool_with_compiled_members.get("partition", wide_ip_partition)
-            compiled_members = []
-            for member in pool_with_compiled_members.get("members", []) or []:
-                compiled_member, emitted_servers, emitted_datacenters = _compile_inline_gtm_member_infrastructure(
-                    member,
-                    pool_partition,
-                    wide_ip_partition,
-                )
-                compiled_members.append(compiled_member)
-                compiled_servers.extend(emitted_servers)
-                compiled_datacenters.extend(emitted_datacenters)
-            pool_with_compiled_members["members"] = compiled_members
+        pool_with_compiled_members = dict(pool)
+        pool_partition = pool_with_compiled_members.get("partition", wide_ip_partition)
+        compiled_members = []
+        for member in pool_with_compiled_members.get("members", []) or []:
+            compiled_member, emitted_servers, emitted_datacenters = _compile_inline_gtm_member_infrastructure(
+                member,
+                pool_partition,
+                wide_ip_partition,
+            )
+            compiled_members.append(compiled_member)
+            compiled_servers.extend(emitted_servers)
+            compiled_datacenters.extend(emitted_datacenters)
+        pool_with_compiled_members["members"] = compiled_members
 
-            normalized_pool = normalize_gtm_pool(pool_with_compiled_members, pool_defaults, member_defaults, monitor_sets, ltm_virtual_servers)
-            normalized_pool = dict(normalized_pool)
-            normalized_pool.setdefault("partition", wide_ip_partition)
-            normalized_pool.setdefault("record_type", record_type)
-            compiled_pools.append(normalized_pool)
-            compiled_pool_refs.append({
-                "name": normalized_pool["name"],
-                "ratio": pool.get("ratio", 1),
-            })
-            continue
-
-        compiled_pool_refs.append({
-            "name": pool["name"],
-            "ratio": pool.get("ratio", 1),
-        })
+        normalized_pool = normalize_gtm_pool(pool_with_compiled_members, pool_defaults, member_defaults, monitor_sets, ltm_virtual_servers)
+        normalized_pool = dict(normalized_pool)
+        normalized_pool.setdefault("partition", wide_ip_partition)
+        normalized_pool.setdefault("record_type", record_type)
+        compiled_pools.append(normalized_pool)
+        compiled_pool_ref = {
+            "name": normalized_pool["name"],
+            "ratio": pool_ratio,
+        }
+        if pool_binding.get("partition") not in (None, ""):
+            compiled_pool_ref["partition"] = pool_binding.get("partition")
+        compiled_pool_refs.append(compiled_pool_ref)
 
     compiled_wide_ip["pools"] = compiled_pool_refs
 

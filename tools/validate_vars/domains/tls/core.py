@@ -6,7 +6,7 @@ from pathlib import Path
 from typing import Any
 
 from filter_plugins.bigip_var_filters import (
-    compile_gtm_wide_ip_intent,
+    compile_gtm_application_intent,
     compile_ltm_rke2_server_intent,
     compile_ltm_virtual_server_intent,
     normalize_gtm_pool,

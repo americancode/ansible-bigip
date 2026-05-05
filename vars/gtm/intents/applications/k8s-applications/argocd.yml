@@ -1,35 +1,39 @@
 ---
-# GTM intent for the Argo CD hostname.
+# GTM application intent for the Argo CD hostname.
 # This file is part of the `k8s-applications` GTM intent category and is compiled by `playbooks/gtm/prep.yml`.
 # It references canonical GTM servers in `vars/gtm/servers/regional-bigips.yml` and repo-known LTM virtual servers in:
 # - `vars/ltm/intents/inline/k8s-clusters/rke2-east.yml`
 # - `vars/ltm/intents/inline/k8s-clusters/rke2-west.yml`
 # Supported fields:
-# - Wide IP: `name`, `record_type`, `pool_lb_method`, `pools`
-# - Inline pool: `name`, `preferred_lb_method`, `monitors`/`default_monitors`, `members`
+# - Application intent: `name`, `record_type`, `pool_lb_method`, `pools`
+# - Pool binding: `pool_mode`, optional `ratio`, and either `pool_ref` or nested `pool`
 # - Member ownership: `server_mode: reference` + `server`, or `server_mode: inline` + `server: {name, address/devices, datacenter_mode, ...}`
-gtm_wide_ips:
+gtm_application_intents:
   - name: "argocd.platform.example.com"
     record_type: "a"
     pool_lb_method: "topology"
     pools:
-      - name: "pool_argocd_east"
-        preferred_lb_method: "global-availability"
-        monitors:
-          - "argocd_https"
-        members:
-          - server_mode: "reference"
-            server: "bigip-east"
-            virtual_server: "vs_rke2_east_traefik_443"
-            address: "10.201.0.30"
-            port: 443
-      - name: "pool_argocd_west"
-        preferred_lb_method: "global-availability"
-        monitors:
-          - "argocd_https"
-        members:
-          - server_mode: "reference"
-            server: "bigip-west"
-            virtual_server: "vs_rke2_west_traefik_443"
-            address: "10.202.0.30"
-            port: 443
+      - pool_mode: "inline"
+        pool:
+          name: "pool_argocd_east"
+          preferred_lb_method: "global-availability"
+          monitors:
+            - "argocd_https"
+          members:
+            - server_mode: "reference"
+              server: "bigip-east"
+              virtual_server: "vs_rke2_east_traefik_443"
+              address: "10.201.0.30"
+              port: 443
+      - pool_mode: "inline"
+        pool:
+          name: "pool_argocd_west"
+          preferred_lb_method: "global-availability"
+          monitors:
+            - "argocd_https"
+          members:
+            - server_mode: "reference"
+              server: "bigip-west"
+              virtual_server: "vs_rke2_west_traefik_443"
+              address: "10.202.0.30"
+              port: 443

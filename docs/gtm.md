@@ -12,7 +12,7 @@
 - regions
 - topology records
 
-This domain also supports application-oriented Wide IP intents under `vars/gtm/intents/`, but runtime apply/delete still operates on canonical GTM objects.
+This domain also supports application-oriented GTM intents under `vars/gtm/intents/`, but runtime apply/delete still operates on canonical GTM objects.
 
 ## Playbook Structure
 
@@ -26,7 +26,7 @@ playbooks/gtm/
 ├── prep/build-repo-ltm-virtuals.yml
 ├── prep/intents/inline/
 │   ├── load-repo-ltm-inline-virtual-server-intents.yml
-│   └── build-wide-ip-intents.yml
+│   └── build-application-intents.yml
 └── tasks/
     ├── manage.yml
     ├── audit.yml
@@ -67,7 +67,8 @@ vars/gtm/
 | `gtm_datacenters` | `vars/gtm/datacenters/` | datacenter identities |
 | `gtm_servers` | `vars/gtm/servers/` | GTM server objects |
 | `gtm_pools` | `vars/gtm/pools/` | DNS answer pools |
-| `gtm_wide_ips` | `vars/gtm/intents/applications/` or canonical trees after compilation | Wide IP definitions |
+| `gtm_application_intents` | `vars/gtm/intents/applications/` | Application-intent authoring that compiles into canonical Wide IPs |
+| `gtm_wide_ips` | canonical trees after compilation | Wide IP runtime definitions |
 | `gtm_topology_regions` | `vars/gtm/regions/` | region definitions |
 | `gtm_topology_records` | `vars/gtm/topology/` | topology decision rules |
 
@@ -76,7 +77,7 @@ vars/gtm/
 - `gtm_servers[*].datacenter` points at `vars/gtm/datacenters/*.yml`
 - `gtm_pools[*].members[*].server` points at `vars/gtm/servers/*.yml`
 - `gtm_pools[*].members[*].virtual_server` points at repo-known LTM virtual servers in `vars/ltm/virtual_servers/*.yml`
-- `gtm_wide_ips[*].pools[*].name` points at `vars/gtm/pools/*.yml`
+- `gtm_application_intents[*].pools[*].pool_ref` points at `vars/gtm/pools/*.yml` when `pool_mode: reference`
 - monitor aliases expand through sibling `settings.yml` files in the GTM trees
 
 When a GTM pool member omits `address` and `port`, the playbook can resolve them from the referenced repo-known LTM virtual server.
@@ -87,13 +88,13 @@ When a GTM pool member omits `address` and `port`, the playbook can resolve them
 
 Use canonical datacenters, servers, and pools when they are shared or need independent lifecycle ownership.
 
-### Wide IP intent layer
+### Application intent layer
 
 Use `vars/gtm/intents/applications/` when one application-oriented file should compile into a Wide IP and, when owned inline, the related GTM pools, servers, or datacenters.
 
 See:
 
-- [intents/gtm-wide-ip-intents.md](intents/gtm-wide-ip-intents.md)
+- [intents/gtm-application-intents.md](intents/gtm-application-intents.md)
 - [example-models.md](example-models.md)
 
 ## Dependency Order
@@ -118,7 +119,7 @@ Delete order is the reverse.
 - duplicate names
 - datacenter, server, and pool references
 - GTM member linkage to repo-known LTM virtual servers where used
-- intent ownership and collision rules for compiled Wide IP convenience models
+- intent ownership and collision rules for compiled application-intent convenience models
 
 ## Drift And Import
 
@@ -136,5 +137,5 @@ See [drift-import.md](drift-import.md) for exact supported types.
 ## Supplemental Docs
 
 - [gtm-advanced.md](gtm-advanced.md)
-- [intents/gtm-wide-ip-intents.md](intents/gtm-wide-ip-intents.md)
+- [intents/gtm-application-intents.md](intents/gtm-application-intents.md)
 - [example-models.md](example-models.md)

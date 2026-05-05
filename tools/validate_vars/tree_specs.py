@@ -346,11 +346,11 @@ def build_tree_specs() -> list[TreeSpec]:
             extra_settings_keys=("gtm_member_defaults", "gtm_monitor_sets"),
         ),
         TreeSpec(
-            name="gtm_wide_ips",
+            name="gtm_application_intents",
             active_dir=VARS_DIR / "gtm" / "intents" / "applications",
             deletion_dir=VARS_DIR / "gtm" / "deletions" / "intents" / "applications",
-            top_key="gtm_wide_ips",
-            settings_key="gtm_wide_ip_defaults",
+            top_key="gtm_application_intents",
+            settings_key="gtm_application_intent_defaults",
             extra_settings_keys=("gtm_pool_defaults", "gtm_member_defaults", "gtm_monitor_sets"),
         ),
         TreeSpec(

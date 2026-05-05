@@ -39,14 +39,14 @@
     delete_var: gtm_pools_delete
     present_var: gtm_pools_present
 
-- name: Classify GTM Wide IP operations
+- name: Classify GTM application intent operations
   ansible.builtin.import_tasks: "{{ playbook_dir }}/shared/prep/classify-operations.yml"
   vars:
-    object_label: GTM Wide IP
-    active_objects: "{{ gtm_wide_ips | default([]) }}"
-    deletion_objects: "{{ gtm_wide_ip_deletions | default([]) }}"
-    delete_var: gtm_wide_ips_delete
-    present_var: gtm_wide_ips_present
+    object_label: GTM application intent
+    active_objects: "{{ gtm_application_intents | default([]) }}"
+    deletion_objects: "{{ gtm_application_intent_deletions | default([]) }}"
+    delete_var: gtm_application_intents_delete
+    present_var: gtm_application_intents_present
 
 - name: Classify GTM topology region operations
   ansible.builtin.import_tasks: "{{ playbook_dir }}/shared/prep/classify-operations.yml"
@@ -72,7 +72,7 @@
     gtm_canonical_datacenters_delete: "{{ gtm_datacenters_delete | default([]) }}"
     gtm_canonical_datacenters_present: "{{ gtm_datacenters_present | default([]) }}"
 
-# Wide-IP intent shortcuts are merged after canonical classification so runtime still
+# Application-intent compiler output is merged after canonical classification so runtime still
 # consumes a single canonical object model for all GTM object families.
-- name: Build GTM Wide IP intent shortcuts
-  ansible.builtin.import_tasks: "{{ playbook_dir }}/gtm/prep/intents/inline/build-wide-ip-intents.yml"
+- name: Build GTM application intent shortcuts
+  ansible.builtin.import_tasks: "{{ playbook_dir }}/gtm/prep/intents/inline/build-application-intents.yml"

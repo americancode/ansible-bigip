@@ -39,4 +39,4 @@ Intent authoring is an abstraction layer. Runtime playbooks still apply and dele
 ## Current Intent Classes
 
 - [LTM Inline Virtual Server Intents](ltm-inline-virtual-server-intents.md)
-- [GTM Wide IP Intents](gtm-wide-ip-intents.md)
+- [GTM Application Intents](gtm-application-intents.md)

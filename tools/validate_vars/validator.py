@@ -18,7 +18,7 @@ from .tree_specs import build_tree_specs
 ensure_repo_root_on_path()
 
 from filter_plugins.bigip_var_filters import (
-    compile_gtm_wide_ip_intent,
+    compile_gtm_application_intent,
     compile_ltm_virtual_server_intent,
     load_settings_hierarchy,
     normalize_gtm_pool,

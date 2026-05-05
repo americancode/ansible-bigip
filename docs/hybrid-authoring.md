@@ -49,7 +49,7 @@ Cross-file references work by name:
 
 - `ltm_virtual_servers[*].pool: "pool_inventory_east_8443"` points at an object in `vars/ltm/pools/`
 - `ltm_pools[*].members[*].name: "inventory-east-1"` points at a node in `vars/ltm/nodes/`
-- `gtm_wide_ips[*].pools[*].name: "pool_inventory_global"` points at `vars/gtm/pools/`
+- `gtm_application_intents[*].pools[*].pool_ref: "pool_inventory_global"` points at `vars/gtm/pools/`
 - `gtm_pools[*].members[*].virtual_server: "vs_inventory_east_443"` points at `vars/ltm/virtual_servers/`
 
 Monitor aliases (e.g., `standard_https`, `platform_https`) expand through sibling `settings.yml` files. Out-of-the-box BIG-IP references use fully-qualified names such as `/Common/https`.

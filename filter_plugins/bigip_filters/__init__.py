@@ -1,4 +1,4 @@
-from .intent_gtm import compile_gtm_wide_ip_intent
+from .intent_gtm import compile_gtm_application_intent
 from .intent_ltm import compile_ltm_rke2_server_intent, compile_ltm_virtual_server_intent
 from .prep_ops import classify_operations
 from .settings import aggregate_settings_fragments, discover_yaml_fragments, load_settings_hierarchy
@@ -13,7 +13,7 @@ __all__ = [
     "build_management_route_tmsh_command",
     "build_nat_tmsh_command",
     "classify_operations",
-    "compile_gtm_wide_ip_intent",
+    "compile_gtm_application_intent",
     "compile_ltm_rke2_server_intent",
     "compile_ltm_virtual_server_intent",
     "discover_yaml_fragments",

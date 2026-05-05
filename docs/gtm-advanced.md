@@ -150,7 +150,7 @@ gtm_pools:
 
 The `server` field references a GTM server in `vars/gtm/servers/`. The `virtual_server` field references a repo-known LTM virtual server in `vars/ltm/virtual_servers/`.
 
-When the pool is authored inline under a Wide IP intent, member ownership is explicit:
+When the pool is authored inline under a GTM application intent, member ownership is explicit:
 
 - `server_mode: reference` reuses a canonical GTM server object
 - `server_mode: inline` emits a canonical GTM server from the intent
@@ -215,7 +215,7 @@ gtm_servers:
     address: "10.201.0.1"
 ```
 
-The same canonical server object can be emitted from a GTM Wide IP intent when an inline member uses:
+The same canonical server object can be emitted from a GTM application intent when an inline member uses:
 
 ```yaml
 server_mode: "inline"

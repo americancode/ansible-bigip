@@ -81,7 +81,7 @@ The system var tree includes both basic device settings and management-plane adm
 Objects can be embedded directly in parent definitions or promoted to first-class trees. See [hybrid-authoring.md](hybrid-authoring.md) for the current model and [intents/how-to-build-intents.md](intents/how-to-build-intents.md) for the canonical intent/compiler implementation path.
 
 The dedicated LTM inline intent tree is under `vars/ltm/intents/inline/` for app and cluster-oriented virtual server intent authoring. Intent directories should be category-first under `vars/<domain>/intents/<category>/...`, and `settings.yml` can exist at the intent root, category level, or leaf service directory. These trees are authoring abstractions only: `prep.yml` compiles them into canonical runtime objects before tasks run.
-GTM Wide IP intent authoring follows the same pattern under `vars/gtm/intents/applications/` (with deletions under `vars/gtm/deletions/intents/applications/`).
+GTM application-intent authoring follows the same pattern under `vars/gtm/intents/applications/` (with deletions under `vars/gtm/deletions/intents/applications/`).
 
 ## Deletions
 

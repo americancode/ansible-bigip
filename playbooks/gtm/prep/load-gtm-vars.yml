@@ -1,8 +1,8 @@
 # GTM variable-load tasks.
 # Runtime effect: load canonical GTM fragments and deletions into prep working sets.
 
-# Wide-IP and pool runtime collections are intentionally loaded with shared settings layering
-# before runtime classification so canonical defaults and intent shortcuts are normalized first.
+# Application-intent and pool runtime collections are intentionally loaded with shared settings
+# layering before runtime classification so canonical defaults and compiler inputs are normalized first.
 - name: Load GTM datacenter fragments into gtm_datacenters/gtm_datacenter_deletions
   ansible.builtin.import_tasks: "{{ playbook_dir }}/shared/prep/load-fragment-tree.yml"
   vars:
@@ -118,56 +118,56 @@
         | load_settings_hierarchy(repo_root ~ '/vars/gtm/deletions/pools')
       }}
 
-- name: Discover GTM Wide IP fragments
+- name: Discover GTM application intent fragments
   ansible.builtin.set_fact:
-    gtm_wide_ip_files: "{{ (repo_root ~ '/vars/gtm/intents/applications') | discover_yaml_fragments }}"
-    gtm_wide_ip_deletion_files: "{{ (repo_root ~ '/vars/gtm/deletions/intents/applications') | discover_yaml_fragments }}"
+    gtm_application_intent_files: "{{ (repo_root ~ '/vars/gtm/intents/applications') | discover_yaml_fragments }}"
+    gtm_application_intent_deletion_files: "{{ (repo_root ~ '/vars/gtm/deletions/intents/applications') | discover_yaml_fragments }}"
 
-- name: Load GTM Wide IP fragments
+- name: Load GTM application intent fragments
   ansible.builtin.include_vars:
     file: "{{ item }}"
-    name: gtm_wide_ip_fragment
-  loop: "{{ gtm_wide_ip_files }}"
-  register: gtm_wide_ip_include_results
+    name: gtm_application_intent_fragment
+  loop: "{{ gtm_application_intent_files }}"
+  register: gtm_application_intent_include_results
 
-- name: Load GTM Wide IP deletion fragments
+- name: Load GTM application intent deletion fragments
   ansible.builtin.include_vars:
     file: "{{ item }}"
-    name: gtm_wide_ip_deletion_fragment
-  loop: "{{ gtm_wide_ip_deletion_files }}"
-  register: gtm_wide_ip_deletion_include_results
+    name: gtm_application_intent_deletion_fragment
+  loop: "{{ gtm_application_intent_deletion_files }}"
+  register: gtm_application_intent_deletion_include_results
 
-- name: Aggregate GTM Wide IPs with layered directory settings
+- name: Aggregate GTM application intents with layered directory settings
   ansible.builtin.set_fact:
-    gtm_wide_ips: >-
+    gtm_application_intents: >-
       {{
-        gtm_wide_ips | default([]) + [
+        gtm_application_intents | default([]) + [
           (
-            gtm_wide_ip_settings_payload.gtm_wide_ip_defaults
+            gtm_application_intent_settings_payload.gtm_application_intent_defaults
             | default({})
             | combine(item.1, recursive=True)
             | combine({'__source_file': item.0.item}, recursive=True)
           )
         ]
       }}
-  loop: "{{ query('subelements', gtm_wide_ip_include_results.results, 'ansible_facts.gtm_wide_ip_fragment.gtm_wide_ips', {'skip_missing': True}) }}"
+  loop: "{{ query('subelements', gtm_application_intent_include_results.results, 'ansible_facts.gtm_application_intent_fragment.gtm_application_intents', {'skip_missing': True}) }}"
   vars:
-    gtm_wide_ip_settings_payload: >-
+    gtm_application_intent_settings_payload: >-
       {{
         item.0.item
         | load_settings_hierarchy(repo_root ~ '/vars/gtm/intents')
       }}
 
-- name: Aggregate GTM Wide IP deletions with layered directory settings
+- name: Aggregate GTM application intent deletions with layered directory settings
   # Deletion intents are transformed with the same settings hierarchy to keep
   # delete ordering and source-file traceability aligned with creates.
   ansible.builtin.set_fact:
-    gtm_wide_ip_deletions: >-
+    gtm_application_intent_deletions: >-
       {{
-        gtm_wide_ip_deletions | default([]) + [
+        gtm_application_intent_deletions | default([]) + [
           (
             (
-              gtm_wide_ip_deletion_settings_payload.gtm_wide_ip_defaults
+              gtm_application_intent_deletion_settings_payload.gtm_application_intent_defaults
               | default({})
               | combine(item.1, recursive=True)
               | combine({'state': 'absent'}, recursive=True)
@@ -176,9 +176,9 @@
           )
         ]
       }}
-  loop: "{{ query('subelements', gtm_wide_ip_deletion_include_results.results, 'ansible_facts.gtm_wide_ip_deletion_fragment.gtm_wide_ips', {'skip_missing': True}) }}"
+  loop: "{{ query('subelements', gtm_application_intent_deletion_include_results.results, 'ansible_facts.gtm_application_intent_deletion_fragment.gtm_application_intents', {'skip_missing': True}) }}"
   vars:
-    gtm_wide_ip_deletion_settings_payload: >-
+    gtm_application_intent_deletion_settings_payload: >-
       {{
         item.0.item
         | load_settings_hierarchy(repo_root ~ '/vars/gtm/deletions/intents')
