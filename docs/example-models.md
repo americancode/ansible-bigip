@@ -9,33 +9,33 @@ These examples reflect the current authoring surface: concise shortcuts for smal
 Use the app-local inline model when one file should explain the whole service.
 
 - Example files:
-  - `vars/ltm/virtual_servers/vm-apps/concise-inline-demo.yml`
+  - `vars/ltm/intents/inline/k8s-applications/concise-inline-demo.yml`
 - Pattern: an LTM virtual server embeds its pool and members directly under `pool`
+- Ownership: `pool_mode: inline` emits a canonical pool; `pool_mode: reference` uses `pool_ref` and emits no pool
 - Compiler behavior: `ltm/prep.yml` compiles the embedded pool into canonical LTM pool objects and rewrites the virtual server to reference that pool by name before runtime apply/delete
 - Monitor linkage: monitor aliases such as `traefik_https` are expanded from the sibling `settings.yml` in the same directory
-- Built-in health check example: `/Common/https` in `vars/ltm/virtual_servers/vm-apps/concise-inline-demo.yml`
+- Built-in health check example: `/Common/https` in `vars/ltm/intents/inline/k8s-applications/concise-inline-demo.yml`
 
 ## Dedicated LTM Intent Model
 
-Use a dedicated intent tree when a known platform pattern should emit several related BIG-IP objects but still be easy to author as one unit.
+Use a dedicated intent tree when a known platform pattern should emit canonical BIG-IP objects while staying concise to author.
 
 - Example files:
-  - `vars/ltm/intents/clusters/rke2-east/platform-cluster.yml`
-  - `vars/ltm/intents/clusters/rke2-west/platform-cluster.yml`
-- Shared category defaults: `vars/ltm/intents/clusters/settings.yml`
-- Pattern: one `ltm_rke2_server_intents[*]` object compiles into canonical virtual servers plus any inline-owned canonical pools
+  - `vars/ltm/intents/inline/k8s-clusters/rke2-east.yml`
+  - `vars/ltm/intents/inline/k8s-clusters/rke2-west.yml`
+- Shared category defaults: `vars/ltm/intents/inline/settings.yml`
+- Pattern: one `ltm_inline_virtual_server_intents[*]` object compiles into one canonical virtual server and, when inline-owned, one canonical pool
 - Compiler behavior: `ltm/prep.yml` compiles the intent into canonical `ltm_virtual_servers` and `ltm_pools` before runtime apply/delete
-- Category behavior: these files live under `intents/clusters/` because they represent an opinionated cluster bundle, not a generic app-local shortcut
-- Delete behavior: entries under `vars/ltm/deletions/intents/clusters/...` still compile into absent canonical pools and virtual servers
+- Delete behavior: entries under `vars/ltm/deletions/intents/inline/...` still compile into absent canonical pools and virtual servers
 - Ownership behavior:
-  - `services[*].pool_mode: inline` means the intent owns and emits the canonical pool from `services[*].pool`
-  - `services[*].pool_mode: reference` means the service points at an existing canonical pool via `services[*].pool_ref`
+  - `pool_mode: inline` means the intent owns and emits the canonical pool from `pool`
+  - `pool_mode: reference` means the intent points at an existing canonical pool via `pool_ref`
   - validation fails if an inline-emitted pool or virtual server collides with canonical `ltm_pools` or `ltm_virtual_servers`
 - Linkage behavior:
-  - each service under `services[*]` directly declares virtual-server fields (`name`, `vip`, `port`, etc.) and nests one `pool` object
-  - `services[*].name` is the canonical virtual server object name GTM and other consumers reference
+  - each intent object directly declares virtual-server fields (`name`, `destination`, `destination_port`, etc.)
+  - `name` is the canonical virtual server object name GTM and other consumers reference
   - `pool.members[*].port` is explicit per member, so service back-end port intent is directly declared
-  - monitor aliases in `pool.monitors` expand through `vars/ltm/intents/clusters/settings.yml`
+  - monitor aliases in `pool.monitors` expand through `vars/ltm/intents/inline/settings.yml`
 
 ## Verbose LTM Model
 

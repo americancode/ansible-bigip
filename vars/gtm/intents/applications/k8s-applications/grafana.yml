@@ -2,8 +2,8 @@
 # GTM intent for the Grafana hostname.
 # This file is part of the `k8s-applications` GTM intent category and is compiled by `playbooks/gtm/prep.yml`.
 # It references canonical GTM servers in `vars/gtm/servers/regional-bigips.yml` and repo-known LTM virtual servers in:
-# - `vars/ltm/intents/clusters/rke2-east/platform-cluster.yml`
-# - `vars/ltm/intents/clusters/rke2-west/platform-cluster.yml`
+# - `vars/ltm/intents/inline/k8s-clusters/rke2-east.yml`
+# - `vars/ltm/intents/inline/k8s-clusters/rke2-west.yml`
 # Supported fields:
 # - Wide IP: `name`, `record_type`, `pool_lb_method`, `pools`
 # - Inline pool: `name`, `preferred_lb_method`, `monitors`/`default_monitors`, `members`

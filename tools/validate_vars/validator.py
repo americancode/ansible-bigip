@@ -17,7 +17,6 @@ ensure_repo_root_on_path()
 
 from filter_plugins.bigip_var_filters import (
     compile_gtm_wide_ip_intent,
-    compile_ltm_rke2_server_intent,
     compile_ltm_virtual_server_intent,
     load_settings_hierarchy,
     normalize_gtm_pool,
@@ -331,14 +330,13 @@ class Validator:
                 deletion_dir=VARS_DIR / "ltm" / "deletions" / "virtual_servers",
                 top_key="ltm_virtual_servers",
                 settings_key="ltm_virtual_server_defaults",
-                extra_settings_keys=("ltm_pool_defaults", "ltm_member_defaults", "ltm_monitor_sets"),
             ),
             TreeSpec(
-                name="ltm_rke2_server_intents",
-                active_dir=VARS_DIR / "ltm" / "intents",
-                deletion_dir=VARS_DIR / "ltm" / "deletions" / "intents",
-                top_key="ltm_rke2_server_intents",
-                settings_key="ltm_rke2_server_intent_defaults",
+                name="ltm_inline_virtual_server_intents",
+                active_dir=VARS_DIR / "ltm" / "intents" / "inline",
+                deletion_dir=VARS_DIR / "ltm" / "deletions" / "intents" / "inline",
+                top_key="ltm_inline_virtual_server_intents",
+                settings_key="ltm_virtual_server_defaults",
                 extra_settings_keys=("ltm_pool_defaults", "ltm_member_defaults", "ltm_monitor_sets"),
             ),
             TreeSpec(
@@ -604,8 +602,8 @@ class Validator:
                 self.error(path, f"`{spec.top_key}` must be a list")
                 continue
 
-            if spec.name == "ltm_rke2_server_intents":
-                hierarchy_root = spec.deletion_dir if from_deletions else spec.active_dir
+            if spec.name in {"ltm_inline_virtual_server_intents"}:
+                hierarchy_root = (VARS_DIR / "ltm" / "deletions" / "intents") if from_deletions else (VARS_DIR / "ltm" / "intents")
                 hierarchy_payload = self.load_settings_hierarchy_payload(path, hierarchy_root)
                 defaults = hierarchy_payload.get(spec.settings_key, {}) if isinstance(hierarchy_payload.get(spec.settings_key, {}), dict) else {}
             else:
@@ -860,28 +858,29 @@ class Validator:
                 "destination": destination,
                 "destination_port": destination_port,
             }
-        for obj in self.objects.get("ltm_rke2_server_intents", []):
+        for obj in self.objects.get("ltm_inline_virtual_server_intents", []):
             if obj.effective_state == "absent":
                 continue
             settings_payload = self.load_settings_hierarchy_payload(obj.source_file, VARS_DIR / "ltm" / "intents")
-            compiled_service = compile_ltm_rke2_server_intent(
+            compiled_service = compile_ltm_virtual_server_intent(
                 obj.data,
-                settings_payload.get("ltm_rke2_server_intent_defaults", {}),
                 settings_payload.get("ltm_pool_defaults", {}),
                 settings_payload.get("ltm_member_defaults", {}),
                 settings_payload.get("ltm_monitor_sets", {}),
             )
-            for virtual_server in compiled_service.get("virtual_servers", []) or []:
-                name = virtual_server.get("name")
-                destination = virtual_server.get("destination")
-                destination_port = virtual_server.get("destination_port")
-                partition = str(virtual_server.get("partition", obj.partition))
-                if name in (None, "") or destination in (None, "") or destination_port in (None, ""):
-                    continue
-                lookup[self.fq_name(partition, str(name))] = {
-                    "destination": destination,
-                    "destination_port": destination_port,
-                }
+            virtual_server = compiled_service.get("virtual_server", {})
+            if not isinstance(virtual_server, dict):
+                continue
+            name = virtual_server.get("name")
+            destination = virtual_server.get("destination")
+            destination_port = virtual_server.get("destination_port")
+            partition = str(virtual_server.get("partition", obj.partition))
+            if name in (None, "") or destination in (None, "") or destination_port in (None, ""):
+                continue
+            lookup[self.fq_name(partition, str(name))] = {
+                "destination": destination,
+                "destination_port": destination_port,
+            }
         return lookup
 
     def validate_monitor_reference(
@@ -1260,4 +1259,3 @@ class Validator:
         except ValueError:
             return False
         return True
-

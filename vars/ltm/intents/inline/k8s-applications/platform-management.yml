@@ -1,7 +1,10 @@
 ---
-# Example LTM virtual server with VLAN filtering, metadata, and log profiles.
-ltm_virtual_servers:
+# Purpose: LTM inline virtual-server intent example with VLAN restrictions, metadata, and logging.
+# Cross-file linkages: Compiles into canonical `ltm_virtual_servers` and `ltm_pools`; references VLANs from `vars/network/vlans/...`.
+# Supported fields: `name`, `destination`, `destination_port`, optional `vlans`/`vlans_enabled`/`metadata`/`log_profiles`, plus embedded `pool` with `name`, `monitors`, `members`.
+ltm_inline_virtual_server_intents:
   - name: "vs_platform_mgmt_443"
+    pool_mode: "inline"
     description: "Platform management VIP with VLAN restrictions and logging"
     destination: "10.201.0.100"
     destination_port: 443

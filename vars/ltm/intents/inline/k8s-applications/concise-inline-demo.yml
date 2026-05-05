@@ -1,0 +1,22 @@
+---
+# Purpose: LTM inline virtual-server intent example in the dedicated intent tree.
+# Cross-file linkages: Compiles into canonical `ltm_virtual_servers` and `ltm_pools` consumed by `playbooks/ltm/tasks/*.yml`.
+# Supported fields: `name`, `partition`, `destination`, `destination_port`, optional VS fields (for example `profiles`, `snat`), and required embedded `pool` mapping with `name`, `monitors`, `members`.
+ltm_inline_virtual_server_intents:
+  - name: "vs_status_demo_443"
+    pool_mode: "inline"
+    description: "Demo inline virtual server using an embedded pool and built-in HTTPS monitor"
+    destination: "10.201.0.90"
+    destination_port: 443
+    profiles:
+      - "tcp"
+    snat: "Automap"
+    pool:
+      name: "pool_status_demo_8443"
+      monitors:
+        - "/Common/https"
+      members:
+        - host: "10.201.42.11"
+          port: 8443
+        - host: "10.201.42.12"
+          port: 8443

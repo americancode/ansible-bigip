@@ -1,0 +1,65 @@
+# LTM inline virtual-server intent loader.
+# Discovers inline intent fragments and aligned deletion fragments, then aggregates with layered settings.
+- name: Discover LTM inline virtual-server intent fragments
+  ansible.builtin.set_fact:
+    ltm_inline_virtual_server_intent_files: "{{ (repo_root ~ '/vars/ltm/intents/inline') | discover_yaml_fragments }}"
+    ltm_inline_virtual_server_intent_deletion_files: "{{ (repo_root ~ '/vars/ltm/deletions/intents/inline') | discover_yaml_fragments }}"
+
+- name: Load LTM inline virtual-server intent fragments
+  ansible.builtin.include_vars:
+    file: "{{ item }}"
+    name: ltm_inline_virtual_server_intent_fragment
+  loop: "{{ ltm_inline_virtual_server_intent_files }}"
+  register: ltm_inline_virtual_server_intent_include_results
+
+- name: Load LTM inline virtual-server intent deletion fragments
+  ansible.builtin.include_vars:
+    file: "{{ item }}"
+    name: ltm_inline_virtual_server_intent_deletion_fragment
+  loop: "{{ ltm_inline_virtual_server_intent_deletion_files }}"
+  register: ltm_inline_virtual_server_intent_deletion_include_results
+
+- name: Aggregate LTM inline virtual-server intents with layered directory settings
+  ansible.builtin.set_fact:
+    ltm_inline_virtual_server_intents: >-
+      {{
+        ltm_inline_virtual_server_intents | default([]) + [
+          (
+            ltm_inline_virtual_server_intent_settings_payload.ltm_virtual_server_defaults
+            | default({})
+            | combine(item.1, recursive=True)
+            | combine({'__source_file': item.0.item}, recursive=True)
+          )
+        ]
+      }}
+  loop: "{{ query('subelements', ltm_inline_virtual_server_intent_include_results.results, 'ansible_facts.ltm_inline_virtual_server_intent_fragment.ltm_inline_virtual_server_intents', {'skip_missing': True}) }}"
+  vars:
+    ltm_inline_virtual_server_intent_settings_payload: >-
+      {{
+        item.0.item
+        | load_settings_hierarchy(repo_root ~ '/vars/ltm/intents')
+      }}
+
+- name: Aggregate LTM inline virtual-server intent deletions with layered directory settings
+  ansible.builtin.set_fact:
+    ltm_inline_virtual_server_intent_deletions: >-
+      {{
+        ltm_inline_virtual_server_intent_deletions | default([]) + [
+          (
+            (
+              ltm_inline_virtual_server_intent_deletion_settings_payload.ltm_virtual_server_defaults
+              | default({})
+              | combine(item.1, recursive=True)
+              | combine({'state': 'absent'}, recursive=True)
+            )
+            | combine({'__source_file': item.0.item}, recursive=True)
+          )
+        ]
+      }}
+  loop: "{{ query('subelements', ltm_inline_virtual_server_intent_deletion_include_results.results, 'ansible_facts.ltm_inline_virtual_server_intent_deletion_fragment.ltm_inline_virtual_server_intents', {'skip_missing': True}) }}"
+  vars:
+    ltm_inline_virtual_server_intent_deletion_settings_payload: >-
+      {{
+        item.0.item
+        | load_settings_hierarchy(repo_root ~ '/vars/ltm/deletions/intents')
+      }}

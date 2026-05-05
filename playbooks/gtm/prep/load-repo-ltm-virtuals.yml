@@ -60,5 +60,5 @@
         | load_settings_hierarchy(repo_root ~ '/vars/ltm/deletions/virtual_servers')
       }}
 
-- name: Load repo-known dedicated LTM intent fragments
-  ansible.builtin.import_tasks: "{{ playbook_dir }}/gtm/prep/intents/clusters/load-repo-ltm-rke2-server-intents.yml"
+- name: Load repo-known dedicated LTM inline intent fragments
+  ansible.builtin.import_tasks: "{{ playbook_dir }}/gtm/prep/intents/inline/load-repo-ltm-inline-virtual-server-intents.yml"

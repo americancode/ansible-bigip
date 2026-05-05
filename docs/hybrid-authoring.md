@@ -2,7 +2,7 @@
 
 The current preferred authoring model is hybrid: embed app-local objects when a single file should describe one service clearly, and promote shared or reused objects into first-class trees when multiple apps depend on them.
 
-This document describes the current runtime-facing authoring model. The roadmap direction is to evolve the embedded shortcut paths into a dedicated intent/compiler layer documented in [intent-authoring.md](intent-authoring.md), so runtime playbooks do not keep accumulating shortcut-specific logic.
+This document describes the current runtime-facing authoring model. The roadmap direction is to evolve the embedded shortcut paths into a dedicated intent/compiler layer documented in [intents/how-to-build-intents.md](intents/how-to-build-intents.md), so runtime playbooks do not keep accumulating shortcut-specific logic.
 
 ## Embedded Model (Concise)
 
@@ -15,7 +15,7 @@ This model is currently supported, but it should be treated as transitional for 
 
 Example walkthroughs live in [example-models.md](example-models.md):
 
-- Concise LTM: `vars/ltm/virtual_servers/vm-apps/concise-inline-demo.yml`
+- Concise LTM: `vars/ltm/intents/inline/k8s-applications/concise-inline-demo.yml`
 - Concise GTM: application-specific files under `vars/gtm/intents/applications/k8s-applications/`
 
 These concise paths now compile into canonical pools and pool references during `prep.yml`, so runtime `apply.yml` and `delete.yml` operate on normalized first-class objects rather than mixed inline shortcut shapes.
@@ -28,7 +28,7 @@ Ownership is now explicit in the intent-like concise models:
 
 The repo does not dedupe compiled objects against canonical trees at runtime. If an inline-owned object name collides with a canonical object tree, validation fails before playbook execution.
 
-For known platform patterns that need more structure than a single inline pool, prefer a dedicated intent tree instead of stretching the embedded model further. The first implemented example is the RKE2 cluster intent under `vars/ltm/intents/clusters/`, with shared category defaults in `vars/ltm/intents/clusters/settings.yml`.
+For known platform patterns that need more structure than a single inline pool, prefer a dedicated intent tree instead of stretching the embedded model further. The current pattern is LTM inline intents under `vars/ltm/intents/inline/`, with shared defaults in `vars/ltm/intents/inline/settings.yml`.
 
 ## First-Class Model (Verbose)
 
@@ -54,4 +54,4 @@ Cross-file references work by name:
 
 Monitor aliases (e.g., `standard_https`, `platform_https`) expand through sibling `settings.yml` files. Out-of-the-box BIG-IP references use fully-qualified names such as `/Common/https`.
 
-As the repo grows, do not assume every new convenience case should be added here as more embedded runtime behavior. New "simple mode" patterns should prefer the intent/compiler design in [intent-authoring.md](intent-authoring.md).
+As the repo grows, do not assume every new convenience case should be added here as more embedded runtime behavior. New "simple mode" patterns should prefer the intent/compiler design in [intents/how-to-build-intents.md](intents/how-to-build-intents.md).

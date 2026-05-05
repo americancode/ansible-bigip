@@ -21,12 +21,12 @@
       {{
         (ltm_compiled_pools_delete | default([])) + (ltm_compiled_service.pools | default([]))
       }}
-  loop: "{{ ltm_virtual_servers_delete | default([]) }}"
+  loop: "{{ ltm_inline_virtual_server_intents_delete | default([]) }}"
   vars:
     ltm_virtual_server_settings_payload: >-
       {{
         item.__source_file
-        | load_settings_hierarchy(repo_root ~ '/vars/ltm/virtual_servers')
+        | load_settings_hierarchy(repo_root ~ '/vars/ltm/intents')
       }}
     ltm_virtual_server_pool_defaults: "{{ ltm_virtual_server_settings_payload.ltm_pool_defaults | default({}) }}"
     ltm_virtual_server_member_defaults: "{{ ltm_virtual_server_settings_payload.ltm_member_defaults | default({}) }}"
@@ -51,12 +51,12 @@
       {{
         (ltm_compiled_pools_present | default([])) + (ltm_compiled_service.pools | default([]))
       }}
-  loop: "{{ ltm_virtual_servers_present | default([]) }}"
+  loop: "{{ ltm_inline_virtual_server_intents_present | default([]) }}"
   vars:
     ltm_virtual_server_settings_payload: >-
       {{
         item.__source_file
-        | load_settings_hierarchy(repo_root ~ '/vars/ltm/virtual_servers')
+        | load_settings_hierarchy(repo_root ~ '/vars/ltm/intents')
       }}
     ltm_virtual_server_pool_defaults: "{{ ltm_virtual_server_settings_payload.ltm_pool_defaults | default({}) }}"
     ltm_virtual_server_member_defaults: "{{ ltm_virtual_server_settings_payload.ltm_member_defaults | default({}) }}"
@@ -71,10 +71,10 @@
           )
       }}
 
-- name: Replace raw virtual-server shortcut objects with built canonical virtual servers
+- name: Merge built virtual-server intents into canonical virtual-server operation sets
   ansible.builtin.set_fact:
-    ltm_virtual_servers_delete: "{{ ltm_compiled_virtual_servers_delete | default([]) }}"
-    ltm_virtual_servers_present: "{{ ltm_compiled_virtual_servers_present | default([]) }}"
+    ltm_virtual_servers_delete: "{{ (ltm_virtual_servers_delete | default([])) + (ltm_compiled_virtual_servers_delete | default([])) }}"
+    ltm_virtual_servers_present: "{{ (ltm_virtual_servers_present | default([])) + (ltm_compiled_virtual_servers_present | default([])) }}"
 
 - name: Build canonical LTM pool operations
   ansible.builtin.set_fact:

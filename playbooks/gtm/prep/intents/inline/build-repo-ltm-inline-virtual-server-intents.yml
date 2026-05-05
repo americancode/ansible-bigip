@@ -1,0 +1,32 @@
+# GTM intent build task.
+# Runtime effect: build canonical GTM consumption maps from repo-known LTM inline virtual-server intent output.
+- name: Initialize built repo-known LTM inline virtual servers
+  ansible.builtin.set_fact:
+    repo_ltm_compiled_inline_virtual_servers_present: []
+
+- name: Build repo-known LTM inline virtual-server intents
+  ansible.builtin.set_fact:
+    repo_ltm_compiled_inline_virtual_servers_present: >-
+      {{
+        (repo_ltm_compiled_inline_virtual_servers_present | default([])) + [repo_ltm_compiled_service.virtual_server]
+      }}
+  loop: "{{ repo_ltm_inline_virtual_server_intents_present | default([]) }}"
+  vars:
+    repo_ltm_inline_intent_settings_payload: >-
+      {{
+        item.__source_file
+        | load_settings_hierarchy(repo_root ~ '/vars/ltm/intents')
+      }}
+    repo_ltm_compiled_service: >-
+      {{
+        item
+        | compile_ltm_virtual_server_intent(
+            repo_ltm_inline_intent_settings_payload.ltm_pool_defaults | default({}),
+            repo_ltm_inline_intent_settings_payload.ltm_member_defaults | default({}),
+            repo_ltm_inline_intent_settings_payload.ltm_monitor_sets | default({})
+          )
+      }}
+
+- name: Extend repo-known LTM virtual servers with built inline intent output
+  ansible.builtin.set_fact:
+    repo_ltm_virtual_servers_present: "{{ (repo_ltm_virtual_servers_present | default([])) + (repo_ltm_compiled_inline_virtual_servers_present | default([])) }}"

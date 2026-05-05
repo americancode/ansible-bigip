@@ -8,7 +8,7 @@
 # - `ltm_irules_present` / `ltm_irules_delete`
 # - `ltm_data_groups_present` / `ltm_data_groups_delete`
 # - `ltm_policies_present` / `ltm_policies_delete`
-# - `ltm_rke2_server_intents_present` / `ltm_rke2_server_intents_delete`
+# - `ltm_inline_virtual_server_intents_present` / `ltm_inline_virtual_server_intents_delete`
 # - `ltm_canonical_pools_present` / `ltm_canonical_pools_delete`
 # The canonical pool sets include first-class pools plus built output from virtual-server shortcuts and dedicated LTM intents such as RKE2 server clusters.
 # Intent build snippets live under `prep/intents/<category>/...`; current categories include

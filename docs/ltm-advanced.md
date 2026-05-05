@@ -208,7 +208,7 @@ ltm_virtual_servers:
 | `name` | string | required | Virtual server name |
 | `destination` | string | required | Virtual address |
 | `destination_port` | int | required | Virtual port |
-| `pool` | string or mapping | required | Pool name or embedded pool |
+| `pool` | string | required | Canonical pool name/reference. Use `vars/ltm/intents/inline/...` for embedded pool intent authoring. |
 | `snat` | string | `Automap` | SNAT configuration |
 | `profiles` | list | `["tcp"]` | Profile list (mix built-in and custom) |
 | `default_persistence_profile` | string | - | Default persistence profile name |

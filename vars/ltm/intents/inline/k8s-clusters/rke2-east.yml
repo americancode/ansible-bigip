@@ -1,0 +1,72 @@
+---
+# Purpose: East RKE2 cluster services as LTM inline virtual-server intents.
+# Cross-file linkages: Referenced by GTM application intents in `vars/gtm/intents/applications/k8s-applications/*.yml`.
+# Supported fields: `name`, `destination`, `destination_port`, `pool_mode`, `pool`/`pool_ref`, and optional canonical virtual server fields.
+ltm_inline_virtual_server_intents:
+  - name: "vs_rke2_east_kubeapi_6443"
+    destination: "10.201.0.20"
+    destination_port: 6443
+    description: "East region RKE2 Kubernetes API VIP"
+    pool_mode: "inline"
+    pool:
+      name: "pool_rke2_east_kubeapi_6443"
+      monitors:
+        - "kubeapi_tcp"
+      members:
+        - host: "10.201.10.11"
+          port: 6443
+        - host: "10.201.10.12"
+          port: 6443
+        - host: "10.201.10.13"
+          port: 6443
+
+  - name: "vs_rke2_east_registration_9345"
+    destination: "10.201.0.20"
+    destination_port: 9345
+    description: "East region RKE2 supervisor registration VIP"
+    pool_mode: "inline"
+    pool:
+      name: "pool_rke2_east_registration_9345"
+      monitors:
+        - "registration_tcp"
+      members:
+        - host: "10.201.10.11"
+          port: 9345
+        - host: "10.201.10.12"
+          port: 9345
+        - host: "10.201.10.13"
+          port: 9345
+
+  - name: "vs_rke2_east_traefik_443"
+    destination: "10.201.0.30"
+    destination_port: 443
+    description: "East region Traefik ingress VIP"
+    pool_mode: "inline"
+    pool:
+      name: "pool_rke2_east_traefik_443"
+      monitors:
+        - "traefik_https"
+      members:
+        - host: "10.201.20.21"
+          port: 30443
+        - host: "10.201.20.22"
+          port: 30443
+        - host: "10.201.20.23"
+          port: 30443
+
+  - name: "vs_rke2_east_rancher_443"
+    destination: "10.201.0.31"
+    destination_port: 443
+    description: "East region Rancher management VIP"
+    pool_mode: "inline"
+    pool:
+      name: "pool_rke2_east_rancher_443"
+      monitors:
+        - "/Common/https"
+      members:
+        - host: "10.201.20.21"
+          port: 30444
+        - host: "10.201.20.22"
+          port: 30444
+        - host: "10.201.20.23"
+          port: 30444

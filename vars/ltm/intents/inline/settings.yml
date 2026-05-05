@@ -1,8 +1,8 @@
 ---
-# Category-level defaults for cluster intents.
-# Files under `vars/ltm/intents/clusters/*/` inherit these values unless a deeper `settings.yml`
-# overrides them.
-ltm_rke2_server_intent_defaults:
+# Purpose: Shared defaults for LTM inline virtual-server intents.
+# Cross-file linkages: Used by `vars/ltm/intents/inline/...` and consumed by `playbooks/ltm/prep/intents/inline/build-virtual-server-intents.yml`.
+# Supported fields: `ltm_virtual_server_defaults`, `ltm_pool_defaults`, `ltm_member_defaults`, `ltm_monitor_sets`.
+ltm_virtual_server_defaults:
   partition: "Common"
   enabled: true
   snat: "Automap"

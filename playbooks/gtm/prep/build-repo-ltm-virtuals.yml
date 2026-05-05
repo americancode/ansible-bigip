@@ -12,17 +12,17 @@
     delete_var: repo_ltm_virtual_servers_delete
     present_var: repo_ltm_virtual_servers_present
 
-- name: Classify repo-known LTM RKE2 server intent operations
+- name: Classify repo-known LTM inline virtual-server intent operations
   ansible.builtin.import_tasks: "{{ playbook_dir }}/shared/prep/classify-operations.yml"
   vars:
-    object_label: repo-known LTM RKE2 server intent
-    active_objects: "{{ repo_ltm_rke2_server_intents | default([]) }}"
+    object_label: repo-known LTM inline virtual-server intent
+    active_objects: "{{ repo_ltm_inline_virtual_server_intents | default([]) }}"
     deletion_objects: []
-    delete_var: repo_ltm_rke2_server_intents_delete
-    present_var: repo_ltm_rke2_server_intents_present
+    delete_var: repo_ltm_inline_virtual_server_intents_delete
+    present_var: repo_ltm_inline_virtual_server_intents_present
 
-- name: Build repo-known LTM RKE2 intent virtual servers
-  ansible.builtin.import_tasks: "{{ playbook_dir }}/gtm/prep/intents/clusters/build-repo-ltm-rke2-server-intents.yml"
+- name: Build repo-known LTM inline intent virtual servers
+  ansible.builtin.import_tasks: "{{ playbook_dir }}/gtm/prep/intents/inline/build-repo-ltm-inline-virtual-server-intents.yml"
 
 - name: Build repo-known LTM virtual server lookup
   ansible.builtin.set_fact:

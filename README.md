@@ -18,7 +18,7 @@ The repo already manages the main BIG-IP runtime domains through Git:
 - day-0 bootstrap for licensing and first management reachability
 - network, system, HA, LTM, GTM, TLS, and security playbooks
 - split var trees with per-directory `settings.yml` and explicit deletion trees
-- dedicated intent/compiler authoring for opinionated patterns such as RKE2 LTM clusters, organized under category-first trees like `vars/ltm/intents/clusters/...` with layered `settings.yml` support
+- dedicated intent/compiler authoring for opinionated patterns such as LTM inline virtual-server intents, organized under category-first trees like `vars/ltm/intents/inline/...` with layered `settings.yml` support
 - Python-backed prep helpers split by concern under `filter_plugins/bigip_filters/`, with `filter_plugins/bigip_var_filters.py` kept as the thin Ansible entrypoint
 - shared prep snippets under `playbooks/shared/prep/` for fragment discovery, settings-aware aggregation, and present/delete classification across the standard domains
 - recursive nested var-tree discovery and hierarchical multi-level `settings.yml` inheritance across canonical playbooks, including specialized `ltm` and `gtm` loaders
@@ -37,8 +37,9 @@ Current lifecycle boundaries:
 | Playbook layout | [docs/playbook-structure.md](docs/playbook-structure.md) |
 | Variables and precedence | [docs/var-layout.md](docs/var-layout.md) |
 | Hybrid authoring | [docs/hybrid-authoring.md](docs/hybrid-authoring.md) |
-| Intent authoring | [docs/intent-authoring.md](docs/intent-authoring.md) |
-| Intent extension guide | [docs/intent-extension-guide.md](docs/intent-extension-guide.md) |
+| Build new intents | [docs/intents/how-to-build-intents.md](docs/intents/how-to-build-intents.md) |
+| Intent class: LTM inline virtual servers | [docs/intents/ltm-inline-virtual-server-intents.md](docs/intents/ltm-inline-virtual-server-intents.md) |
+| Intent class: GTM Wide IPs | [docs/intents/gtm-wide-ip-intents.md](docs/intents/gtm-wide-ip-intents.md) |
 | Deletion workflows | [docs/deletion-workflows.md](docs/deletion-workflows.md) |
 | AWX inventory and targeting | [docs/03-awx-inventory-and-targeting.md](docs/03-awx-inventory-and-targeting.md) |
 | AWX job execution | [docs/04-awx-job-execution.md](docs/04-awx-job-execution.md) |

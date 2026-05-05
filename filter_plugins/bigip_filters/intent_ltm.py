@@ -5,7 +5,7 @@ from .transforms import expand_monitor_list, normalize_ltm_pool, normalize_membe
 
 
 def compile_ltm_virtual_server_intent(virtual_server, pool_defaults=None, member_defaults=None, monitor_sets=None):
-    """Compile an LTM virtual server intent that embeds an inline pool definition.
+    """Compile an LTM inline virtual-server intent into canonical VS/pool objects.
 
     Purpose:
         Allows a virtual server to declare its pool inline (as a dict) rather than
@@ -13,8 +13,10 @@ def compile_ltm_virtual_server_intent(virtual_server, pool_defaults=None, member
         emitted as a separate canonical pool object.
 
     Inputs:
-        virtual_server (dict|None): Virtual server dict, optionally containing a
-            "pool" key that is a pool dict (not just a name string).
+        virtual_server (dict|None): Virtual server intent dict.
+            Ownership is explicit with:
+            - pool_mode: inline + pool mapping
+            - pool_mode: reference + pool_ref string
         pool_defaults (dict|None): Defaults applied to the inline pool.
         member_defaults (dict|None): Defaults applied to the inline pool's members.
         monitor_sets (dict|None): Monitor alias mapping for pool monitor expansion.
@@ -25,8 +27,10 @@ def compile_ltm_virtual_server_intent(virtual_server, pool_defaults=None, member
             - pools: A list containing the normalized inline pool (if any).
 
     Constraints:
-        - If pool is already a string (name reference), it is left unchanged and
-          no pool is emitted.
+        - pool_mode defaults to "inline" for backward compatibility with old
+          inline intent examples that only provided `pool`.
+        - Intent-only keys (`pool_mode`, `pool_ref`) are consumed and removed
+          from emitted virtual server objects.
         - The pool's partition defaults to the virtual server's partition.
         - If the pool's partition differs from the virtual server's, the pool reference
           is fully qualified via fq_name().
@@ -36,9 +40,24 @@ def compile_ltm_virtual_server_intent(virtual_server, pool_defaults=None, member
 
     compiled_virtual_server = dict(virtual_server)
     compiled_pools = []
+    pool_mode = compiled_virtual_server.get("pool_mode", "inline")
+    pool_ref = compiled_virtual_server.get("pool_ref")
     pool = compiled_virtual_server.get("pool")
 
-    if isinstance(pool, dict):
+    compiled_virtual_server.pop("pool_mode", None)
+    compiled_virtual_server.pop("pool_ref", None)
+
+    if pool_mode == "reference":
+        if isinstance(pool_ref, str) and pool_ref:
+            compiled_virtual_server["pool"] = pool_ref
+        elif isinstance(pool, str) and pool:
+            compiled_virtual_server["pool"] = pool
+        return {
+            "virtual_server": compiled_virtual_server,
+            "pools": [],
+        }
+
+    if pool_mode == "inline" and isinstance(pool, dict):
         virtual_partition = compiled_virtual_server.get("partition", "Common")
         normalized_pool = normalize_ltm_pool(pool, pool_defaults, member_defaults, monitor_sets)
         normalized_pool = dict(normalized_pool)

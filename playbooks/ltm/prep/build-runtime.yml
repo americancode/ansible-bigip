@@ -45,14 +45,14 @@
     delete_var: ltm_virtual_servers_delete
     present_var: ltm_virtual_servers_present
 
-- name: Classify LTM RKE2 server intent operations
+- name: Classify LTM inline virtual-server intent operations
   ansible.builtin.import_tasks: "{{ playbook_dir }}/shared/prep/classify-operations.yml"
   vars:
-    object_label: LTM RKE2 server intent
-    active_objects: "{{ ltm_rke2_server_intents | default([]) }}"
-    deletion_objects: "{{ ltm_rke2_server_intent_deletions | default([]) }}"
-    delete_var: ltm_rke2_server_intents_delete
-    present_var: ltm_rke2_server_intents_present
+    object_label: LTM inline virtual-server intent
+    active_objects: "{{ ltm_inline_virtual_server_intents | default([]) }}"
+    deletion_objects: "{{ ltm_inline_virtual_server_intent_deletions | default([]) }}"
+    delete_var: ltm_inline_virtual_server_intents_delete
+    present_var: ltm_inline_virtual_server_intents_present
 
 - name: Classify LTM persistence profile operations
   ansible.builtin.import_tasks: "{{ playbook_dir }}/shared/prep/classify-operations.yml"
@@ -97,10 +97,3 @@
   # This prep step rewrites them into canonical pools and canonical virtual servers
   # before `tasks/delete.yml` / `tasks/apply.yml` see the data.
   ansible.builtin.import_tasks: "{{ playbook_dir }}/ltm/prep/intents/inline/build-virtual-server-intents.yml"
-
-- name: Build dedicated LTM RKE2 server intents
-  # Dedicated cluster intents are handled after the raw intent objects have already been
-  # classified into present/delete buckets above. This import expands each cluster intent
-  # into canonical LTM pools and canonical LTM virtual servers, then merges that output
-  # back into the same runtime collections used by the normal LTM tasks.
-  ansible.builtin.import_tasks: "{{ playbook_dir }}/ltm/prep/intents/clusters/build-rke2-server-intents.yml"

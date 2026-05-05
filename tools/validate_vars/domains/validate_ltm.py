@@ -12,7 +12,7 @@ def validate_ltm(validator) -> None:
         "pools": validator.objects.get("ltm_pools", []),
         "monitors": validator.objects.get("ltm_monitors", []),
         "virtual_servers": validator.objects.get("ltm_virtual_servers", []),
-        "rke2_server_intents": validator.objects.get("ltm_rke2_server_intents", []),
+        "inline_virtual_server_intents": validator.objects.get("ltm_inline_virtual_server_intents", []),
         "tls_client_ssl_profiles": validator.objects.get("tls_client_ssl_profiles", []),
         "tls_server_ssl_profiles": validator.objects.get("tls_server_ssl_profiles", []),
         "network_vlans": validator.objects.get("network_vlans", []),
