@@ -11,6 +11,7 @@ At the end of this setup:
 - AWX can sync this repository as a project
 - AWX inventory hosts represent execution targets, not just peer references
 - each execution target host has a correct `f5_host`
+- each execution target host can optionally set `f5_server_port` for non-default API ports
 - credentials provide authentication only
 - job templates map cleanly to canonical playbooks
 - operators have a repeatable audit-first launch path
@@ -44,7 +45,7 @@ Use a credential type that injects:
 - `F5_PASSWORD`
 - optional `F5_VALIDATE_CERTS`
 
-Do not put the BIG-IP host in the credential. Targeting belongs to the AWX inventory host var `f5_host`.
+Do not put the BIG-IP host or port in the credential. Targeting belongs to AWX inventory host vars (`f5_host`, optional `f5_server_port`).
 
 See [03-awx-inventory-and-targeting.md](03-awx-inventory-and-targeting.md) for the targeting contract.
 
@@ -54,12 +55,20 @@ The inventory host is the execution boundary.
 
 - one inventory host should represent one BIG-IP execution target
 - one execution target should have one `f5_host`
+- set `f5_server_port` only when the host uses a non-default API port
 - for shared configuration in HA, use one designated sync-owner host per pair
 
 ### Minimum host vars
 
 ```yaml
 f5_host: 192.0.2.10
+```
+
+### Optional host port override
+
+```yaml
+f5_host: 192.0.2.10
+f5_server_port: 8443
 ```
 
 ### Useful optional host vars

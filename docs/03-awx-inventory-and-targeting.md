@@ -16,7 +16,9 @@ This repository talks to one BIG-IP management endpoint per inventory host execu
 - the playbooks use the `provider` object in `vars/common.yml`
 - canonical playbooks target AWX inventory hosts with `connection: local`
 - `provider.server` prefers the inventory host var `f5_host`
+- `provider.server_port` prefers the inventory host var `f5_server_port`
 - `F5_HOST` is an environment fallback for local testing or one-off runs
+- `F5_SERVER_PORT` is an environment fallback when `f5_server_port` is not set
 - each selected inventory host resolves its own BIG-IP target through `f5_host`
 - if an AWX job targets more than one inventory host, the playbook runs once per selected host
 
@@ -27,6 +29,7 @@ Treat AWX inventory names as part of the repo contract.
 - `inventory_hostname` is what `target_hosts` matches
 - Ansible `group_names` are what `target_groups` matches
 - `f5_host` is the actual BIG-IP management endpoint
+- `f5_server_port` is the per-host BIG-IP REST API port override (optional)
 
 Use one execution target host per HA domain for routine shared configuration.
 
@@ -42,6 +45,13 @@ Minimum required:
 
 ```yaml
 f5_host: bigip-east.example.com
+```
+
+Optional host-level port override:
+
+```yaml
+f5_host: bigip-east.example.com
+f5_server_port: 8443
 ```
 
 Optional metadata for clarity:
@@ -100,15 +110,22 @@ system_dns:
 This repository reads connection details from `vars/common.yml`:
 
 - `f5_host` must come from AWX inventory host vars for normal AWX operation
+- `f5_server_port` can come from AWX inventory host vars when a host uses a non-default API port
 - `F5_USERNAME`, `F5_PASSWORD` come from AWX credentials or environment
 - optional `F5_VALIDATE_CERTS`
 
 Recommended pattern:
 
 - store username and password in an AWX custom credential type
-- do not store the BIG-IP host in the credential
+- do not store the BIG-IP host or port in the credential
 - set the target BIG-IP in the selected inventory host var `f5_host`
+- set `f5_server_port` on that host only when a non-default port is needed
 - let `vars/common.yml` resolve `provider.server` from that inventory value
+
+Provider resolution order:
+
+1. `provider.server`: `f5_host` -> `F5_HOST` -> hardcoded fallback
+2. `provider.server_port`: `f5_server_port` -> `F5_SERVER_PORT` -> `443`
 
 The sample credential type in `bigip-credential-config.yaml` is auth-only and injects:
 

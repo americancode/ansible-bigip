@@ -25,6 +25,8 @@ Inventory: prod-bigip
 Host: bigip-east-sync-owner
 Host Variables:
   f5_host: 192.0.2.10
+  # optional if API is not on 443
+  # f5_server_port: 8443
 ```
 
 Richer host vars with optional metadata:
@@ -39,12 +41,12 @@ f5_ha_peer_name: bigip-west.example.com
 f5_self_name: bigip-east.example.com
 ```
 
-Only `f5_host` is required. The rest are for operator clarity.
+Only `f5_host` is required. Use `f5_server_port` only when that host uses a non-default BIG-IP API port.
 
 ## Step 2: Set Up AWX Credential
 
 Create a custom credential type using `bigip-credential-config.yaml` and attach a credential instance to your job template. See [03-awx-inventory-and-targeting.md](03-awx-inventory-and-targeting.md) for credential design details.
-The credential is auth-only (username/password plus optional cert validation). Host targeting must come from inventory host var `f5_host`.
+The credential is auth-only (username/password plus optional cert validation). Host targeting must come from inventory host vars (`f5_host`, optional `f5_server_port`).
 
 ## Step 3: Create the HA Template
 

@@ -134,9 +134,10 @@ From `vars/common.yml`:
 
 - `f5_host` is the preferred target source
 - `F5_HOST` is only an environment fallback
+- `f5_server_port` is the preferred per-host API port override
+- `F5_SERVER_PORT` is an environment fallback
 - `F5_USERNAME`
 - `F5_PASSWORD`
-- optional `F5_SERVER_PORT`
 - optional `F5_VALIDATE_CERTS`
 
 ## Minimum Local Inventory
@@ -155,9 +156,16 @@ all:
   hosts:
     bigip-east-sync-owner:
       f5_host: 192.0.2.10
+      # optional if API is not on 443
+      # f5_server_port: 8443
 ```
 
 Only `f5_host` is required for target selection.
+
+Provider resolution order:
+
+1. `server`: `f5_host` -> `F5_HOST` -> hardcoded fallback
+2. `server_port`: `f5_server_port` -> `F5_SERVER_PORT` -> `443`
 
 ## Credential Input from the Terminal
 
