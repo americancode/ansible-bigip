@@ -12,6 +12,7 @@ import yaml
 from .ansible_yaml import AnsibleVarLoader
 from .constants import ROOT, VARS_DIR, ensure_repo_root_on_path
 from .models import LoadedObject, TreeSpec
+from .playbook_checks import find_self_referential_task_vars
 from .tree_specs import build_tree_specs
 
 ensure_repo_root_on_path()
@@ -86,6 +87,7 @@ class Validator:
         self.validate_security()
         self.validate_waf()
         self.validate_apm()
+        self.validate_playbook_task_imports()
 
         if self.errors:
             for error in self.errors:
@@ -236,6 +238,18 @@ class Validator:
 
     def validate_system(self) -> None:
         domain_validate_system(self)
+
+    def validate_playbook_task_imports(self) -> None:
+        """Validate playbook include/import vars for recursion-prone handoffs.
+
+        Purpose:
+            Prevent self-referential `vars:` assignments such as
+            `object_label: "{{ object_label }}"` on imported or included task
+            files. Those patterns can trigger recursive templating during task
+            name rendering.
+        """
+        for error in find_self_referential_task_vars(ROOT / "playbooks"):
+            self.errors.append(error)
 
     def validate_ha(self) -> None:
         domain_validate_ha(self)

@@ -6,22 +6,21 @@
 - name: Filter {{ object_label }} objects for the current inventory host
   ansible.builtin.import_tasks: "{{ playbook_dir }}/shared/prep/filter-targeted-objects.yml"
   vars:
-    object_label: "{{ object_label }}"
     source_objects: "{{ active_objects | default([]) }}"
     matched_var: _prep_targeted_active_objects
     skipped_var: _prep_skipped_active_objects
     summary_var: _prep_active_targeting_summary
-    match_without_selectors: "{{ match_without_selectors | default(true) }}"
+    target_filter_match_without_selectors: "{{ match_without_selectors | default(true) }}"
 
 - name: Filter {{ object_label }} deletion objects for the current inventory host
   ansible.builtin.import_tasks: "{{ playbook_dir }}/shared/prep/filter-targeted-objects.yml"
   vars:
-    object_label: "{{ object_label }} deletion"
+    target_filter_object_label: "{{ object_label }} deletion"
     source_objects: "{{ deletion_objects | default([]) }}"
     matched_var: _prep_targeted_deletion_objects
     skipped_var: _prep_skipped_deletion_objects
     summary_var: _prep_deletion_targeting_summary
-    match_without_selectors: "{{ match_without_selectors | default(true) }}"
+    target_filter_match_without_selectors: "{{ match_without_selectors | default(true) }}"
 
 - name: Classify {{ object_label }} operations
   ansible.builtin.set_fact:
