@@ -20,31 +20,40 @@ def validate_intent_and_virtuals(validator, objects: dict[str, list], state: dic
     compiled_inline_virtual_servers: list[tuple[object, dict]] = []
 
     for obj in inline_virtual_server_intents:
+        # Validate and compile against the effective intent payload, not just the raw
+        # YAML fragment entry. Runtime prep has already layered `settings.yml`
+        # defaults onto these intent objects before compilation, so validation must
+        # do the same or partition/pool ownership checks can diverge.
+        effective_intent = dict(obj.defaults or {})
+        effective_intent.update(obj.data)
         validator.require_fields(obj, ["name"])
-        pool_mode = obj.data.get("pool_mode", "inline")
+        pool_mode = effective_intent.get("pool_mode", "inline")
         if pool_mode not in {"inline", "reference"}:
             validator.error(
                 obj.relpath,
                 f"LTM inline virtual-server intent `{obj.data.get('name')}` must define `pool_mode: inline` or `pool_mode: reference`",
             )
             continue
-        if pool_mode == "reference" and obj.data.get("pool_ref") in (None, "") and obj.data.get("pool") in (None, ""):
+        if pool_mode == "reference" and effective_intent.get("pool_ref") in (None, "") and effective_intent.get("pool") in (None, ""):
             validator.error(
                 obj.relpath,
                 f"LTM inline virtual-server intent `{obj.data.get('name')}` with `pool_mode: reference` must define `pool_ref`",
             )
             continue
-        if pool_mode == "inline" and not isinstance(obj.data.get("pool"), dict):
+        if pool_mode == "inline" and not isinstance(effective_intent.get("pool"), dict):
             validator.error(
                 obj.relpath,
                 f"LTM inline virtual-server intent `{obj.data.get('name')}` with `pool_mode: inline` must define embedded `pool` mapping",
             )
             continue
         if obj.effective_state != "absent":
-            validator.require_fields(obj, ["destination", "destination_port"])
+            if effective_intent.get("destination") in (None, ""):
+                validator.error(obj.relpath, f"LTM inline virtual-server intent `{obj.data.get('name')}` must define `destination`")
+            if effective_intent.get("destination_port") in (None, ""):
+                validator.error(obj.relpath, f"LTM inline virtual-server intent `{obj.data.get('name')}` must define `destination_port`")
         settings_payload = validator.load_settings_hierarchy_payload(obj.source_file, VARS_DIR / "ltm" / "intents")
         compiled_service = compile_ltm_virtual_server_intent(
-            obj.data,
+            effective_intent,
             settings_payload.get("ltm_pool_defaults", {}),
             settings_payload.get("ltm_member_defaults", {}),
             settings_payload.get("ltm_monitor_sets", {}),
@@ -141,4 +150,3 @@ def _validate_compiled_inline_virtual_servers(
         pool_ref = validator.normalize_pool_reference(virtual_server.get("pool"), vs_partition)
         if pool_ref not in active_pool_names:
             validator.error(source_obj.relpath, f"LTM inline compiled virtual server `{name}` references undefined pool `{pool_ref}`")
-
