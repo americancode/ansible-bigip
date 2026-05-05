@@ -1,0 +1,1 @@
+"""HA domain validation steps."""
