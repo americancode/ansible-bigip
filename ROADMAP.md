@@ -1,4 +1,17 @@
 # BIG-IP Enterprise GitOps Roadmap
+TASK [Create manual GTM virtual servers for pool members] **********************
+fatal: [lab-f5]: FAILED! => {"msg": "The task includes an option with an undefined variable. The error was: 'dict object' has no attribute 'address'. 'dict object' has no attribute 'address'\n\nThe error appears to be in '/runner/project/playbooks/gtm/tasks/apply.yml': line 209, column 3, but may\nbe elsewhere in the file depending on the exact syntax problem.\n\nThe offending line appears to be:\n\n# object is explicitly materialized before its parent pool is created.\n- name: Create manual GTM virtual servers for pool members\n  ^ here\n"}
+
+python3 tools/validate-vars.py
+ERROR: vars/ltm/intents/inline/k8s-clusters/dc1-rsc-cib-1.yml: LTM inline compiled virtual server `vs_dc1_rsc_cib_1_kubeapi_6443` references undefined pool `/K8s/pool_dc1_rsc_cib_1_kubeapi_6443`
+ERROR: vars/ltm/intents/inline/k8s-clusters/dc1-rsc-cib-1.yml: LTM inline compiled virtual server `vs_dc1_rsc_cib_1_registration_9345` references undefined pool `/K8s/pool_dc1_rsc_cib_1_registration_9345`
+ERROR: vars/ltm/intents/inline/k8s-clusters/dc1-rsc-cib-1.yml: LTM inline compiled virtual server `vs_dc1_rsc_cib_1_traefik_443` references undefined pool `/K8s/pool_dc1_rsc_cib_1_traefik_443`
+ERROR: vars/gtm/pools/k8s-pools/dcx-cib-1.yml: GTM pool `pool_dcx-rsc-cib-1` member 0 cannot resolve repo-known LTM virtual `/Common/dc1-rsc-cib-1-traefik`
+ERROR: vars/gtm/pools/k8s-pools/dcx-cib-1.yml: GTM member 0 must define `address`
+ERROR: vars/gtm/pools/k8s-pools/dcx-cib-1.yml: GTM member 0 must define `port`
+Validation failed with 6 error(s).
+make: *** [Makefile:11: validate-vars] Error 1
+
 
 ## Proposals
 
