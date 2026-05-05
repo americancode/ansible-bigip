@@ -154,6 +154,15 @@ Documentation is not limited to markdown docs. The code paths themselves must st
 - add inline playbook comments where task ordering, data reshaping, intent compilation, lookup building, or delete/apply merging would not be obvious to a new contributor, but keep those comments in YAML task/comment structure (not inside Jinja expressions or templated strings)
 - do not add noise comments to trivial tasks, but do comment any place where a reader would otherwise need to infer hidden data flow
 
+### Python Tooling Structure Rule
+
+This is binding for future modifications:
+
+- all Python tooling changes must follow the modular package pattern already used in this repo (thin compatibility entrypoint + split modules by concern such as CLI, models, specs/constants, transforms/helpers, and runtime/orchestration)
+- avoid re-introducing large monolithic scripts after a package split
+- this applies to tools under `tools/` and most importantly to `filter_plugins/` and split support packages under `filter_plugins/bigip_filters/`
+- for `filter_plugins`, keep `filter_plugins/bigip_var_filters.py` as the thin Ansible entrypoint and place non-trivial implementation in focused modules under `filter_plugins/bigip_filters/`
+
 ### Intent And Shortcut Design
 
 When working on convenience patterns, common service templates, or “simple mode” authoring:

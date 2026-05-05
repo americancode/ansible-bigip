@@ -1,0 +1,798 @@
+from __future__ import annotations
+
+import re
+import sys
+from pathlib import Path
+from typing import Any
+
+import yaml
+
+from .connection import BigIPConnection
+from .specs import IMPORT_SPECS, ImportSpec, BUILTIN_MONITORS, BUILTIN_PROFILES
+from .importer_specialized import ImporterSpecialized
+from .yaml_io import VarTreeDumper
+
+
+class Importer(ImporterSpecialized):
+    """Orchestrates importing BIG-IP configuration into repository var tree format.
+
+    Purpose:
+        Queries a BIG-IP device via REST API and generates YAML files
+        matching the repository's var tree structure under vars/.
+
+    Attributes:
+        conn (BigIPConnection): Authenticated BIG-IP connection.
+        out_dir (Path): Output directory for generated YAML files.
+    """
+
+    def __init__(self, conn: BigIPConnection, out_dir: Path) -> None:
+        self.conn = conn
+        self.out_dir = out_dir
+
+    def run(self, types: list[str] | None = None) -> dict[str, int]:
+        """Execute import for all or a subset of object types.
+
+        Inputs:
+            types (list[str]|None): If provided, only import these types
+                (e.g., ["ltm_pools", "ltm_virtual_servers"]).
+
+        Returns:
+            dict[str, int]: Mapping of object type to count of imported objects
+                (or -1 if an error occurred).
+        """
+        specs = {k: v for k, v in IMPORT_SPECS.items() if k in (types or list(IMPORT_SPECS))}
+        results: dict[str, int] = {}
+
+        for obj_type, spec in specs.items():
+            try:
+                count = self._import_type(obj_type, spec)
+                results[obj_type] = count
+            except Exception as exc:
+                print(f"ERROR: {obj_type}: {exc}", file=sys.stderr)
+                results[obj_type] = -1
+
+        return results
+
+    def _import_type(self, obj_type: str, spec: ImportSpec) -> int:
+        """Import a single object type from BIG-IP to YAML files.
+
+        Purpose:
+            Queries BIG-IP REST API for the given object type,
+            transforms items to repo format, and writes YAML output.
+
+        Inputs:
+            obj_type (str): The object type key (e.g., "ltm_pools").
+            spec (ImportSpec): The import specification for this type.
+
+        Returns:
+            int: Number of objects imported (or -1 on error).
+
+        Side effects:
+            For special types (WAF, APM, GTM topology), delegates to type-specific methods.
+            Otherwise, queries BIG-IP, transforms items, and writes YAML output.
+        """
+        if obj_type == "waf_server_technologies":
+            return self._import_waf_server_technologies(spec)
+        if obj_type == "apm_sso_configs":
+            return self._import_apm_sso_configs(spec)
+        if obj_type == "apm_policy_nodes":
+            return self._import_apm_policy_nodes(spec)
+        if obj_type == "gtm_topology_records":
+            return self._import_gtm_topology_records(spec)
+
+        items = self.conn.get_all(spec.endpoint)
+        if not items:
+            return 0
+
+        dir_path = self.out_dir / spec.output_dir
+        dir_path.mkdir(parents=True, exist_ok=True)
+
+        objects = []
+        for item in items:
+            obj = self._transform_item(item, spec)
+            if obj:
+                objects.append(obj)
+
+        if not objects:
+            return 0
+
+        filename = f"imported-{obj_type.replace('_', '-')}.yml"
+        output_path = dir_path / filename
+
+        payload = {spec.top_key: objects}
+        with output_path.open("w") as f:
+            yaml.dump(payload, f, Dumper=VarTreeDumper, default_flow_style=False, allow_unicode=True)
+
+        print(f"  {obj_type}: {len(objects)} objects -> {output_path.relative_to(self.out_dir)}")
+        return len(objects)
+
+    def _write_import_objects(self, obj_type: str, spec: ImportSpec, objects: list[dict[str, Any]]) -> int:
+        if not objects:
+            return 0
+
+        dir_path = self.out_dir / spec.output_dir
+        dir_path.mkdir(parents=True, exist_ok=True)
+
+        filename = f"imported-{obj_type.replace('_', '-')}.yml"
+        output_path = dir_path / filename
+        payload = {spec.top_key: objects}
+        with output_path.open("w") as f:
+            yaml.dump(payload, f, Dumper=VarTreeDumper, default_flow_style=False, allow_unicode=True)
+
+        print(f"  {obj_type}: {len(objects)} objects -> {output_path.relative_to(self.out_dir)}")
+        return len(objects)
+
+    def _transform_item(self, item: dict, spec: ImportSpec) -> dict | None:
+        """Transform a BIG-IP API object into repository var tree shape.
+
+        Purpose:
+            Converts a raw BIG-IP REST response item into the repository's
+            var tree format, applying type-specific transformations.
+
+        Inputs:
+            item (dict): Raw object from BIG-IP REST API.
+            spec (ImportSpec): Import specification with field mappings.
+
+        Returns:
+            dict|None: Transformed object ready for YAML output, or None if invalid.
+
+        Side effects:
+            Calls type-specific transform methods for pools, virtual servers, monitors, etc.
+        """
+        obj: dict[str, Any] = {}
+
+        for decl_key, api_key in spec.extract.items():
+            if api_key in item:
+                value = item[api_key]
+                if value is not None and value != "" and value != "none":
+                    obj[decl_key] = self._normalize_value(decl_key, value, spec)
+
+        if "name" not in obj:
+            return None
+
+        partition = item.get("partition", "Common")
+        if partition != "Common":
+            obj["partition"] = partition
+
+        if "name" in obj and "/" in str(obj["name"]):
+            obj["name"] = obj["name"].split("/")[-1]
+
+        if spec.top_key == "ltm_pools":
+            self._transform_pool(item, obj)
+        elif spec.top_key == "ltm_virtual_servers":
+            self._transform_virtual(item, obj)
+        elif spec.top_key in ("ltm_monitors", "gtm_monitors"):
+            self._transform_monitor(item, obj, spec)
+        elif spec.top_key == "network_vlans":
+            self._transform_vlan(item, obj)
+        elif spec.top_key == "network_trunks":
+            self._transform_trunk(item, obj)
+        elif spec.top_key == "bigip_snat_pools":
+            self._transform_snat_pool(item, obj)
+
+        return obj if obj.get("name") else None
+
+    def _normalize_value(self, key: str, value: Any, spec: ImportSpec) -> Any:
+        """Normalize a field value from BIG-IP API to repo format.
+
+        Purpose:
+            Converts BIG-IP API field values into the appropriate Python
+            types and formats used in the repository var trees.
+
+        Inputs:
+            key (str): The field name being normalized.
+            value (Any): The raw value from BIG-IP API.
+            spec (ImportSpec): The import specification for context.
+
+        Returns:
+            Any: The normalized value ready for YAML output.
+
+        Side effects:
+            Handles special cases for load balancing methods, profile types,
+            destinations, booleans, integers, traffic groups, and scopes.
+        """
+        if key == "lb_method":
+            return str(value)
+        if key == "type" and spec.top_key == "ltm_profiles":
+            kind = str(value)
+            match = re.search(r"ltm:profile:([a-z0-9-]+)", kind)
+            if match:
+                return match.group(1)
+            return kind
+        if key == "destination":
+            if isinstance(value, str):
+                parts = value.rsplit(":", 1)
+                return parts[0].lstrip("/")
+        if key == "enabled":
+            return value == "yes"
+        if key == "min_active_members":
+            try:
+                v = int(value)
+                return v if v > 1 else None
+            except (ValueError, TypeError):
+                return None
+        if key == "tag":
+            try:
+                v = int(value)
+                return v if v > 0 else None
+            except (ValueError, TypeError):
+                return None
+        if key == "mtu":
+            try:
+                return int(value)
+            except (ValueError, TypeError):
+                return None
+        if key in {"connection_limit", "ip_idle_timeout", "tcp_idle_timeout", "udp_idle_timeout"}:
+            try:
+                return int(value)
+            except (ValueError, TypeError):
+                return value
+        if key in {"session_timeout", "idle_timeout", "max_sessions", "weight"}:
+            try:
+                return int(value)
+            except (ValueError, TypeError):
+                return value
+        if key == "arp":
+            if isinstance(value, str):
+                return value.lower() == "enabled"
+            return bool(value)
+        if key in {"agent_cap", "cookie_fallback"}:
+            if isinstance(value, str):
+                return value.lower() == "enabled"
+            return bool(value)
+        if key in {"use_session_creds", "use_machine_account", "sign_assertion", "encrypt_assertion"}:
+            if isinstance(value, str):
+                return value.lower() == "enabled"
+            return bool(value)
+        if key == "traffic_group" and isinstance(value, str):
+            return value.split("/")[-1] if value.startswith("/") else value
+        if key in {
+            "default_access_policy",
+            "default_per_session_policy",
+            "sso_configuration",
+            "signing_cert",
+            "signing_key",
+        } and isinstance(value, str):
+            return value if value.startswith("/") else value.split("/")[-1]
+        if key == "scopes":
+            if isinstance(value, list):
+                return [str(item) for item in value if item not in (None, "")]
+            if isinstance(value, str):
+                return [part for part in value.split() if part]
+        return value
+
+    def _transform_apm_sso_config(self, item: dict[str, Any]) -> dict[str, Any] | None:
+        """Transform an APM SSO configuration item from BIG-IP API.
+
+        Purpose:
+            Converts a raw APM SSO configuration from the BIG-IP API
+            into the repository's var tree format.
+
+        Inputs:
+            item (dict[str, Any]): Raw SSO config from BIG-IP REST API.
+
+        Returns:
+            dict[str, Any] | None: Transformed SSO config, or None if invalid.
+
+        Side effects:
+            Derives the SSO type, extracts fields based on type-specific
+            field specs, and normalizes all values.
+        """
+        name = item.get("name")
+        if not name:
+            return None
+
+        sso_type = self._derive_apm_sso_type(item)
+        if not sso_type:
+            return None
+
+        obj: dict[str, Any] = {
+            "name": name.split("/")[-1] if "/" in str(name) else name,
+            "type": sso_type,
+        }
+        description = item.get("description")
+        if description not in (None, "", "none"):
+            obj["description"] = description
+
+        for field_name, live_keys in self._apm_sso_field_specs(sso_type):
+            live_value = self._first_present(item, live_keys)
+            if live_value in (None, "", []):
+                continue
+            obj[field_name] = self._normalize_value(field_name, live_value, IMPORT_SPECS["apm_sso_configs"])
+
+        partition = item.get("partition", "Common")
+        if partition != "Common":
+            obj["partition"] = partition
+        return obj
+
+    def _derive_apm_sso_type(self, item: dict[str, Any]) -> str | None:
+        """Derive the APM SSO configuration type from a BIG-IP API item.
+
+        Purpose:
+            Determines the SSO type (kerberos, form_based, saml, etc.)
+            from the item's type field, kind, or by detecting
+            type-specific fields.
+
+        Inputs:
+            item (dict[str, Any]): Raw SSO config from BIG-IP REST API.
+
+        Returns:
+            str|None: The derived SSO type in snake_case, or None if unknown.
+
+        Side effects:
+            Checks type field, kind string, and presence of type-specific
+            fields (keytab, formActionUrl, idpMetadataUrl, etc.).
+        """
+        type_value = self._first_present(item, ("type", "ssoType", "sso_type"))
+        if isinstance(type_value, str) and type_value:
+            return type_value.replace("-", "_")
+
+        kind = item.get("kind")
+        if isinstance(kind, str):
+            parts = kind.lower().split(":")
+            if "sso" in parts:
+                idx = parts.index("sso")
+                if idx + 1 < len(parts):
+                    raw = parts[idx + 1].split("state")[0].replace("-", "_")
+                    if raw:
+                        return raw
+
+        if any(self._first_present(item, keys) is not None for keys in (("keytab",), ("servicePrincipalName", "spn"), ("kdcServers", "kdc"))):
+            return "kerberos"
+        if any(self._first_present(item, keys) is not None for keys in (("formActionUrl", "form_action_url"), ("loginSuccessRegex", "login_success_regex"))):
+            return "form_based"
+        if self._first_present(item, ("storefrontUrl", "storefront_url")) is not None:
+            return "citrix"
+        if any(self._first_present(item, keys) is not None for keys in (("idpMetadataUrl", "idp_metadata_url"), ("spEntityId", "sp_entity_id"))):
+            return "saml"
+        if any(self._first_present(item, keys) is not None for keys in (("providerUrl", "provider_url"), ("tokenEndpoint", "token_endpoint"))):
+            return "oauth"
+        if self._first_present(item, ("useMachineAccount", "use_machine_account")) is not None:
+            return "ntlm"
+        if self._first_present(item, ("useSessionCredentials", "use_session_creds")) is not None:
+            return "http_basic"
+        if self._first_present(item, ("server",)) is not None and self._first_present(item, ("domain",)) is not None:
+            return "domain_join"
+        return None
+
+    def _apm_sso_field_specs(self, sso_type: str) -> list[tuple[str, tuple[str, ...]]]:
+        """Get field specifications for an APM SSO type.
+
+        Purpose:
+            Returns a list of (repo_field_name, api_keys) tuples for
+            the given SSO type, defining how to extract fields from
+            the BIG-IP API response.
+
+        Inputs:
+            sso_type (str): The SSO type (kerberos, form_based, saml, etc.).
+
+        Returns:
+            list[tuple[str, tuple[str, ...]]]: Field specs mapping repo fields
+                to possible API key names.
+
+        Side effects:
+            Returns type-specific field mappings for all supported SSO types.
+        """
+        return {
+            "kerberos": [
+                ("keytab", ("keytab",)),
+                ("spn", ("servicePrincipalName", "spn")),
+                ("kdc", ("kdcServers", "kdc")),
+                ("realm", ("realm",)),
+                ("method", ("method",)),
+                ("upn_domain", ("upnDomain", "upn_domain")),
+            ],
+            "form_based": [
+                ("form_action_url", ("formActionUrl", "form_action_url")),
+                ("username_field", ("usernameField", "username_field")),
+                ("password_field", ("passwordField", "password_field")),
+                ("submit_button", ("submitButton", "submit_button")),
+                ("login_success_regex", ("loginSuccessRegex", "login_success_regex")),
+                ("login_failure_regex", ("loginFailureRegex", "login_failure_regex")),
+            ],
+            "http_basic": [
+                ("domain", ("domain",)),
+                ("use_session_creds", ("useSessionCredentials", "use_session_creds")),
+            ],
+            "ntlm": [
+                ("server", ("server",)),
+                ("domain", ("domain",)),
+                ("use_machine_account", ("useMachineAccount", "use_machine_account")),
+            ],
+            "saml": [
+                ("idp_metadata_url", ("idpMetadataUrl", "idp_metadata_url")),
+                ("sp_entity_id", ("spEntityId", "sp_entity_id")),
+                ("assertion_consumer_url", ("assertionConsumerUrl", "assertion_consumer_url")),
+                ("nameid_format", ("nameidFormat", "nameid_format")),
+                ("sign_assertion", ("signAssertion", "sign_assertion")),
+                ("encrypt_assertion", ("encryptAssertion", "encrypt_assertion")),
+                ("signing_cert", ("signingCert", "signing_cert")),
+                ("signing_key", ("signingKey", "signing_key")),
+            ],
+            "oauth": [
+                ("provider_url", ("providerUrl", "provider_url")),
+                ("client_id", ("clientId", "client_id")),
+                ("client_secret", ("clientSecret", "client_secret")),
+                ("authorization_endpoint", ("authorizationEndpoint", "authorization_endpoint")),
+                ("token_endpoint", ("tokenEndpoint", "token_endpoint")),
+                ("scopes", ("scopes",)),
+            ],
+            "citrix": [
+                ("storefront_url", ("storefrontUrl", "storefront_url")),
+                ("username_field", ("usernameField", "username_field")),
+                ("password_field", ("passwordField", "password_field")),
+                ("domain_field", ("domainField", "domain_field")),
+                ("use_session_creds", ("useSessionCredentials", "use_session_creds")),
+            ],
+            "domain_join": [
+                ("domain", ("domain",)),
+                ("server", ("server",)),
+            ],
+        }.get(sso_type, [])
+
+    def _extract_apm_policy_node_properties(self, item: dict[str, Any]) -> dict[str, Any]:
+        """Extract properties from an APM policy node item.
+
+        Purpose:
+            Filters out metadata and reference fields from an APM policy node,
+            normalizing the remaining properties into repo format.
+
+        Inputs:
+            item (dict[str, Any]): Raw APM policy node from BIG-IP API.
+
+        Returns:
+            dict[str, Any]: Normalized properties for the policy node.
+
+        Side effects:
+            Skips ignored keys (metadata, references), normalizes property
+            keys and values for repo consumption.
+        """
+        ignored_keys = {
+            "name",
+            "partition",
+            "tmPartition",
+            "policy",
+            "subPath",
+            "appService",
+            "fullPath",
+            "generation",
+            "kind",
+            "selfLink",
+            "type",
+            "itemType",
+            "item_type",
+        }
+        properties: dict[str, Any] = {}
+        for key, value in item.items():
+            if key in ignored_keys or value in (None, "", []):
+                continue
+            if isinstance(key, str) and key.endswith("Reference"):
+                continue
+            property_key = self._normalize_apm_property_key(key)
+            properties[property_key] = self._normalize_apm_policy_property_value(property_key, value)
+        return properties
+
+    def _normalize_apm_property_key(self, key: Any) -> str:
+        """Normalize an APM policy node property key to repo format.
+
+        Purpose:
+            Converts BIG-IP API property keys (often camelCase) to
+            snake_case format used in the repository.
+
+        Inputs:
+            key (Any): The property key from BIG-IP API.
+
+        Returns:
+            str: Normalized key in snake_case format.
+
+        Side effects:
+            Replaces hyphens with underscores, converts camelCase to snake_case.
+        """
+        if not isinstance(key, str):
+            return str(key)
+        text = key.replace("-", "_")
+        output = []
+        for idx, char in enumerate(text):
+            if char.isupper() and idx > 0 and text[idx - 1] != "_":
+                output.append("_")
+            output.append(char.lower())
+        return "".join(output)
+
+    def _normalize_apm_policy_property_value(self, key: str, value: Any) -> Any:
+        """Normalize an APM policy node property value.
+
+        Purpose:
+            Converts BIG-IP API property values to appropriate Python types
+            and repo format (booleans, references, nested structures).
+
+        Inputs:
+            key (str): The property key (used to determine normalization rules).
+            value (Any): The raw value from BIG-IP API.
+
+        Returns:
+            Any: Normalized value ready for YAML output.
+
+        Side effects:
+            Handles special cases for rules, server references, booleans,
+            nested dicts/lists, and numeric strings.
+        """
+        if value is None:
+            return None
+        if key == "rules":
+            return self._normalize_apm_rules(value)
+        if key in {
+            "ad_server",
+            "ldap_server",
+            "kerberos_sso_object",
+            "sso_config",
+            "auth_server",
+            "saml_sso",
+            "oauth_sso",
+            "form_based_sso",
+            "http_basic_sso",
+            "ntlm_sso",
+        } and isinstance(value, str):
+            return value if value.startswith("/") else value.split("/")[-1]
+        if isinstance(value, list):
+            return [self._normalize_apm_policy_property_value(key, item) for item in value]
+        if isinstance(value, dict):
+            normalized: dict[str, Any] = {}
+            for subkey, subvalue in value.items():
+                if subvalue in (None, ""):
+                    continue
+                repo_subkey = self._normalize_apm_property_key(subkey)
+                normalized[repo_subkey] = self._normalize_apm_policy_property_value(repo_subkey, subvalue)
+            return normalized
+        if isinstance(value, str):
+            lowered = value.lower()
+            if lowered in {"true", "yes", "enabled", "enable", "on"}:
+                return True
+            if lowered in {"false", "no", "disabled", "disable", "off"}:
+                return False
+            if value.isdigit():
+                return int(value)
+        return value
+
+    def _normalize_apm_rules(self, value: Any) -> Any:
+        """Normalize APM policy rules from BIG-IP API format.
+
+        Purpose:
+            Recursively normalizes a list of APM policy rules, converting
+            keys to snake_case and values to appropriate Python types.
+
+        Inputs:
+            value (Any): Raw rules value from BIG-IP API (expected list).
+
+        Returns:
+            Any: Normalized rules list, or original value if not a list.
+
+        Side effects:
+            Iterates through rule items, normalizing keys and values
+            recursively via _normalize_apm_policy_property_value.
+        """
+        if not isinstance(value, list):
+            return value
+        normalized = []
+        for item in value:
+            if not isinstance(item, dict):
+                normalized.append(item)
+                continue
+            rule: dict[str, Any] = {}
+            for key, subvalue in item.items():
+                if subvalue in (None, ""):
+                    continue
+                repo_key = self._normalize_apm_property_key(key)
+                rule[repo_key] = self._normalize_apm_policy_property_value(repo_key, subvalue)
+            if rule:
+                normalized.append(rule)
+        return normalized
+
+    def _first_present(self, item: dict[str, Any], keys: tuple[str, ...]) -> Any:
+        """Return the first non-empty value from a list of keys in an item.
+
+        Purpose:
+            Searches through multiple possible key names to find the first
+            one that exists and has a non-empty value in the item.
+
+        Inputs:
+            item (dict[str, Any]): The dictionary to search.
+            keys (tuple[str, ...]): Ordered list of keys to try.
+
+        Returns:
+            Any: The first non-empty value found, or None if none found.
+
+        Side effects:
+            None - read-only operation.
+        """
+        for key in keys:
+            if key in item and item.get(key) not in (None, ""):
+                return item.get(key)
+        return None
+
+    def _transform_pool(self, item: dict, obj: dict) -> None:
+        monitors = item.get("monitors", "")
+        if monitors:
+            monitor_list = re.split(r"\s+(?:and|or)\s+", monitors)
+            cleaned = []
+            for m in monitor_list:
+                m = m.strip()
+                if m.startswith("/Common/") and m.split("/")[-1] in BUILTIN_MONITORS:
+                    cleaned.append(m)
+                elif not m.startswith("/"):
+                    cleaned.append(m)
+                else:
+                    cleaned.append(m)
+            if cleaned:
+                obj["monitors"] = cleaned
+
+        if "membersReference" in item:
+            members_link = item["membersReference"].get("link", "")
+            if members_link:
+                try:
+                    member_data = self.conn.get_all(members_link.split("/mgmt/tm/")[-1])
+                    members = []
+                    for member in member_data:
+                        m = {}
+                        if "name" in member:
+                            m["name"] = member["name"].split("/")[-1] if "/" in member["name"] else member["name"]
+                        if "address" in member:
+                            m["address"] = member["address"]
+                        m["port"] = int(member.get("port", 0))
+                        if m.get("name"):
+                            members.append(m)
+                    if members:
+                        obj["members"] = members
+                except Exception:
+                    pass
+
+    def _transform_virtual(self, item: dict, obj: dict) -> None:
+        if "destination" in obj:
+            dest = str(obj["destination"])
+            if ":" in dest:
+                parts = dest.rsplit(":", 1)
+                obj["destination"] = parts[0]
+                try:
+                    obj["destination_port"] = int(parts[1])
+                except ValueError:
+                    obj["destination_port"] = parts[1]
+            if obj["destination"].startswith("/"):
+                obj["destination"] = obj["destination"][1:]
+
+        if "pool" in item and item["pool"]:
+            pool = item["pool"]
+            if pool.startswith("/Common/"):
+                obj["pool"] = pool.split("/")[-1]
+            elif pool.startswith("/"):
+                obj["pool"] = pool
+            else:
+                obj["pool"] = pool
+
+        profiles_link = item.get("profilesReference", {}).get("link", "")
+        if profiles_link:
+            try:
+                prof_data = self.conn.get_all(profiles_link.split("/mgmt/tm/")[-1])
+                profiles = []
+                for p in prof_data:
+                    pname = p.get("name", "")
+                    pcontext = p.get("context", "all")
+                    fq = f"/Common/{pname}"
+                    if pname not in BUILTIN_PROFILES:
+                        fq = pname
+                    if pcontext != "all":
+                        profiles.append(f"{fq}:{pcontext}")
+                    else:
+                        profiles.append(fq)
+                if profiles:
+                    obj["profiles"] = profiles
+            except Exception:
+                pass
+
+        policies_link = item.get("policiesReference", {}).get("link", "")
+        if policies_link:
+            try:
+                pol_data = self.conn.get_all(policies_link.split("/mgmt/tm/")[-1])
+                policies = [p.get("name", "") for p in pol_data if p.get("name")]
+                if policies:
+                    obj["policies"] = policies
+            except Exception:
+                pass
+
+        irules_link = item.get("rulesReference", {}).get("link", "")
+        if irules_link:
+            try:
+                irule_data = self.conn.get_all(irules_link.split("/mgmt/tm/")[-1])
+                irules = [r.get("name", "") for r in irule_data if r.get("name")]
+                if irules:
+                    obj["irules"] = irules
+            except Exception:
+                pass
+
+    def _transform_monitor(self, item: dict, obj: dict, spec: ImportSpec) -> None:
+        kind = item.get("kind", "")
+        if "ltm:monitor:" in kind:
+            mtype = kind.split("ltm:monitor:")[-1].replace("-", "_")
+            obj["type"] = mtype
+        elif "gtm:monitor:" in kind:
+            mtype = kind.split("gtm:monitor:")[-1].replace("-", "_")
+            obj["type"] = mtype
+
+        if "interval" in item:
+            try:
+                interval = int(item["interval"])
+                if interval != 5:
+                    obj["interval"] = interval
+            except (ValueError, TypeError):
+                pass
+
+        if "timeout" in item:
+            try:
+                timeout = int(item["timeout"])
+                if timeout != 16:
+                    obj["timeout"] = timeout
+            except (ValueError, TypeError):
+                pass
+
+    def _transform_vlan(self, item: dict, obj: dict) -> None:
+        interfaces = item.get("interfacesReference", {}).get("link", "")
+        if interfaces:
+            try:
+                iface_data = self.conn.get_all(interfaces.split("/mgmt/tm/")[-1])
+                iface_list = []
+                for iface in iface_data:
+                    entry = {"interface": iface.get("name", "")}
+                    if iface.get("tagging"):
+                        entry["tagging"] = iface["tagging"]
+                    if entry["interface"]:
+                        iface_list.append(entry)
+                if iface_list:
+                    obj["interfaces"] = iface_list
+            except Exception:
+                pass
+
+    def _transform_trunk(self, item: dict, obj: dict) -> None:
+        interfaces = item.get("interfacesReference", {}).get("link", "")
+        if interfaces:
+            try:
+                iface_data = self.conn.get_all(interfaces.split("/mgmt/tm/")[-1])
+                members = []
+                for iface in iface_data:
+                    name = iface.get("name", "")
+                    if name:
+                        members.append(name.split("/")[-1] if "/" in name else name)
+                if members:
+                    obj["interfaces"] = members
+            except Exception:
+                pass
+
+    def _transform_snat_pool(self, item: dict, obj: dict) -> None:
+        members = item.get("members")
+        if isinstance(members, list):
+            normalized_members = []
+            for member in members:
+                if isinstance(member, str) and member:
+                    normalized_members.append(member.split("/")[-1] if "/" in member else member)
+            if normalized_members:
+                obj["members"] = normalized_members
+
+    def _normalize_topology_side(self, value: Any) -> Any:
+        if value is None:
+            return None
+        items = [value] if isinstance(value, dict) else value
+        if not isinstance(items, list):
+            return value
+
+        normalized = []
+        for item in items:
+            if not isinstance(item, dict):
+                normalized.append(item)
+                continue
+            normalized_item = {}
+            for key, member_value in item.items():
+                if key in {"datacenter", "pool", "region"} and isinstance(member_value, str):
+                    normalized_item[key] = member_value if member_value.startswith("/") else member_value.split("/")[-1]
+                elif key == "negate":
+                    normalized_item[key] = bool(member_value)
+                else:
+                    normalized_item[key] = member_value
+            normalized.append(normalized_item)
+        return normalized

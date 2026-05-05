@@ -2,9 +2,6 @@
 
 ## To Do
 
-4. Refactor `tools/drift-check.py` into a modular package.
-
-5. Refactor `tools/import-from-bigip.py` into a modular package.
 
 8. Improve helper-tool fidelity where `basic field drift` is no longer sufficient.
 
